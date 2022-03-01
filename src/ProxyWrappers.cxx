@@ -61,7 +61,7 @@ static PyObject* CreateNewCppProxyClass(Cppyy::TCppScope_t klass, PyObject* pyba
         PyTuple_SET_ITEM(pymetabases, i, btype);
     }
 
-    std::string name = Cppyy::GetFinalName(klass);
+    std::string name = Cppyy::NewGetFinalName(klass);
 
 // create meta-class, add a dummy __module__ to pre-empt the default setting
     PyObject* args = Py_BuildValue((char*)"sO{}", (name+"_meta").c_str(), pymetabases);
@@ -158,8 +158,8 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 // proxy object.
 
 // some properties that'll affect building the dictionary
-    bool isNamespace = Cppyy::IsNamespace(scope);
-    bool isAbstract  = Cppyy::IsAbstract(scope);
+    bool isNamespace = Cppyy::NewIsNamespace(scope);
+    bool isAbstract  = Cppyy::NewIsAbstract(scope);
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
@@ -406,26 +406,24 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 }
 
 //----------------------------------------------------------------------------
-static void CollectUniqueBases(Cppyy::TCppType_t klass, std::deque<std::string>& uqb)
+static void CollectUniqueBases(Cppyy::TCppType_t klass, std::deque<Cppyy::TCppScope_t>& uqb)
 {
 // collect bases in acceptable mro order, while removing duplicates (this may
 // break the overload resolution in esoteric cases, but otherwise the class can
 // not be used at all, as CPython will refuse the mro).
-    size_t nbases = Cppyy::GetNumBases(klass);
+    size_t nbases = Cppyy::NewGetNumBases(klass);
 
-    std::deque<Cppyy::TCppType_t> bids;
     for (size_t ibase = 0; ibase < nbases; ++ibase) {
-        const std::string& name = Cppyy::GetBaseName(klass, ibase);
+        Cppyy::TCppType_t tp = Cppyy::NewGetBaseScope(klass, ibase);
         int decision = 2;
-        Cppyy::TCppType_t tp = Cppyy::GetScope(name);
         if (!tp) continue;   // means this base with not be available Python-side
         for (size_t ibase2 = 0; ibase2 < uqb.size(); ++ibase2) {
-            if (uqb[ibase2] == name) {         // not unique ... skip
+            if (uqb[ibase2] == tp) {         // not unique ... skip
                 decision = 0;
                 break;
             }
 
-            if (Cppyy::IsSubtype(tp, bids[ibase2])) {
+            if (Cppyy::NewIsSubclass(tp, uqb[ibase2])) {
             // mro requirement: sub-type has to follow base
                 decision = 1;
                 break;
@@ -433,20 +431,18 @@ static void CollectUniqueBases(Cppyy::TCppType_t klass, std::deque<std::string>&
         }
 
         if (decision == 1) {
-            uqb.push_front(name);
-            bids.push_front(tp);
+            uqb.push_front(tp);
         } else if (decision == 2) {
-            uqb.push_back(name);
-            bids.push_back(tp);
+            uqb.push_back(tp);
         }
     // skipped if decision == 0 (not unique)
     }
 }
 
-static PyObject* BuildCppClassBases(Cppyy::TCppType_t klass)
+static PyObject* BuildCppClassBases(Cppyy::TCppScope_t klass)
 {
 // Build a tuple of python proxy classes of all the bases of the given 'klass'.
-    std::deque<std::string> uqb;
+    std::deque<Cppyy::TCppScope_t> uqb;
     CollectUniqueBases(klass, uqb);
 
 // allocate a tuple for the base classes, special case for first base
@@ -461,7 +457,7 @@ static PyObject* BuildCppClassBases(Cppyy::TCppType_t klass)
         Py_INCREF((PyObject*)(void*)&CPPInstance_Type);
         PyTuple_SET_ITEM(pybases, 0, (PyObject*)(void*)&CPPInstance_Type);
     } else {
-        for (std::deque<std::string>::size_type ibase = 0; ibase < nbases; ++ibase) {
+        for (std::deque<Cppyy::TCppScope_t>::size_type ibase = 0; ibase < nbases; ++ibase) {
             PyObject* pyclass = CreateScopeProxy(uqb[ibase]);
             if (!pyclass) {
                 Py_DECREF(pybases);
@@ -509,17 +505,6 @@ PyObject* CPyCppyy::GetScopeProxy(Cppyy::TCppScope_t scope)
 }
 
 //----------------------------------------------------------------------------
-PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, const unsigned flags)
-{
-// Convenience function with a lookup first through the known existing proxies.
-    PyObject* pyclass = GetScopeProxy(scope);
-    if (pyclass)
-        return pyclass;
-
-    return CreateScopeProxy(Cppyy::GetScopedFinalName(scope), nullptr, flags);
-}
-
-//----------------------------------------------------------------------------
 PyObject* CPyCppyy::CreateScopeProxy(PyObject*, PyObject* args)
 {
 // Build a python shadow class for the named C++ class.
@@ -536,10 +521,10 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
 // Build a python shadow class for the named C++ class or namespace.
 
 // determine complete scope name, if a python parent has been given
-    std::string scName = "";
+    Cppyy::TCppScope_t parent_scope = 0;
     if (parent) {
         if (CPPScope_Check(parent))
-            scName = Cppyy::GetScopedFinalName(((CPPScope*)parent)->fCppType);
+            parent_scope = ((CPPScope*)parent)->fCppType;
         else {
             PyObject* parname = PyObject_GetAttr(parent, PyStrings::gName);
             if (!parname) {
@@ -548,66 +533,186 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
             }
 
         // should be a string
-            scName = CPyCppyy_PyText_AsString(parname);
+            std::string scName = CPyCppyy_PyText_AsString(parname);
             Py_DECREF(parname);
             if (PyErr_Occurred())
                 return nullptr;
+            parent_scope = Cppyy::NewGetScope(scName);
         }
 
-    // accept this parent scope and use it's name for prefixing
         Py_INCREF(parent);
     }
 
-// retrieve C++ class (this verifies name, and is therefore done first)
-    const std::string& lookup = scName.empty() ? name : (scName+"::"+name);
-    Cppyy::TCppScope_t klass = Cppyy::GetScope(lookup);
+    // std::string scName = "";
+    // if (parent) {
+    //     if (CPPScope_Check(parent))
+    //         scName = Cppyy::GetScopedFinalName(((CPPScope*)parent)->fCppType);
+    //     else {
+    //         PyObject* parname = PyObject_GetAttr(parent, PyStrings::gName);
+    //         if (!parname) {
+    //             PyErr_Format(PyExc_SystemError, "given scope has no name for %s", name.c_str());
+    //             return nullptr;
+    //         }
+    //
+    //     // should be a string
+    //         scName = CPyCppyy_PyText_AsString(parname);
+    //         Py_DECREF(parname);
+    //         if (PyErr_Occurred())
+    //             return nullptr;
+    //     }
+    //
+    // // accept this parent scope and use it's name for prefixing
+    //     Py_INCREF(parent);
+    // }
+    printf("CPS: Name: %s\n", name.c_str());
 
-    if (!(bool)klass && Cppyy::IsTemplate(lookup)) {
-    // a "naked" templated class is requested: return callable proxy for instantiations
+// retrieve C++ class (this verifies name, and is therefore done first)
+    // const std::string& lookup = scName.empty() ? name : (scName+"::"+name);
+    Cppyy::TCppScope_t klass = Cppyy::NewGetScope(name, parent_scope);
+
+    if (!(bool)klass) {
+    // // could be an enum, which are treated seperately in CPPScope (TODO: maybe they
+    // // should be handled here instead anyway??)
+    //     if (Cppyy::IsEnum(lookup))
+    //         return nullptr;
+
+    //XXX: Is this required?
+        // final possibility is a typedef of a builtin; these are mapped on the python side
+        // std::string resolved = Cppyy::ResolveName(lookup);
+        // if (gPyTypeMap) {
+        //     PyObject* tc = PyDict_GetItemString(gPyTypeMap, resolved.c_str()); // borrowed
+        //     if (tc && PyCallable_Check(tc)) {
+        //         PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName.c_str());
+        //         if (nt) {
+        //             if (parent) {
+        //                 AddScopeToParent(parent, name, nt);
+        //                 Py_DECREF(parent);
+        //             }
+        //             return nt;
+        //         }
+        //         PyErr_Clear();
+        //     }
+        // }
+
+        if (name == "") {
+            klass = Cppyy::NewGetGlobalScope();
+            Py_INCREF(gThisModule);
+            parent = gThisModule;
+        } else {
+            // all options have been exhausted: it doesn't exist as such
+            PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ class", name.c_str());
+            Py_XDECREF(parent);
+            return nullptr;
+        }
+    }
+
+// now have a class ... get the actual, fully scoped class name, so that typedef'ed
+// classes are created in the right place
+    // const std::string& actual = Cppyy::GetScopedFinalName(klass);
+    // if (actual != lookup) {
+    //     pyscope = CreateScopeProxy(actual);
+    //     if (!pyscope) PyErr_Clear();
+    // }
+
+// locate the parent, if necessary, for memoizing the class if not specified
+    // std::string::size_type last = 0;
+    // if (!parent) {
+    // // TODO: move this to TypeManip, which already has something similar in
+    // // the form of 'extract_namespace'
+    // // need to deal with template parameters that can have scopes themselves
+    //     int tpl_open = 0;
+    //     for (std::string::size_type pos = 0; pos < name.size(); ++pos) {
+    //         std::string::value_type c = name[pos];
+    //
+    //     // count '<' and '>' to be able to skip template contents
+    //         if (c == '<')
+    //             ++tpl_open;
+    //         else if (c == '>')
+    //             --tpl_open;
+    //
+    //   // by only checking for "::" the last part (class name) is dropped
+    //         else if (tpl_open == 0 && \
+    //             c == ':' && pos+1 < name.size() && name[ pos+1 ] == ':') {
+    //         // found a new scope part
+    //             const std::string& part = name.substr(last, pos-last);
+    //
+    //             PyObject* next = PyObject_GetAttrString(
+    //                 parent ? parent : gThisModule, const_cast<char*>(part.c_str()));
+    //
+    //             if (!next) {            // lookup failed, try to create it
+    //                 PyErr_Clear();
+    //                 next = CreateScopeProxy(part, parent);
+    //             }
+    //             Py_XDECREF(parent);
+    //
+    //             if (!next)              // create failed, give up
+    //                 return nullptr;
+    //
+    //         // found scope part
+    //             parent = next;
+    //
+    //         // done with part (note that pos is moved one ahead here)
+    //             last = pos+2; ++pos;
+    //         }
+    //     }
+    //
+    //     if (parent && !CPPScope_Check(parent)) {
+    //     // Special case: parent found is not one of ours (it's e.g. a pure Python module), so
+    //     // continuing would fail badly. One final lookup, then out of here ...
+    //         std::string unscoped = name.substr(last, std::string::npos);
+    //         PyObject* ret = PyObject_GetAttrString(parent, unscoped.c_str());
+    //         Py_DECREF(parent);
+    //         return ret;
+    //     }
+    // }
+
+// use the module as a fake scope if no outer scope found
+    if (!parent) {
+    }
+
+    return CreateScopeProxy(klass, parent, flags);
+}
+
+//----------------------------------------------------------------------------
+PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent, const unsigned flags)
+{
+// Convenience function with a lookup first through the known existing proxies.
+    PyObject* pyclass = GetScopeProxy(scope);
+    if (pyclass)
+        return pyclass;
+
+    if (!parent) {
+        Cppyy::TCppScope_t parent_scope = Cppyy::NewGetParentScope(scope);
+        if (parent_scope)
+            parent = CreateScopeProxy(scope);
+        else {
+            Py_INCREF(gThisModule);
+            parent = gThisModule;
+        }
+    }
+
+    std::string name = Cppyy::NewGetFinalName(scope);
+
+    if (Cppyy::NewIsTemplate(scope)) {
+        // a "naked" templated class is requested: return callable proxy for instantiations
         PyObject* pytcl = PyObject_GetAttr(gThisModule, PyStrings::gTemplate);
         PyObject* pytemplate = PyObject_CallFunction(
-            pytcl, const_cast<char*>("s"), const_cast<char*>(lookup.c_str()));
+            pytcl, const_cast<char*>("s"), const_cast<char*>(name.c_str()));
         Py_DECREF(pytcl);
 
-    // cache the result
-        AddScopeToParent(parent ? parent : gThisModule, name, pytemplate);
+        // cache the result
+        AddScopeToParent(parent, name, pytemplate);
 
-    // done, next step should be a call into this template
+        // done, next step should be a call into this template
         Py_XDECREF(parent);
         return pytemplate;
     }
 
-    if (!(bool)klass) {
-    // could be an enum, which are treated seperately in CPPScope (TODO: maybe they
-    // should be handled here instead anyway??)
-        if (Cppyy::IsEnum(lookup))
-            return nullptr;
-
-    // final possibility is a typedef of a builtin; these are mapped on the python side
-        std::string resolved = Cppyy::ResolveName(lookup);
-        if (gPyTypeMap) {
-            PyObject* tc = PyDict_GetItemString(gPyTypeMap, resolved.c_str()); // borrowed
-            if (tc && PyCallable_Check(tc)) {
-                PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName.c_str());
-                if (nt) {
-                    if (parent) {
-                        AddScopeToParent(parent, name, nt);
-                        Py_DECREF(parent);
-                    }
-                    return nt;
-                }
-                PyErr_Clear();
-            }
-        }
-
-    // all options have been exhausted: it doesn't exist as such
-        PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ class", lookup.c_str());
-        Py_XDECREF(parent);
+    if (Cppyy::NewIsEnum(scope))
         return nullptr;
-    }
 
-// locate class by ID, if possible, to prevent parsing scopes/templates anew
-    PyObject* pyscope = GetScopeProxy(klass);
+    // locate class by ID, if possible, to prevent parsing scopes/templates anew
+    PyObject* pyscope = GetScopeProxy(scope);
     if (pyscope) {
         if (parent) {
             AddScopeToParent(parent, name, pyscope);
@@ -616,104 +721,38 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
         return pyscope;
     }
 
-// now have a class ... get the actual, fully scoped class name, so that typedef'ed
-// classes are created in the right place
-    const std::string& actual = Cppyy::GetScopedFinalName(klass);
-    if (actual != lookup) {
-        pyscope = CreateScopeProxy(actual);
-        if (!pyscope) PyErr_Clear();
-    }
-
-// locate the parent, if necessary, for memoizing the class if not specified
-    std::string::size_type last = 0;
-    if (!parent) {
-    // TODO: move this to TypeManip, which already has something similar in
-    // the form of 'extract_namespace'
-    // need to deal with template parameters that can have scopes themselves
-        int tpl_open = 0;
-        for (std::string::size_type pos = 0; pos < name.size(); ++pos) {
-            std::string::value_type c = name[pos];
-
-        // count '<' and '>' to be able to skip template contents
-            if (c == '<')
-                ++tpl_open;
-            else if (c == '>')
-                --tpl_open;
-
-      // by only checking for "::" the last part (class name) is dropped
-            else if (tpl_open == 0 && \
-                c == ':' && pos+1 < name.size() && name[ pos+1 ] == ':') {
-            // found a new scope part
-                const std::string& part = name.substr(last, pos-last);
-
-                PyObject* next = PyObject_GetAttrString(
-                    parent ? parent : gThisModule, const_cast<char*>(part.c_str()));
-
-                if (!next) {            // lookup failed, try to create it
-                    PyErr_Clear();
-                    next = CreateScopeProxy(part, parent);
-                }
-                Py_XDECREF(parent);
-
-                if (!next)              // create failed, give up
-                    return nullptr;
-
-            // found scope part
-                parent = next;
-
-            // done with part (note that pos is moved one ahead here)
-                last = pos+2; ++pos;
-            }
-        }
-
-        if (parent && !CPPScope_Check(parent)) {
-        // Special case: parent found is not one of ours (it's e.g. a pure Python module), so
-        // continuing would fail badly. One final lookup, then out of here ...
-            std::string unscoped = name.substr(last, std::string::npos);
-            PyObject* ret = PyObject_GetAttrString(parent, unscoped.c_str());
-            Py_DECREF(parent);
-            return ret;
-        }
-    }
-
-// use the module as a fake scope if no outer scope found
-    if (!parent) {
-        Py_INCREF(gThisModule);
-        parent = gThisModule;
-    }
-
-// if the scope was earlier found as actual, then we're done already, otherwise
-// build a new scope proxy
+    // if the scope was earlier found as actual, then we're done already, otherwise
+    // build a new scope proxy
     if (!pyscope) {
-    // construct the base classes
-        PyObject* pybases = BuildCppClassBases(klass);
+        // construct the base classes
+        PyObject* pybases = BuildCppClassBases(scope);
         if (pybases != 0) {
         // create a fresh Python class, given bases, name, and empty dictionary
-            pyscope = CreateNewCppProxyClass(klass, pybases);
+            pyscope = CreateNewCppProxyClass(scope, pybases);
             Py_DECREF(pybases);
         }
 
-    // fill the dictionary, if successful
-        if (pyscope) {
-            if (BuildScopeProxyDict(klass, pyscope, flags)) {
-            // something failed in building the dictionary
-                Py_DECREF(pyscope);
-                pyscope = nullptr;
-            }
-        }
+        // fill the dictionary, if successful
+        // if (pyscope) {
+        //     if (BuildScopeProxyDict(scope, pyscope, flags)) {
+        //     // something failed in building the dictionary
+        //         Py_DECREF(pyscope);
+        //         pyscope = nullptr;
+        //     }
+        // }
 
-    // store a ref from cppyy scope id to new python class
+        // store a ref from cppyy scope id to new python class
         if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {
-            gPyClasses[klass] = PyWeakref_NewRef(pyscope, nullptr);
+            gPyClasses[scope] = PyWeakref_NewRef(pyscope, nullptr);
 
             if (!(((CPPScope*)pyscope)->fFlags & CPPScope::kIsNamespace)) {
-            // add python-style features to classes only
-                if (!Pythonize(pyscope, Cppyy::GetScopedFinalName(klass))) {
+                // add python-style features to classes only
+                if (!Pythonize(pyscope, Cppyy::NewGetScopedFinalName(scope))) {
                     Py_DECREF(pyscope);
                     pyscope = nullptr;
                 }
             } else {
-            // add to sys.modules to allow importing from this namespace
+                // add to sys.modules to allow importing from this namespace
                 PyObject* pyfullname = PyObject_GetAttr(pyscope, PyStrings::gModule);
                 CPyCppyy_PyText_AppendAndDel(&pyfullname, CPyCppyy_PyText_FromString("."));
                 CPyCppyy_PyText_AppendAndDel(&pyfullname, PyObject_GetAttr(pyscope, PyStrings::gName));
@@ -725,15 +764,15 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
         }
     }
 
-// store on parent if found/created and complete
-    if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete))
+    // store on parent if found/created and complete
+    if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {
         AddScopeToParent(parent, name, pyscope);
+    }
     Py_DECREF(parent);
 
-// all done
+    // all done
     return pyscope;
 }
-
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyObject* parent)
@@ -744,7 +783,7 @@ PyObject* CPyCppyy::CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyO
 // derives from Pythons Exception class
 
 // start with creation of CPPExcInstance type base classes
-    std::deque<std::string> uqb;
+    std::deque<Cppyy::TCppScope_t> uqb;
     CollectUniqueBases(((CPPScope*)pyscope)->fCppType, uqb);
     size_t nbases = uqb.size();
 
@@ -766,19 +805,18 @@ PyObject* CPyCppyy::CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyO
     } else {
         PyObject* best_base = nullptr;
 
-        for (std::deque<std::string>::size_type ibase = 0; ibase < nbases; ++ibase) {
+        for (std::deque<Cppyy::TCppScope_t>::size_type ibase = 0; ibase < nbases; ++ibase) {
         // retrieve bases through their enclosing scope to guarantee treatment as
         // exception classes and proper caching
-            const std::string& finalname = Cppyy::GetScopedFinalName(Cppyy::GetScope(uqb[ibase]));
-            const std::string& parentname = TypeManip::extract_namespace(finalname);
-            PyObject* base_parent = CreateScopeProxy(parentname);
+            Cppyy::TCppScope_t parent_scope = Cppyy::NewGetParentScope(uqb[ibase]);
+            PyObject* base_parent = CreateScopeProxy(parent_scope);
             if (!base_parent) {
                 Py_DECREF(pybases);
                 return nullptr;
             }
 
             PyObject* excbase = PyObject_GetAttrString(base_parent,
-                parentname.empty() ? finalname.c_str() : finalname.substr(parentname.size()+2, std::string::npos).c_str());
+                Cppyy::NewGetFinalName(uqb[ibase]).c_str());
             Py_DECREF(base_parent);
             if (!excbase) {
                 Py_DECREF(pybases);
@@ -788,7 +826,8 @@ PyObject* CPyCppyy::CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyO
             if (PyType_IsSubtype((PyTypeObject*)excbase, &CPPExcInstance_Type)) {
                 Py_XDECREF(best_base);
                 best_base = excbase;
-                if (finalname != "std::exception")
+
+                if (Cppyy::NewGetScopedFinalName(uqb[ibase]) != "std::exception")
                     break;
             } else {
             // just skip: there will be at least one exception derived base class

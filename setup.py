@@ -51,7 +51,7 @@ def get_cflags():
 #
 class my_build_extension(_build_ext):
     def build_extension(self, ext):
-        ext.extra_compile_args += ['-O2']+get_cflags().split()
+        ext.extra_compile_args += ['-g']+get_cflags().split()
         if ('linux' in sys.platform) or ('darwin' in sys.platform):
             if 'clang' in self.compiler.compiler_cxx[0]:
                 ext.extra_compile_args += \

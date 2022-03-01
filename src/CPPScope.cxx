@@ -105,15 +105,16 @@ static PyObject* meta_getmodule(CPPScope* scope, void*)
         return CPyCppyy_PyText_FromString(scope->fModuleName);
 
 // get C++ representation of outer scope
-    std::string modname =
-        TypeManip::extract_namespace(Cppyy::GetScopedFinalName(scope->fCppType));
-    if (modname.empty())
+    // std::string modname =
+    //     TypeManip::extract_namespace(Cppyy::NewGetScopedFinalName(scope->fCppType));
+    Cppyy::TCppScope_t parent_scope = Cppyy::NewGetParentScope(scope->fCppType);
+    if (parent_scope == Cppyy::NewGetGlobalScope())
         return CPyCppyy_PyText_FromString(const_cast<char*>("cppyy.gbl"));
 
 // now peel scopes one by one, pulling in the python naming (which will
 // simply recurse if not overridden in python)
     PyObject* pymodule = nullptr;
-    PyObject* pyscope = CPyCppyy::GetScopeProxy(Cppyy::GetScope(modname));
+    PyObject* pyscope = CPyCppyy::GetScopeProxy(parent_scope);
     if (pyscope) {
     // get the module of our module
         pymodule = PyObject_GetAttr(pyscope, PyStrings::gModule);
@@ -133,6 +134,7 @@ static PyObject* meta_getmodule(CPPScope* scope, void*)
     PyErr_Clear();
 
 // lookup through python failed, so simply cook up a '::' -> '.' replacement
+    std::string modname = Cppyy::NewGetScopedFinalName(parent_scope);
     TypeManip::cppscope_to_pyscope(modname);
     return CPyCppyy_PyText_FromString(("cppyy.gbl."+modname).c_str());
 }
@@ -204,7 +206,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
 // creation of the python-side class; extend the size if this is a smart ptr
     Cppyy::TCppType_t raw{0}; Cppyy::TCppMethod_t deref{0};
     if (CPPScope_CheckExact(subtype)) {
-        if (Cppyy::GetSmartPtrInfo(Cppyy::GetScopedFinalName(((CPPScope*)subtype)->fCppType), &raw, &deref))
+        if (Cppyy::GetSmartPtrInfo(Cppyy::NewGetScopedFinalName(((CPPScope*)subtype)->fCppType), &raw, &deref))
             subtype->tp_basicsize = sizeof(CPPSmartClass);
     }
 
@@ -273,9 +275,9 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
         return (PyObject*)result;
 
 // maps for using namespaces and tracking objects
-    if (!Cppyy::IsNamespace(result->fCppType)) {
+    if (!Cppyy::NewIsNamespace(result->fCppType)) {
         static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("std::exception");
-        if (Cppyy::IsSubtype(result->fCppType, exc_type))
+        if (Cppyy::NewIsSubclass(result->fCppType, exc_type))
             result->fFlags |= CPPScope::kIsException;
         if (!(result->fFlags & CPPScope::kIsPython))
             result->fImp.fCppObjects = new CppToPyMap_t;
@@ -310,6 +312,10 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
     if (pyclass == (PyObject*)&CPPInstance_Type)
         return attr;
 
+    std::string name = CPyCppyy_PyText_AsString(pyname);
+    std::string type = Cppyy::NewGetScopedFinalName(((CPPScope *)pyclass)->fCppType);
+    printf("MGA: Name: %s \tType: %s\n", name.c_str(), type.c_str());
+
     PyObject* possibly_shadowed = nullptr;
     if (attr) {
         if (CPPScope_Check(attr) && CPPScope_Check(pyclass) && !(((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace)) {
@@ -337,7 +343,9 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         return possibly_shadowed;
 
 // filter for python specials
-    std::string name = CPyCppyy_PyText_AsString(pyname);
+    // std::string name = CPyCppyy_PyText_AsString(pyname);
+    // std::string type = Cppyy::GetScopedFinalName(((CPPScope *)pyclass)->fCppType);
+    // printf("MGA: Name: %s \tType: %s\n", name.c_str(), type.c_str());
     if (name.size() >= 5 && name.compare(0, 2, "__") == 0 &&
             name.compare(name.size()-2, name.size(), "__") == 0)
         return possibly_shadowed;
@@ -362,14 +370,13 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
     // are available as "methods" even though they're not really that
         if (klass->fFlags & CPPScope::kIsNamespace) {
         // tickle lazy lookup of functions
-            const std::vector<Cppyy::TCppIndex_t> methods =
-                Cppyy::GetMethodIndicesFromName(scope, name);
+            const std::vector<Cppyy::TCppScope_t> methods =
+                Cppyy::NewGetMethodsFromName(scope, name);
             if (!methods.empty()) {
             // function exists, now collect overloads
                 std::vector<PyCallable*> overloads;
-                for (auto idx : methods) {
-                    overloads.push_back(
-                        new CPPFunction(scope, Cppyy::GetMethod(scope, idx)));
+                for (auto method : methods) {
+                    overloads.push_back(new CPPFunction(scope, method));
                 }
 
             // Note: can't re-use Utility::AddClass here, as there's the risk of
@@ -534,8 +541,7 @@ static int meta_setattro(PyObject* pyclass, PyObject* pyname, PyObject* pyval)
     // skip if the given pyval is a descriptor already, or an unassignable class
         if (!CPyCppyy::CPPDataMember_Check(pyval) && !CPyCppyy::CPPScope_Check(pyval)) {
             std::string name = CPyCppyy_PyText_AsString(pyname);
-            Cppyy::TCppIndex_t dmi = Cppyy::GetDatamemberIndex(((CPPScope*)pyclass)->fCppType, name);
-            if (dmi != (Cppyy::TCppIndex_t)-1)
+            if (Cppyy::NewCheckDatamember(((CPPScope*)pyclass)->fCppType, name))
                 meta_getattro(pyclass, pyname);       // triggers creation
         }
     }

@@ -62,6 +62,14 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t GetScope(const std::string& scope_name);
     CPPYY_IMPORT
+    TCppScope_t NewGetScope(const std::string& name, TCppScope_t parent_scope = 0);
+    CPPYY_IMPORT
+    TCppScope_t NewGetParentScope(TCppScope_t scope);
+    CPPYY_IMPORT
+    TCppScope_t NewGetScopeFromType(TCppScope_t type);
+    CPPYY_IMPORT
+    TCppScope_t NewGetGlobalScope();
+    CPPYY_IMPORT
     TCppType_t  GetActualClass(TCppType_t klass, TCppObject_t obj);
     CPPYY_IMPORT
     size_t      SizeOf(TCppType_t klass);
@@ -137,9 +145,17 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsTemplate(const std::string& template_name);
     CPPYY_IMPORT
+    bool NewIsNamespace(TCppScope_t scope);
+    CPPYY_IMPORT
+    bool NewIsTemplate(TCppScope_t handle);
+    CPPYY_IMPORT
     bool IsAbstract(TCppType_t type);
     CPPYY_IMPORT
+    bool NewIsAbstract(TCppType_t type);
+    CPPYY_IMPORT
     bool IsEnum(const std::string& type_name);
+    CPPYY_IMPORT
+    bool NewIsEnum(TCppScope_t handle);
     CPPYY_IMPORT
     bool IsAggregate(TCppType_t type);
     CPPYY_IMPORT
@@ -156,17 +172,27 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetFinalName(TCppType_t type);
     CPPYY_IMPORT
+    std::string NewGetFinalName(TCppType_t type);
+    CPPYY_IMPORT
     std::string GetScopedFinalName(TCppType_t type);
+    CPPYY_IMPORT
+    std::string NewGetScopedFinalName(TCppType_t type);
     CPPYY_IMPORT
     bool        HasVirtualDestructor(TCppType_t type);
     CPPYY_IMPORT
     bool        HasComplexHierarchy(TCppType_t type);
     CPPYY_IMPORT
+    TCppIndex_t NewGetNumBases(TCppType_t type);
+    CPPYY_IMPORT
     TCppIndex_t GetNumBases(TCppType_t type);
     CPPYY_IMPORT
     std::string GetBaseName(TCppType_t type, TCppIndex_t ibase);
     CPPYY_IMPORT
+    TCppScope_t NewGetBaseScope(TCppType_t type, TCppIndex_t ibase);
+    CPPYY_IMPORT
     bool        IsSubtype(TCppType_t derived, TCppType_t base);
+    CPPYY_IMPORT
+    bool        NewIsSubclass(TCppType_t derived, TCppType_t base);
     CPPYY_IMPORT
     bool        IsSmartPtr(TCppType_t type);
     CPPYY_IMPORT
@@ -187,6 +213,8 @@ namespace Cppyy {
     TCppIndex_t GetNumMethods(TCppScope_t scope, bool accept_namespace = false);
     CPPYY_IMPORT
     std::vector<TCppIndex_t> GetMethodIndicesFromName(TCppScope_t scope, const std::string& name);
+    CPPYY_IMPORT
+    std::vector<TCppScope_t> NewGetMethodsFromName(TCppScope_t scope, const std::string& name);
 
     CPPYY_IMPORT
     TCppMethod_t GetMethod(TCppScope_t scope, TCppIndex_t imeth);
@@ -257,6 +285,8 @@ namespace Cppyy {
     intptr_t    GetDatamemberOffset(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
     TCppIndex_t GetDatamemberIndex(TCppScope_t scope, const std::string& name);
+    CPPYY_IMPORT
+    bool NewCheckDatamember(TCppScope_t scope, const std::string& name);
 
 // data member properties ----------------------------------------------------
     CPPYY_IMPORT
