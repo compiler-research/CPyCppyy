@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <iostream>
 
 
 namespace CPyCppyy {
@@ -180,7 +181,7 @@ static PyObject* meta_repr(CPPScope* scope)
 
 // printing of C++ classes
     PyObject* modname = meta_getmodule(scope, nullptr);
-    std::string clName = Cppyy::GetFinalName(scope->fCppType);
+    std::string clName = Cppyy::NewGetFinalName(scope->fCppType);
     const char* kind = (scope->fFlags & CPPScope::kIsNamespace) ? "namespace" : "class";
 
     PyObject* repr = CPyCppyy_PyText_FromFormat("<%s %s.%s at %p>",
@@ -276,7 +277,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
 
 // maps for using namespaces and tracking objects
     if (!Cppyy::NewIsNamespace(result->fCppType)) {
-        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("std::exception");
+        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::NewGetScope("exception", Cppyy::NewGetScope("std"));
         if (Cppyy::NewIsSubclass(result->fCppType, exc_type))
             result->fFlags |= CPPScope::kIsException;
         if (!(result->fFlags & CPPScope::kIsPython))
@@ -368,7 +369,8 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
     // namespaces may have seen updates in their list of global functions, which
     // are available as "methods" even though they're not really that
-        if (klass->fFlags & CPPScope::kIsNamespace) {
+        if ((klass->fFlags & CPPScope::kIsNamespace) || 
+                scope == Cppyy::NewGetGlobalScope()) {
         // tickle lazy lookup of functions
             const std::vector<Cppyy::TCppScope_t> methods =
                 Cppyy::NewGetMethodsFromName(scope, name);
@@ -382,7 +384,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
             // Note: can't re-use Utility::AddClass here, as there's the risk of
             // a recursive call. Simply add method directly, as we're guaranteed
             // that it doesn't exist yet.
-                if (Cppyy::ExistsMethodTemplate(scope, name))
+                if (Cppyy::NewExistsMethodTemplate(scope, name))
                     attr = add_template(pyclass, name, &overloads);
                 else
                     attr = (PyObject*)CPPOverload_New(name, overloads);
@@ -391,35 +393,38 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
         // tickle lazy lookup of data members
             if (!attr) {
-                Cppyy::TCppIndex_t dmi = Cppyy::GetDatamemberIndex(scope, name);
-                if (dmi != (Cppyy::TCppIndex_t)-1) attr = (PyObject*)CPPDataMember_New(scope, dmi);
-            }
-        }
-
-    // this may be a typedef that resolves to a sugared type
-        if (!attr) {
-            const std::string& lookup = Cppyy::GetScopedFinalName(klass->fCppType) + "::" + name;
-            const std::string& resolved = Cppyy::ResolveName(lookup);
-            if (resolved != lookup) {
-                const std::string& cpd = TypeManip::compound(resolved);
-                if (cpd == "*") {
-                    const std::string& clean = TypeManip::clean_type(resolved, false, true);
-                    Cppyy::TCppType_t tcl = Cppyy::GetScope(clean);
-                    if (tcl) {
-                        typedefpointertoclassobject* tpc =
-                            PyObject_GC_New(typedefpointertoclassobject, &TypedefPointerToClass_Type);
-                        tpc->fCppType = tcl;
-                        tpc->fDict = PyDict_New();
-                        attr = (PyObject*)tpc;
-                    }
+                Cppyy::TCppScope_t var = Cppyy::NewGetNamed(name, scope);
+                if (Cppyy::NewIsVariable(var)) {
+                    printf("%x\n", var);
+                    attr = (PyObject*)CPPDataMember_New(scope, var);
                 }
             }
         }
 
+    // this may be a typedef that resolves to a sugared type
+        // if (!attr) {
+        //     const std::string& lookup = Cppyy::NewGetScopedFinalName(klass->fCppType) + "::" + name;
+        //     // XXX: What to do here? const std::string& resolved = Cppyy::ResolveName(lookup);
+        //     if (resolved != lookup) {
+        //         const std::string& cpd = TypeManip::compound(resolved);
+        //         if (cpd == "*") {
+        //             const std::string& clean = TypeManip::clean_type(resolved, false, true);
+        //             Cppyy::TCppType_t tcl = Cppyy::NewGetScope(clean);
+        //             if (tcl) {
+        //                 typedefpointertoclassobject* tpc =
+        //                     PyObject_GC_New(typedefpointertoclassobject, &TypedefPointerToClass_Type);
+        //                 tpc->fCppType = tcl;
+        //                 tpc->fDict = PyDict_New();
+        //                 attr = (PyObject*)tpc;
+        //             }
+        //         }
+        //     }
+        // }
+
     // function templates that have not been instantiated (namespaces _may_ have already
     // been taken care of, by their general function lookup above)
         if (!attr && !templated_functions_checked) {
-            if (Cppyy::ExistsMethodTemplate(scope, name))
+            if (Cppyy::NewExistsMethodTemplate(scope, name))
                 attr = add_template(pyclass, name);
             else {
             // for completeness in error reporting
@@ -431,8 +436,8 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
     // enums types requested as type (rather than the constants)
         if (!attr) {
         // TODO: IsEnum should deal with the scope, using klass->GetListOfEnums()->FindObject()
-            const std::string& ename = scope == Cppyy::gGlobalScope ? name : Cppyy::GetScopedFinalName(scope)+"::"+name;
-            if (Cppyy::IsEnum(ename)) {
+            Cppyy::TCppScope_t enumerator = Cppyy::NewGetNamed(name, scope);
+            if (Cppyy::NewIsEnum(enumerator)) {
             // enum types (incl. named and class enums)
                 attr = (PyObject*)CPPEnum_New(name, scope);
             } else {
@@ -445,11 +450,18 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if (attr) {
         // cache the result
             if (CPPDataMember_Check(attr)) {
-                PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
+                int i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
+                PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW); 
+                std::cerr << std::endl<< i <<std::endl; 
+                if (PyErr_Occurred()) {
+                    printf("\n\n\n==============HERE===========\n\n");
+                }
                 Py_DECREF(attr);
                 attr = PyType_Type.tp_getattro(pyclass, pyname);
-                if (!attr && PyErr_Occurred())
-                    Utility::FetchError(errors);
+                if (!attr && PyErr_Occurred()) {
+                    // Utility::FetchError(errors);
+                    PyErr_Print();
+                }
             } else
                 PyType_Type.tp_setattro(pyclass, pyname, attr);
 

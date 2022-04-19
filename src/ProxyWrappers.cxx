@@ -667,8 +667,6 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
     // }
 
 // use the module as a fake scope if no outer scope found
-    if (!parent) {
-    }
 
     return CreateScopeProxy(klass, parent, flags);
 }

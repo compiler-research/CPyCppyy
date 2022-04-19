@@ -311,52 +311,56 @@ PyTypeObject CPPDataMember_Type = {
 
 
 //- public members -----------------------------------------------------------
-void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppIndex_t idata)
+void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t idata)
 {
     fEnclosingScope = scope;
-    fOffset         = Cppyy::GetDatamemberOffset(scope, idata); // TODO: make lazy
-    fFlags          = Cppyy::IsStaticData(scope, idata) ? kIsStaticData : 0;
+    fScope          = idata;
+    fOffset         = Cppyy::NewGetDatamemberOffset(scope, idata); // XXX: Check back here // TODO: make lazy
+    fFlags          = Cppyy::NewIsStaticDatamember(idata) ? kIsStaticData : 0;
 
-    std::vector<dim_t> dims;
+    printf("%d\n", fFlags);
+
+    // std::vector<dim_t> dims;
     int ndim = 0; Py_ssize_t size = 0;
-    while (0 < (size = Cppyy::GetDimensionSize(scope, idata, ndim))) {
-         ndim += 1;
-         if (size == INT_MAX)      // meaning: incomplete array type
-             size = UNKNOWN_SIZE;
-         if (ndim == 1) dims.reserve(4);
-         dims.push_back((dim_t)size);
-    }
-    if (!dims.empty())
-        fFlags |= kIsArrayType;
+    // while (0 < (size = Cppyy::GetDimensionSize(scope, idata, ndim))) {
+    //      ndim += 1;
+    //      if (size == INT_MAX)      // meaning: incomplete array type
+    //          size = UNKNOWN_SIZE;
+    //      if (ndim == 1) dims.reserve(4);
+    //      dims.push_back((dim_t)size);
+    // }
+    // if (!dims.empty())
+    //     fFlags |= kIsArrayType;
 
-    const std::string name = Cppyy::GetDatamemberName(scope, idata);
-    fFullType = Cppyy::GetDatamemberType(scope, idata);
-    if (Cppyy::IsEnumData(scope, idata)) {
-        if (fFullType.find("(anonymous)") == std::string::npos) {
-        // repurpose fDescription for lazy lookup of the enum later
-            fDescription = CPyCppyy_PyText_FromString((fFullType + "::" + name).c_str());
-            fFlags |= kIsEnumPrep;
-        }
-        fFullType = Cppyy::ResolveEnum(fFullType);
-        fFlags |= kIsConstData;
-    } else if (Cppyy::IsConstData(scope, idata)) {
+    const std::string name = Cppyy::NewGetFinalName(idata);
+    // fFullType = Cppyy::GetDatamemberType(scope, idata);
+    // if (Cppyy::IsEnumData(scope, idata)) {
+    //     if (fFullType.find("(anonymous)") == std::string::npos) {
+    //     // repurpose fDescription for lazy lookup of the enum later
+    //         fDescription = CPyCppyy_PyText_FromString((fFullType + "::" + name).c_str());
+    //         fFlags |= kIsEnumPrep;
+    //     }
+    //     fFullType = Cppyy::ResolveEnum(fFullType);
+    //     fFlags |= kIsConstData;
+    // } else
+    if (Cppyy::NewIsConstVar(idata)) {
         fFlags |= kIsConstData;
     }
 
 // if this data member is an array, the conversion needs to be pointer to object for instances,
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
 // builtins are not declared as such if more than 1-dim (TODO: fix in clingwrapper)
-    if (!dims.empty() && fFullType.back() != '*') {
-        if (Cppyy::GetScope(fFullType)) fFullType += '*';
-        else if (fFullType.back() != ']') {
-            for (auto d: dims) fFullType += d == UNKNOWN_SIZE ? "*" : "[]";
-        }
-    }
+    // if (!dims.empty() && fFullType.back() != '*') {
+    //     if (Cppyy::GetScope(fFullType)) fFullType += '*';
+    //     else if (fFullType.back() != ']') {
+    //         for (auto d: dims) fFullType += d == UNKNOWN_SIZE ? "*" : "[]";
+    //     }
+    // }
 
-    if (dims.empty())
-        fConverter = CreateConverter(fFullType);
-    else
-        fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
+    // if (dims.empty())
+    //     fConverter = CreateConverter(fFullType);
+    // else
+    //     fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
 
     if (!(fFlags & kIsEnumPrep))
         fDescription = CPyCppyy_PyText_FromString(name.c_str());

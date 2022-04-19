@@ -64,6 +64,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t NewGetScope(const std::string& name, TCppScope_t parent_scope = 0);
     CPPYY_IMPORT
+    TCppScope_t NewGetNamed(const std::string& name, TCppScope_t parent_scope = 0);
+    CPPYY_IMPORT
     TCppScope_t NewGetParentScope(TCppScope_t scope);
     CPPYY_IMPORT
     TCppScope_t NewGetScopeFromType(TCppScope_t type);
@@ -159,7 +161,11 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsAggregate(TCppType_t type);
     CPPYY_IMPORT
+    bool NewIsAggregate(TCppType_t type);
+    CPPYY_IMPORT
     bool IsDefaultConstructable(TCppType_t type);
+    CPPYY_IMPORT
+    bool NewIsVariable(TCppScope_t scope);
 
     CPPYY_IMPORT
     void GetAllCppNames(TCppScope_t scope, std::set<std::string>& cppnames);
@@ -253,6 +259,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool        ExistsMethodTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
+    bool        NewExistsMethodTemplate(TCppScope_t scope, const std::string& name);
+    CPPYY_IMPORT
     bool        IsMethodTemplate(TCppScope_t scope, TCppIndex_t imeth);
     CPPYY_IMPORT
     TCppMethod_t GetMethodTemplate(
@@ -284,6 +292,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     intptr_t    GetDatamemberOffset(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
+    intptr_t    NewGetDatamemberOffset(TCppScope_t scope, TCppScope_t idata);
+    CPPYY_IMPORT
     TCppIndex_t GetDatamemberIndex(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
     bool NewCheckDatamember(TCppScope_t scope, const std::string& name);
@@ -296,7 +306,11 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsStaticData(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
+    bool NewIsStaticDatamember(TCppScope_t var);
+    CPPYY_IMPORT
     bool IsConstData(TCppScope_t scope, TCppIndex_t idata);
+    CPPYY_IMPORT
+    bool NewIsConstVar(TCppScope_t var);
     CPPYY_IMPORT
     bool IsEnumData(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
