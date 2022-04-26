@@ -333,6 +333,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
     //     fFlags |= kIsArrayType;
 
     const std::string name = Cppyy::NewGetFinalName(idata);
+    const std::string type = Cppyy::NewGetDatamemberTypeAsString(idata);
     // fFullType = Cppyy::GetDatamemberType(scope, idata);
     // if (Cppyy::IsEnumData(scope, idata)) {
     //     if (fFullType.find("(anonymous)") == std::string::npos) {
@@ -347,6 +348,8 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
         fFlags |= kIsConstData;
     }
 
+    printf("Type => %s\n", type.c_str());
+
 // if this data member is an array, the conversion needs to be pointer to object for instances,
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
 // builtins are not declared as such if more than 1-dim (TODO: fix in clingwrapper)
@@ -358,12 +361,11 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
     // }
 
     // if (dims.empty())
-    //     fConverter = CreateConverter(fFullType);
+    fConverter = CreateConverter(type);
     // else
     //     fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
 
-    if (!(fFlags & kIsEnumPrep))
-        fDescription = CPyCppyy_PyText_FromString(name.c_str());
+    fDescription = CPyCppyy_PyText_FromString(name.c_str());
 }
 
 //-----------------------------------------------------------------------------

@@ -290,6 +290,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetDatamemberType(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
+    std::string NewGetDatamemberTypeAsString(TCppScope_t scope);
+    CPPYY_IMPORT
     intptr_t    GetDatamemberOffset(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
     intptr_t    NewGetDatamemberOffset(TCppScope_t scope, TCppScope_t idata);
