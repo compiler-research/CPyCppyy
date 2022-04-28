@@ -318,8 +318,6 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
     fOffset         = Cppyy::NewGetDatamemberOffset(scope, idata); // XXX: Check back here // TODO: make lazy
     fFlags          = Cppyy::NewIsStaticDatamember(idata) ? kIsStaticData : 0;
 
-    printf("%d\n", fFlags);
-
     // std::vector<dim_t> dims;
     int ndim = 0; Py_ssize_t size = 0;
     // while (0 < (size = Cppyy::GetDimensionSize(scope, idata, ndim))) {
@@ -354,14 +352,14 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
 // builtins are not declared as such if more than 1-dim (TODO: fix in clingwrapper)
     // if (!dims.empty() && fFullType.back() != '*') {
-    //     if (Cppyy::GetScope(fFullType)) fFullType += '*';
+    //     if (Cppyy::NewGetScope(fFullType)) fFullType += '*';
     //     else if (fFullType.back() != ']') {
     //         for (auto d: dims) fFullType += d == UNKNOWN_SIZE ? "*" : "[]";
     //     }
     // }
 
     // if (dims.empty())
-    fConverter = CreateConverter(type);
+    fConverter = CreateConverter(type, 0, Cppyy::NewGetTypeScope(idata));
     // else
     //     fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
 

@@ -231,7 +231,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
     if (!CPPScope_CheckExact(subtype) || !strstr(subtype->tp_name, "_meta") /* convention */) {
     // there has been a user meta class override in a derived class, so do
     // the consistent thing, thus allowing user control over naming
-        result->fCppType = Cppyy::GetScope(
+        result->fCppType = Cppyy::NewGetScope(
             CPyCppyy_PyText_AsString(PyTuple_GET_ITEM(args, 0)));
     } else {
     // coming here from cppyy or from sub-classing in python; take the
@@ -395,7 +395,6 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
             if (!attr) {
                 Cppyy::TCppScope_t var = Cppyy::NewGetNamed(name, scope);
                 if (Cppyy::NewIsVariable(var)) {
-                    printf("%x\n", var);
                     attr = (PyObject*)CPPDataMember_New(scope, var);
                 }
             }
@@ -452,10 +451,6 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
             if (CPPDataMember_Check(attr)) {
                 int i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
                 PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW); 
-                std::cerr << std::endl<< i <<std::endl; 
-                if (PyErr_Occurred()) {
-                    printf("\n\n\n==============HERE===========\n\n");
-                }
                 Py_DECREF(attr);
                 attr = PyType_Type.tp_getattro(pyclass, pyname);
                 if (!attr && PyErr_Occurred()) {

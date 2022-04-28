@@ -123,7 +123,7 @@ public:
 };
 
 // create a converter based on its full type name and dimensions
-CPYCPPYY_EXTERN Converter* CreateConverter(const std::string& name, cdims_t = 0);
+CPYCPPYY_EXTERN Converter* CreateConverter(const std::string& name, cdims_t = 0, Cppyy::TCppScope_t = 0);
 
 // delete a previously created converter
 CPYCPPYY_EXTERN void DestroyConverter(Converter* p);

@@ -126,7 +126,7 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteFast(
         result = nullptr;           // error already set
     } catch (std::exception& e) {
     // attempt to set the exception to the actual type, to allow catching with the Python C++ type
-        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("std::exception");
+        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::NewGetScope("std::exception");
 
         ctxt->fFlags |= CallContext::kCppException;
 
@@ -482,7 +482,7 @@ int CPyCppyy::CPPMethod::GetPriority()
 
         // prefer more derived classes
             const std::string& clean_name = TypeManip::clean_type(aname, false);
-            Cppyy::TCppScope_t scope = Cppyy::GetScope(clean_name);
+            Cppyy::TCppScope_t scope = Cppyy::NewGetScope(clean_name);
             if (scope)
                 priority += (int)Cppyy::GetNumBases(scope);
 

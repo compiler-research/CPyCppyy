@@ -549,7 +549,7 @@ static PyObject* vector_iter(PyObject* v) {
 
         if (CPyCppyy_PyText_Check(pyvalue_type)) {
             std::string value_type = CPyCppyy_PyText_AsString(pyvalue_type);
-            vi->vi_klass = Cppyy::GetScope(value_type);
+            vi->vi_klass = Cppyy::NewGetScope(value_type);
             if (vi->vi_klass) {
                 vi->vi_converter = nullptr;
                 if (!vi->vi_flags) {
@@ -1603,7 +1603,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
                 Cppyy::TCppMethod_t meth = Cppyy::GetMethod(klass->fCppType, v[0]);
                 const std::string& resname = Cppyy::GetMethodResultType(meth);
                 bool isIterator = gIteratorTypes.find(resname) != gIteratorTypes.end();
-                if (!isIterator && Cppyy::GetScope(resname)) {
+                if (!isIterator && Cppyy::NewGetScope(resname)) {
                     if (resname.find("iterator") == std::string::npos)
                         gIteratorTypes.insert(resname);
                     isIterator = true;
@@ -1716,7 +1716,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
                     if ((!cpd.empty() && cpd.back() == '*') || Cppyy::IsBuiltin(res_clean))
                         arg_defaults.push_back("0");
                     else {
-                        Cppyy::TCppScope_t klsid = Cppyy::GetScope(res_clean);
+                        Cppyy::TCppScope_t klsid = Cppyy::NewGetScope(res_clean);
                         if (Cppyy::IsDefaultConstructable(klsid)) arg_defaults.push_back(res_clean+"{}");
                     }
                 } else {
@@ -1739,7 +1739,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
                 initdef << "};\n} }";
 
                 if (Cppyy::Compile(initdef.str(), true /* silent */)) {
-                    Cppyy::TCppScope_t cis = Cppyy::GetScope("__cppyy_internal");
+                    Cppyy::TCppScope_t cis = Cppyy::NewGetScope("__cppyy_internal");
                     const auto& mix = Cppyy::GetMethodIndicesFromName(cis, "init_"+rname);
                     if (mix.size()) {
                         if (!Utility::AddToClass(pyclass, "__init__",
@@ -1757,7 +1757,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
     if (IsTemplatedSTLClass(name, "vector")) {
 
     // std::vector<bool> is a special case in C++
-        if (!sVectorBoolTypeID) sVectorBoolTypeID = (Cppyy::TCppType_t)Cppyy::GetScope("std::vector<bool>");
+        if (!sVectorBoolTypeID) sVectorBoolTypeID = (Cppyy::TCppType_t)Cppyy::NewGetScope("std::vector<bool>");
         if (klass->fCppType == sVectorBoolTypeID) {
             Utility::AddToClass(pyclass, "__getitem__", (PyCFunction)VectorBoolGetItem, METH_O);
             Utility::AddToClass(pyclass, "__setitem__", (PyCFunction)VectorBoolSetItem);

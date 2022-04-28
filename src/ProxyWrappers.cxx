@@ -682,7 +682,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     if (!parent) {
         Cppyy::TCppScope_t parent_scope = Cppyy::NewGetParentScope(scope);
         if (parent_scope)
-            parent = CreateScopeProxy(scope);
+            parent = CreateScopeProxy(parent_scope);
         else {
             Py_INCREF(gThisModule);
             parent = gThisModule;

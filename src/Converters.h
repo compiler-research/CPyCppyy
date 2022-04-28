@@ -25,7 +25,7 @@ public:
 };
 
 // create/destroy converter from fully qualified type (public API)
-CPYCPPYY_EXPORT Converter* CreateConverter(const std::string& fullType, cdims_t dims = 0);
+CPYCPPYY_EXPORT Converter* CreateConverter(const std::string& fullType, cdims_t dims = 0, Cppyy::TCppScope_t type = 0);
 CPYCPPYY_EXPORT void DestroyConverter(Converter* p);
 typedef Converter* (*cf_t)(cdims_t d);
 CPYCPPYY_EXPORT bool RegisterConverter(const std::string& name, cf_t fac);

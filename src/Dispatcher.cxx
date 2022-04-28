@@ -334,7 +334,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
         if (PyDict_Size(clbs)) {
             size_t nbases = Cppyy::GetNumBases(binfo.btype);
             for (size_t ibase = 0; ibase < nbases; ++ibase) {
-                Cppyy::TCppScope_t tbase = (Cppyy::TCppScope_t)Cppyy::GetScope( \
+                Cppyy::TCppScope_t tbase = (Cppyy::TCppScope_t)Cppyy::NewGetScope( \
                     Cppyy::GetBaseName(binfo.btype, ibase));
 
                 PyObject* keys = PyDict_Keys(clbs);
@@ -440,7 +440,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
 // keep track internally of the actual C++ type (this is used in
 // CPPConstructor to call the dispatcher's one instead of the base)
-    Cppyy::TCppScope_t disp = Cppyy::GetScope("__cppyy_internal::"+derivedName);
+    Cppyy::TCppScope_t disp = Cppyy::NewGetScope("__cppyy_internal::"+derivedName);
     if (!disp) {
         err << "failed to retrieve the internal dispatcher";
         return false;

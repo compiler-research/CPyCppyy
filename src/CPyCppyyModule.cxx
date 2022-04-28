@@ -617,7 +617,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
         Py_INCREF(arg1);
 
     if (!cast_type && arg1) {
-        cast_type = (Cppyy::TCppType_t)Cppyy::GetScope(CPyCppyy_PyText_AsString(arg1));
+        cast_type = (Cppyy::TCppType_t)Cppyy::NewGetScope(CPyCppyy_PyText_AsString(arg1));
         Py_DECREF(arg1);
     }
 

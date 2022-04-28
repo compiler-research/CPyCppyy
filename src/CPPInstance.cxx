@@ -652,7 +652,7 @@ static Py_hash_t op_hash(CPPInstance* self)
         return h;
     }
 
-    Cppyy::TCppScope_t stdhash = Cppyy::GetScope("std::hash<"+Cppyy::GetScopedFinalName(self->ObjectIsA())+">");
+    Cppyy::TCppScope_t stdhash = Cppyy::NewGetScope("std::hash<"+Cppyy::GetScopedFinalName(self->ObjectIsA())+">");
     if (stdhash) {
         PyObject* hashcls = CreateScopeProxy(stdhash);
         PyObject* dct = PyObject_GetAttr(hashcls, PyStrings::gDict);
@@ -683,7 +683,7 @@ static Py_hash_t op_hash(CPPInstance* self)
 //----------------------------------------------------------------------------
 static PyObject* op_str_internal(PyObject* pyobj, PyObject* lshift, bool isBound)
 {
-    static Cppyy::TCppScope_t sOStringStreamID = Cppyy::GetScope("std::ostringstream");
+    static Cppyy::TCppScope_t sOStringStreamID = Cppyy::NewGetScope("std::ostringstream");
     std::ostringstream s;
     PyObject* pys = BindCppObjectNoCast(&s, sOStringStreamID);
     Py_INCREF(pys);
@@ -743,7 +743,7 @@ static PyObject* op_str(CPPInstance* self)
             else if (pyname == (PyObject*)0x01) {
             // normal lookup failed; attempt lazy install of global operator<<(ostream&, type&)
                 std::string rcname = Utility::ClassName((PyObject*)self);
-                Cppyy::TCppScope_t rnsID = Cppyy::GetScope(TypeManip::extract_namespace(rcname));
+                Cppyy::TCppScope_t rnsID = Cppyy::NewGetScope(TypeManip::extract_namespace(rcname));
                 PyCallable* pyfunc = Utility::FindBinaryOperator("std::ostream", rcname, "<<", rnsID);
                 if (!pyfunc)
                      continue;
