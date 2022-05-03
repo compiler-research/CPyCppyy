@@ -220,6 +220,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppIndex_t GetNumMethods(TCppScope_t scope, bool accept_namespace = false);
     CPPYY_IMPORT
+    std::vector<TCppMethod_t> NewGetClassMethods(TCppScope_t scope);
+    CPPYY_IMPORT
     std::vector<TCppIndex_t> GetMethodIndicesFromName(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
     std::vector<TCppScope_t> NewGetMethodsFromName(TCppScope_t scope, const std::string& name);
@@ -230,19 +232,31 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetMethodName(TCppMethod_t);
     CPPYY_IMPORT
+    std::string NewGetMethodName(TCppMethod_t);
+    CPPYY_IMPORT
     std::string GetMethodFullName(TCppMethod_t);
+    CPPYY_IMPORT
+    std::string NewGetMethodFullName(TCppMethod_t);
     CPPYY_IMPORT
     std::string GetMethodMangledName(TCppMethod_t);
     CPPYY_IMPORT
     std::string GetMethodResultType(TCppMethod_t);
     CPPYY_IMPORT
+    std::string NewGetMethodReturnTypeAsString(TCppMethod_t);
+    CPPYY_IMPORT
     TCppIndex_t GetMethodNumArgs(TCppMethod_t);
     CPPYY_IMPORT
+    TCppIndex_t NewGetMethodNumArgs(TCppMethod_t);
+    CPPYY_IMPORT
     TCppIndex_t GetMethodReqArgs(TCppMethod_t);
+    CPPYY_IMPORT
+    TCppIndex_t NewGetMethodReqArgs(TCppMethod_t);
     CPPYY_IMPORT
     std::string GetMethodArgName(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodArgType(TCppMethod_t, TCppIndex_t iarg);
+    CPPYY_IMPORT
+    std::string NewGetMethodArgTypeAsString(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodArgDefault(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
@@ -265,6 +279,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool        IsMethodTemplate(TCppScope_t scope, TCppIndex_t imeth);
     CPPYY_IMPORT
+    bool        NewIsTemplatedMethod(TCppMethod_t method);
+    CPPYY_IMPORT
     TCppMethod_t GetMethodTemplate(
         TCppScope_t scope, const std::string& name, const std::string& proto);
 
@@ -283,10 +299,22 @@ namespace Cppyy {
     bool IsDestructor(TCppMethod_t method);
     CPPYY_IMPORT
     bool IsStaticMethod(TCppMethod_t method);
+    CPPYY_IMPORT
+    bool NewIsPublicMethod(TCppMethod_t method);
+    CPPYY_IMPORT
+    bool NewIsProtectedMethod(TCppMethod_t method);
+    CPPYY_IMPORT
+    bool NewIsConstructor(TCppMethod_t method);
+    CPPYY_IMPORT
+    bool NewIsDestructor(TCppMethod_t method);
+    CPPYY_IMPORT
+    bool NewIsStaticMethod(TCppMethod_t method);
 
 // data member reflection information ----------------------------------------
     CPPYY_IMPORT
     TCppIndex_t GetNumDatamembers(TCppScope_t scope, bool accept_namespace = false);
+    CPPYY_IMPORT
+    std::vector<TCppScope_t> NewGetDatamembers(TCppScope_t scope);
     CPPYY_IMPORT
     std::string GetDatamemberName(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
@@ -306,7 +334,11 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsPublicData(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
+    bool NewIsPublicData(TCppScope_t data);
+    CPPYY_IMPORT
     bool IsProtectedData(TCppScope_t scope, TCppIndex_t idata);
+    CPPYY_IMPORT
+    bool NewIsProtectedData(TCppScope_t data);
     CPPYY_IMPORT
     bool IsStaticData(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT

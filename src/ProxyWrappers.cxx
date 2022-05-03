@@ -174,21 +174,20 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
 // functions in namespaces are properly found through lazy lookup, so do not
 // create them until needed (the same is not true for data members)
-    const Cppyy::TCppIndex_t nMethods = isNamespace ? 0 : Cppyy::GetNumMethods(scope);
-    for (Cppyy::TCppIndex_t imeth = 0; imeth < nMethods; ++imeth) {
-        Cppyy::TCppMethod_t method = Cppyy::GetMethod(scope, imeth);
+    std::vector<Cppyy::TCppMethod_t> methods = Cppyy::NewGetClassMethods(scope);
+    for (auto &method : methods) {
 
     // do not expose non-public methods as the Cling wrappers as those won't compile
-        if (!Cppyy::IsPublicMethod(method))
+        if (!Cppyy::NewIsPublicMethod(method))
             continue;
 
     // process the method based on its name
-        std::string mtCppName = Cppyy::GetMethodName(method);
+        std::string mtCppName = Cppyy::NewGetMethodName(method);
 
     // special case trackers
         bool setupSetItem = false;
-        bool isConstructor = Cppyy::IsConstructor(method);
-        bool isTemplate = isConstructor ? false : Cppyy::IsMethodTemplate(scope, imeth);
+        bool isConstructor = Cppyy::NewIsConstructor(method);
+        bool isTemplate = isConstructor ? false : Cppyy::NewIsTemplatedMethod(method);
         bool isStubbedOperator = false;
 
     // filter empty names (happens for namespaces, is bug?)
@@ -201,20 +200,20 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
     // translate operators
         std::string mtName = Utility::MapOperatorName(
-            mtCppName, Cppyy::GetMethodNumArgs(method), &isStubbedOperator);
+            mtCppName, Cppyy::NewGetMethodNumArgs(method), &isStubbedOperator);
         if (mtName.empty())
             continue;
 
     // operator[]/() returning a reference type will be used for __setitem__
         bool isCall = mtName == "__call__";
         if (isCall || mtName == "__getitem__") {
-            const std::string& qual_return = Cppyy::ResolveName(Cppyy::GetMethodResultType(method));
+            const std::string& qual_return = Cppyy::NewGetMethodReturnTypeAsString(method);
             const std::string& cpd = TypeManip::compound(qual_return);
             if (!cpd.empty() && cpd[cpd.size()-1] == '&' && \
                     qual_return.find("const", 0, 5) == std::string::npos) {
                 if (isCall && !potGetItem) potGetItem = method;
                 setupSetItem = true;     // will add methods as overloads
-            } else if (isCall && 1 < Cppyy::GetMethodNumArgs(method)) {
+            } else if (isCall && 1 < Cppyy::NewGetMethodNumArgs(method)) {
             // not a non-const by-ref return, thus better __getitem__ candidate; the
             // requirement for multiple arguments is that there is otherwise no benefit
             // over the use of normal __getitem__ (this allows multi-indexing arguments,
@@ -225,7 +224,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
     // template members; handled by adding a dispatcher to the class
         bool storeOnTemplate =
-            isTemplate ? true : (!isConstructor && Cppyy::ExistsMethodTemplate(scope, mtCppName));
+            isTemplate ? true : (!isConstructor && Cppyy::NewExistsMethodTemplate(scope, mtCppName));
         if (storeOnTemplate) {
             sync_templates(pyclass, mtCppName, mtName);
         // continue processing to actually add the method so that the proxy can find
@@ -234,7 +233,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
     // construct the holder
         PyCallable* pycall = nullptr;
-        if (Cppyy::IsStaticMethod(method))  // class method
+        if (Cppyy::NewIsStaticMethod(method))  // class method
             pycall = new CPPClassMethod(scope, method);
         else if (isNamespace)               // free function
             pycall = new CPPFunction(scope, method);
@@ -293,25 +292,25 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     }
 
 // add proxies for un-instantiated/non-overloaded templated methods
-    const Cppyy::TCppIndex_t nTemplMethods = isNamespace ? 0 : Cppyy::GetNumTemplatedMethods(scope);
-    for (Cppyy::TCppIndex_t imeth = 0; imeth < nTemplMethods; ++imeth) {
-        const std::string mtCppName = Cppyy::GetTemplatedMethodName(scope, imeth);
-    // the number of arguments isn't known until instantiation and as far as C++ is concerned, all
-    // same-named operators are simply overloads; so will pre-emptively add both names if with and
-    // without arguments differ, letting the normal overload mechanism resolve on call
-        bool isConstructor = Cppyy::IsTemplatedConstructor(scope, imeth);
-
-    // first add with no arguments
-        std::string mtName0 = isConstructor ? "__init__" : Utility::MapOperatorName(mtCppName, false);
-        sync_templates(pyclass, mtCppName, mtName0);
-
-    // then add when taking arguments, if this method is different
-        if (!isConstructor) {
-            std::string mtName1 = Utility::MapOperatorName(mtCppName, true);
-            if (mtName0 != mtName1)
-                sync_templates(pyclass, mtCppName, mtName1);
-        }
-    }
+    // const Cppyy::TCppIndex_t nTemplMethods = isNamespace ? 0 : Cppyy::GetNumTemplatedMethods(scope);
+    // for (Cppyy::TCppIndex_t imeth = 0; imeth < nTemplMethods; ++imeth) {
+    //     const std::string mtCppName = Cppyy::GetTemplatedMethodName(scope, imeth);
+    // // the number of arguments isn't known until instantiation and as far as C++ is concerned, all
+    // // same-named operators are simply overloads; so will pre-emptively add both names if with and
+    // // without arguments differ, letting the normal overload mechanism resolve on call
+    //     bool isConstructor = Cppyy::IsTemplatedConstructor(scope, imeth);
+    //
+    // // first add with no arguments
+    //     std::string mtName0 = isConstructor ? "__init__" : Utility::MapOperatorName(mtCppName, false);
+    //     sync_templates(pyclass, mtCppName, mtName0);
+    //
+    // // then add when taking arguments, if this method is different
+    //     if (!isConstructor) {
+    //         std::string mtName1 = Utility::MapOperatorName(mtCppName, true);
+    //         if (mtName0 != mtName1)
+    //             sync_templates(pyclass, mtCppName, mtName1);
+    //     }
+    // }
 
 // add a pseudo-default ctor, if none defined
     if (!hasConstructor) {
@@ -320,10 +319,10 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
             defctor = new CPPAbstractClassConstructor(scope, (Cppyy::TCppMethod_t)0);
         else if (isNamespace)
             defctor = new CPPNamespaceConstructor(scope, (Cppyy::TCppMethod_t)0);
-        else if (!Cppyy::IsComplete(Cppyy::GetScopedFinalName(scope))) {
-            ((CPPScope*)pyclass)->fFlags |= CPPScope::kIsInComplete;
-            defctor = new CPPIncompleteClassConstructor(scope, (Cppyy::TCppMethod_t)0);
-        } else
+        // else if (!Cppyy::IsComplete(Cppyy::GetScopedFinalName(scope))) {
+        //     ((CPPScope*)pyclass)->fFlags |= CPPScope::kIsInComplete;
+        //     defctor = new CPPIncompleteClassConstructor(scope, (Cppyy::TCppMethod_t)0);
+        else
             defctor = new CPPAllPrivateClassConstructor(scope, (Cppyy::TCppMethod_t)0);
         cache["__init__"].push_back(defctor);
     }
@@ -363,39 +362,39 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     Py_DECREF(dct);
 
  // collect data members (including enums)
-    const Cppyy::TCppIndex_t nDataMembers = Cppyy::GetNumDatamembers(scope);
-    for (Cppyy::TCppIndex_t idata = 0; idata < nDataMembers; ++idata) {
+    std::vector<Cppyy::TCppScope_t> datamembers = Cppyy::NewGetDatamembers(scope);
+    for (auto &datamember : datamembers) {
     // allow only public members
-        if (!Cppyy::IsPublicData(scope, idata))
+        if (!Cppyy::NewIsPublicData(datamember))
             continue;
 
     // enum datamembers (this in conjunction with previously collected enums above)
-        if (Cppyy::IsEnumData(scope, idata) && Cppyy::IsStaticData(scope, idata)) {
-        // some implementation-specific data members have no address: ignore them
-            if (!Cppyy::GetDatamemberOffset(scope, idata))
-                continue;
-
-        // two options: this is a static variable, or it is the enum value, the latter
-        // already exists, so check for it and move on if set
-            PyObject* eset = PyObject_GetAttrString(pyclass,
-                const_cast<char*>(Cppyy::GetDatamemberName(scope, idata).c_str()));
-            if (eset) {
-                Py_DECREF(eset);
-                continue;
-            }
-
-            PyErr_Clear();
-
-        // it could still be that this is an anonymous enum, which is not in the list
-        // provided by the class
-            if (strstr(Cppyy::GetDatamemberType(scope, idata).c_str(), "(anonymous)") != 0) {
-                AddPropertyToClass(pyclass, scope, idata);
-                continue;
-            }
-        }
+        // if (Cppyy::IsEnumData(scope, idata) && Cppyy::IsStaticData(scope, idata)) {
+        // // some implementation-specific data members have no address: ignore them
+        //     if (!Cppyy::GetDatamemberOffset(scope, idata))
+        //         continue;
+        //
+        // // two options: this is a static variable, or it is the enum value, the latter
+        // // already exists, so check for it and move on if set
+        //     PyObject* eset = PyObject_GetAttrString(pyclass,
+        //         const_cast<char*>(Cppyy::GetDatamemberName(scope, idata).c_str()));
+        //     if (eset) {
+        //         Py_DECREF(eset);
+        //         continue;
+        //     }
+        //
+        //     PyErr_Clear();
+        //
+        // // it could still be that this is an anonymous enum, which is not in the list
+        // // provided by the class
+        //     if (strstr(Cppyy::GetDatamemberType(scope, idata).c_str(), "(anonymous)") != 0) {
+        //         AddPropertyToClass(pyclass, scope, idata);
+        //         continue;
+        //     }
+        // }
 
     // properties (aka public (static) data members)
-        AddPropertyToClass(pyclass, scope, idata);
+        AddPropertyToClass(pyclass, scope, datamember);
     }
 
 // restore custom __getattr__
@@ -731,13 +730,13 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         }
 
         // fill the dictionary, if successful
-        // if (pyscope) {
-        //     if (BuildScopeProxyDict(scope, pyscope, flags)) {
-        //     // something failed in building the dictionary
-        //         Py_DECREF(pyscope);
-        //         pyscope = nullptr;
-        //     }
-        // }
+        if (pyscope) {
+            if (BuildScopeProxyDict(scope, pyscope, flags)) {
+            // something failed in building the dictionary
+                Py_DECREF(pyscope);
+                pyscope = nullptr;
+            }
+        }
 
         // store a ref from cppyy scope id to new python class
         if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {

@@ -232,12 +232,12 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteProtected(
 bool CPyCppyy::CPPMethod::InitConverters_()
 {
 // build buffers for argument dispatching
-    const size_t nArgs = Cppyy::GetMethodNumArgs(fMethod);
+    const size_t nArgs = Cppyy::NewGetMethodNumArgs(fMethod);
     fConverters.resize(nArgs);
 
 // setup the dispatch cache
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
-        const std::string& fullType = Cppyy::GetMethodArgType(fMethod, iarg);
+        const std::string& fullType = Cppyy::NewGetMethodArgTypeAsString(fMethod, iarg);
         Converter* conv = CreateConverter(fullType);
         if (!conv) {
             PyErr_Format(PyExc_TypeError, "argument type %s not handled", fullType.c_str());
@@ -255,8 +255,8 @@ bool CPyCppyy::CPPMethod::InitExecutor_(Executor*& executor, CallContext* /* ctx
 {
 // install executor conform to the return type
     executor = CreateExecutor(
-        (bool)fMethod == true ? Cppyy::GetMethodResultType(fMethod) \
-                              : Cppyy::GetScopedFinalName(fScope));
+        (bool)fMethod == true ? Cppyy::NewGetMethodReturnTypeAsString(fMethod) \
+                              : Cppyy::NewGetScopedFinalName(fScope));
 
     if (!executor)
         return false;
@@ -506,7 +506,7 @@ int CPyCppyy::CPPMethod::GetPriority()
 
 // prefer methods w/o optional arguments b/c ones with optional arguments are easier to
 // select by providing the optional arguments explicitly
-    priority += ((int)Cppyy::GetMethodReqArgs(fMethod) - (int)nArgs);
+    priority += ((int)Cppyy::NewGetMethodReqArgs(fMethod) - (int)nArgs);
 
 // add a small penalty to prefer non-const methods over const ones for get/setitem
     if (Cppyy::IsConstMethod(fMethod) && Cppyy::GetMethodName(fMethod) == "operator[]")
@@ -522,11 +522,11 @@ bool CPyCppyy::CPPMethod::IsGreedy()
 // instanstations, so that they don't greedily take over pointers to object.
 // GetPriority() is too heavy-handed, as it will pull in all the argument
 // types, so use this cheaper check.
-    const size_t nArgs = Cppyy::GetMethodReqArgs(fMethod);
+    const size_t nArgs = Cppyy::NewGetMethodReqArgs(fMethod);
     if (!nArgs) return false;
 
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
-        const std::string aname = Cppyy::GetMethodArgType(fMethod, iarg);
+        const std::string aname = Cppyy::NewGetMethodArgTypeAsString(fMethod, iarg);
         if (aname.find("void*") != 0)
             return false;
     }
@@ -667,7 +667,7 @@ bool CPyCppyy::CPPMethod::Initialize(CallContext* ctxt)
         return false;
 
 // minimum number of arguments when calling
-    fArgsRequired = (int)((bool)fMethod == true ? Cppyy::GetMethodReqArgs(fMethod) : 0);
+    fArgsRequired = (int)((bool)fMethod == true ? Cppyy::NewGetMethodReqArgs(fMethod) : 0);
 
     return true;
 }
