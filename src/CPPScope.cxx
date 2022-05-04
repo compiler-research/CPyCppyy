@@ -467,7 +467,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
     if (!attr && (klass->fFlags & CPPScope::kIsNamespace)) {
     // refresh using list as necessary
-        const std::vector<Cppyy::TCppScope_t>& uv = Cppyy::GetUsingNamespaces(klass->fCppType);
+        const std::vector<Cppyy::TCppScope_t>& uv = Cppyy::NewGetUsingNamespaces(klass->fCppType);
         if (!klass->fImp.fUsing || uv.size() != klass->fImp.fUsing->size()) {
             if (klass->fImp.fUsing) {
                 for (auto pyref : *klass->fImp.fUsing) Py_DECREF(pyref);
@@ -477,7 +477,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
         // reload and reset weak refs
             for (auto uid : uv) {
-                std::string uname = Cppyy::GetScopedFinalName(uid);
+                std::string uname = Cppyy::NewGetScopedFinalName(uid);
                 PyObject* pyuscope = CreateScopeProxy(uname);
                 if (pyuscope) {
                     klass->fImp.fUsing->push_back(PyWeakref_NewRef(pyuscope, nullptr));

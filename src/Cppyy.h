@@ -175,6 +175,8 @@ namespace Cppyy {
 // namespace reflection information ------------------------------------------
     CPPYY_IMPORT
     std::vector<TCppScope_t> GetUsingNamespaces(TCppScope_t);
+    CPPYY_IMPORT
+    std::vector<TCppScope_t> NewGetUsingNamespaces(TCppScope_t);
 
 // class reflection information ----------------------------------------------
     CPPYY_IMPORT
