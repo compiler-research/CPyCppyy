@@ -2910,22 +2910,31 @@ static inline CPyCppyy::Converter* selectInstanceCnv(Cppyy::TCppScope_t klass,
     using namespace CPyCppyy;
     Converter* result = nullptr;
 
-    if (cpd == "**" || cpd == "*[]" || cpd == "&*")
+    if (cpd == "**" || cpd == "*[]" || cpd == "&*") {
+        printf("\t\t1\n");
         result = new InstancePtrPtrConverter<false>(klass, control);
-    else if (cpd == "*&")
+    } else if (cpd == "*&") {
+        printf("\t\t2\n");
         result = new InstancePtrPtrConverter<true>(klass, control);
-    else if (cpd == "*" && dims.ndim() == UNKNOWN_SIZE) {
+    } else if (cpd == "*" && dims.ndim() == UNKNOWN_SIZE) {
+        printf("\t\t3\n"); {
         if (isConst) result = new InstancePtrConverter<true>(klass);
         else result = new InstancePtrConverter<false>(klass, control);
+        printf("\t%p\n", result);
     }
-    else if (cpd == "&")
+    } else if (cpd == "&") {
+        printf("\t\t4\n");
         result = new InstanceRefConverter(klass, isConst);
-    else if (cpd == "&&")
+    } else if (cpd == "&&") {
+        printf("\t\t5\n");
         result = new InstanceMoveConverter(klass);
-    else if (cpd == "[]" || dims)
+    } else if (cpd == "[]" || dims) {
+        printf("\t\t6\n");
         result = new InstanceArrayConverter(klass, dims, false);
-    else if (cpd == "")             // by value
+    } else if (cpd == "") {            // by value
+        printf("\t\t7\n");
         result = new InstanceConverter(klass, true);
+    }
 
     return result;
 }
@@ -2934,7 +2943,6 @@ static inline CPyCppyy::Converter* selectInstanceCnv(Cppyy::TCppScope_t klass,
 CPYCPPYY_EXPORT
 CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdims_t dims, Cppyy::TCppScope_t klass)
 {
-    printf("%s\n", fullType.c_str());
 // The matching of the fulltype to a converter factory goes through up to five levels:
 //   1) full, exact match
 //   2) match of decorated, unqualified type
@@ -2967,11 +2975,9 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gConvFactories.find((isConst ? "const " : "") + realType + cpd);
-    printf("here1\n");
     if (h != gConvFactories.end())
         return (h->second)(dims);
 
-    printf("here2\n");
 // drop const, as that is mostly meaningless to python (with the exception
 // of c-strings, but those are specialized in the converter map)
     if (isConst) {
@@ -2981,7 +2987,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
     }
 
 //-- still nothing? try pointer instead of array (for builtins)
-    printf("here3\n");
     if (cpd.compare(0, 3, "*[]") == 0) {
     // special case, array of pointers
         h = gConvFactories.find(realType + " ptr");
@@ -3019,7 +3024,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
     }
 
 //-- special case: initializer list
-    printf("here4\n");
     if (realType.compare(0, 21, "std::initializer_list") == 0) {
     // get the type of the list and create a converter (TODO: get hold of value_type?)
         auto pos = realType.find('<');
@@ -3045,7 +3049,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
 //-- special case: std::function
     auto pos = resolvedType.find("std::function<");
-    printf("here5\n");
     if (pos == 0 /* std:: */ || pos == 6 /* const std:: */ ) {
 
     // get actual converter for normal passing
@@ -3069,12 +3072,9 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
 // converters for known C++ classes and default (void*)
     Converter* result = nullptr;
-    printf("here6 %p\n", Cppyy::NewGetScope("TSystem", Cppyy::NewGetScope("CppyyLegacy")));
     if (klass || (klass = Cppyy::NewGetScope(realType))) {
-        printf("h6r1\n");
         Cppyy::TCppType_t raw{0};
         if (Cppyy::GetSmartPtrInfo(realType, &raw, nullptr)) {
-        printf("h6r2\n");
             if (cpd == "") {
                 result = new SmartPtrConverter(klass, raw, control);
             } else if (cpd == "&") {
@@ -3084,9 +3084,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
             }
         }
 
-        printf("h6r3\n");
         if (!result) {
-        printf("h6r4\n");
         // CLING WORKAROUND -- special case for STL iterators
             if (realType.rfind("__gnu_cxx::__normal_iterator", 0) /* vector */ == 0
 #ifdef __APPLE__
@@ -3094,13 +3092,11 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 #endif
                 // TODO: Windows?
                ) {
-        printf("h6r5\n");
                 static STLIteratorConverter c;
                 result = &c;
             } else
        // -- CLING WORKAROUND
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
-        printf("h6r7\n");
         }
     } else {
         std::smatch sm;
@@ -3113,7 +3109,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         }
     }
 
-    printf("here7\n");
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
         h = gConvFactories.find("const " + realType + "&");
@@ -3123,7 +3118,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         result = new NotImplementedConverter();
     }
 
-    printf("here8\n");
     if (!result && h != gConvFactories.end())
     // converter factory available, use it to create converter
         result = (h->second)(dims);
@@ -3137,7 +3131,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
             result = new NotImplementedConverter();   // fails on use
     }
 
-    printf("here9\n");
     return result;
 }
 

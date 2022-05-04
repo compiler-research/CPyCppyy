@@ -449,10 +449,14 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if (attr) {
         // cache the result
             if (CPPDataMember_Check(attr)) {
+                    printf(" attr => %p\n", attr);
+                    auto attr2 = attr;
                 int i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
-                PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW); 
+                // PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW);
                 Py_DECREF(attr);
                 attr = PyType_Type.tp_getattro(pyclass, pyname);
+                    printf("       2. attr => %p -> %p\n", attr2, attr);
+
                 if (!attr && PyErr_Occurred()) {
                     // Utility::FetchError(errors);
                     PyErr_Print();
