@@ -268,7 +268,7 @@ bool CPyCppyy::CPPMethod::InitExecutor_(Executor*& executor, CallContext* /* ctx
 std::string CPyCppyy::CPPMethod::GetSignatureString(bool fa)
 {
 // built a signature representation (used for doc strings)
-    return Cppyy::GetMethodSignature(fMethod, fa);
+    return Cppyy::NewGetMethodSignature(fMethod, fa);
 }
 
 //----------------------------------------------------------------------------
@@ -372,10 +372,10 @@ CPyCppyy::CPPMethod::~CPPMethod()
 PyObject* CPyCppyy::CPPMethod::GetPrototype(bool fa)
 {
 // construct python string from the method's prototype
-    return CPyCppyy_PyText_FromFormat("%s%s %s::%s%s",
-        (Cppyy::IsStaticMethod(fMethod) ? "static " : ""),
-        Cppyy::GetMethodResultType(fMethod).c_str(),
-        Cppyy::GetScopedFinalName(fScope).c_str(), Cppyy::GetMethodName(fMethod).c_str(),
+    return CPyCppyy_PyText_FromFormat("%s%s %s%s",
+        (Cppyy::NewIsStaticMethod(fMethod) ? "static " : ""),
+        Cppyy::NewGetMethodReturnTypeAsString(fMethod).c_str(),
+        Cppyy::NewGetScopedFinalName(fMethod).c_str(),
         GetSignatureString(fa).c_str());
 }
 
@@ -435,9 +435,9 @@ int CPyCppyy::CPPMethod::GetPriority()
 
     int priority = 0;
 
-    const size_t nArgs = Cppyy::GetMethodNumArgs(fMethod);
+    const size_t nArgs = Cppyy::NewGetMethodNumArgs(fMethod);
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
-        const std::string aname = Cppyy::GetMethodArgType(fMethod, iarg);
+        const std::string aname = Cppyy::NewGetMethodArgTypeAsString(fMethod, iarg);
 
         if (Cppyy::IsBuiltin(aname)) {
         // complex type (note: double penalty: for complex and the template type)
@@ -484,7 +484,7 @@ int CPyCppyy::CPPMethod::GetPriority()
             const std::string& clean_name = TypeManip::clean_type(aname, false);
             Cppyy::TCppScope_t scope = Cppyy::NewGetScope(clean_name);
             if (scope)
-                priority += (int)Cppyy::GetNumBases(scope);
+                priority += (int)Cppyy::NewGetNumBases(scope);
 
             if (Cppyy::IsEnum(clean_name))
                 priority -= 100;

@@ -1813,6 +1813,7 @@ PyObject* CPyCppyy::name##Converter::FromMemory(void* address)               \
     if (address)                                                             \
         return InstanceConverter::FromMemory(address);                       \
     auto* empty = new type();                                                \
+    printf("name Converter\n");                                              \
     return BindCppObjectNoCast(empty, fClass, CPPInstance::kIsOwner);        \
 }                                                                            \
                                                                              \
@@ -2062,6 +2063,7 @@ PyObject* CPyCppyy::InstanceConverter::FromMemory(void* address)
 // here means callbacks receive down-casted object when passed by-ptr, which is
 // needed for object identity. The latter case is assumed to be more common than
 // conversion of (global) objects.
+    printf("Ins Converter\n");
     return BindCppObject((Cppyy::TCppObject_t)address, fClass);
 }
 
@@ -2140,6 +2142,7 @@ bool CPyCppyy::InstanceRefConverter::SetArg(
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::InstanceRefConverter::FromMemory(void* address)
 {
+    printf("inst conv\n");
     return BindCppObjectNoCast((Cppyy::TCppObject_t)address, fClass, CPPInstance::kIsReference);
 }
 
@@ -2781,7 +2784,7 @@ PyObject* CPyCppyy::SmartPtrConverter::FromMemory(void* address)
 {
     if (!address || !fSmartPtrType)
         return nullptr;
-
+    printf("SmartPtr Conv\n");
     return BindCppObjectNoCast(address, fSmartPtrType);
 }
 
@@ -3072,7 +3075,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
 // converters for known C++ classes and default (void*)
     Converter* result = nullptr;
-    if (klass || (klass = Cppyy::NewGetScope(realType))) {
+    if (klass || (klass = Cppyy::NewGetFullScope(realType))) {
         Cppyy::TCppType_t raw{0};
         if (Cppyy::GetSmartPtrInfo(realType, &raw, nullptr)) {
             if (cpd == "") {

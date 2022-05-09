@@ -453,6 +453,8 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                     auto attr2 = attr;
                 int i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
                 // PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW);
+                printf("%d\n", i);
+                if (PyErr_Occurred()) printf("ERRRRR\n");
                 Py_DECREF(attr);
                 attr = PyType_Type.tp_getattro(pyclass, pyname);
                     printf("       2. attr => %p -> %p\n", attr2, attr);

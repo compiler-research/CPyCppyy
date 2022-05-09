@@ -313,9 +313,11 @@ PyTypeObject CPPDataMember_Type = {
 //- public members -----------------------------------------------------------
 void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t idata)
 {
+    printf("Bruh\n");
     fEnclosingScope = scope;
     fScope          = idata;
     fOffset         = Cppyy::NewGetDatamemberOffset(scope, idata); // XXX: Check back here // TODO: make lazy
+    printf("  fOffset => %p\n", fOffset);
     fFlags          = Cppyy::NewIsStaticDatamember(idata) ? kIsStaticData : 0;
 
     // std::vector<dim_t> dims;
@@ -369,6 +371,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
 //-----------------------------------------------------------------------------
 void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, const std::string& name, void* address)
 {
+    printf("jort\n");
     fEnclosingScope = scope;
     fDescription    = CPyCppyy_PyText_FromString(name.c_str());
     fOffset         = (intptr_t)address;
