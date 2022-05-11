@@ -163,6 +163,8 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
+    printf("  %s\n", Cppyy::NewGetFinalName(scope).c_str());
+
 // load all public methods and data members
     typedef std::vector<PyCallable*> Callables_t;
     typedef std::map<std::string, Callables_t> CallableCache_t;
@@ -249,8 +251,10 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
                 pycall = new CPPAbstractClassConstructor(scope, method);
         } else if (isStubbedOperator) {
             pycall = new CPPOperator(scope, method, mtName);
-        } else                               // member function
+        } else {                             // member function
+            printf("\t%s\n", mtCppName.c_str());
             pycall = new CPPMethod(scope, method);
+        }
 
         if (storeOnTemplate) {
         // template proxy was already created in sync_templates call above, so

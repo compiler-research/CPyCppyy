@@ -64,6 +64,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t NewGetScope(const std::string& name, TCppScope_t parent_scope = 0);
     CPPYY_IMPORT
+    TCppScope_t NewGetFullScope(const std::string& name);
+    CPPYY_IMPORT
     TCppScope_t NewGetTypeScope(TCppScope_t klass);
     CPPYY_IMPORT
     TCppScope_t NewGetNamed(const std::string& name, TCppScope_t parent_scope = 0);
@@ -263,6 +265,8 @@ namespace Cppyy {
     std::string GetMethodArgDefault(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodSignature(TCppMethod_t, bool show_formalargs, TCppIndex_t maxargs = (TCppIndex_t)-1);
+    CPPYY_IMPORT
+    std::string NewGetMethodSignature(TCppMethod_t, bool show_formalargs, TCppIndex_t maxargs = (TCppIndex_t)-1);
     CPPYY_IMPORT
     std::string GetMethodPrototype(TCppScope_t scope, TCppMethod_t, bool show_formalargs);
     CPPYY_IMPORT
