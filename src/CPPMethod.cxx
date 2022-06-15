@@ -816,7 +816,7 @@ bool CPyCppyy::CPPMethod::ProcessArgs(PyCallArgs& cargs)
     // demand CPyCppyy object, and an argument that may match down the road
         if (CPPInstance_Check(pyobj)) {
             Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
-            if (fScope == Cppyy::gGlobalScope ||                // free global
+            if (fScope == Cppyy::NewGetGlobalScope() ||         // free global
                 oisa == 0 ||                                    // null pointer or ctor call
                 oisa == fScope ||                               // matching types
                 Cppyy::IsSubtype(oisa, fScope)) {               // id.

@@ -64,7 +64,7 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
             const std::string& enum_scope = TypeManip::extract_namespace(enum_type);
 
             PyObject* pyscope = nullptr;
-            if (enum_scope.empty()) pyscope = GetScopeProxy(Cppyy::gGlobalScope);
+            if (enum_scope.empty()) pyscope = GetScopeProxy(Cppyy::NewGetGlobalScope());
             else pyscope = CreateScopeProxy(enum_scope);
             if (pyscope) {
                 PyObject* pyEnumType = PyObject_GetAttrString(pyscope,

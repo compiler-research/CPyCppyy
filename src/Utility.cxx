@@ -335,8 +335,8 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
     if (scope)
         pyfunc = BuildOperator(lcname, rcname, op, scope, reverse);
 
-    if (!pyfunc && scope != Cppyy::gGlobalScope)      // search in global scope anyway
-        pyfunc = BuildOperator(lcname, rcname, op, Cppyy::gGlobalScope, reverse);
+    if (!pyfunc && scope != Cppyy::NewGetGlobalScope())// search in global scope anyway
+        pyfunc = BuildOperator(lcname, rcname, op, Cppyy::NewGetGlobalScope(), reverse);
 
     if (!pyfunc) {
     // For GNU on clang, search the internal __gnu_cxx namespace for binary operators (is
