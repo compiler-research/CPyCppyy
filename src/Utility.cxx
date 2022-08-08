@@ -286,7 +286,7 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindUnaryOperator(PyObject* pyclass, co
 
     CPPClass* klass = (CPPClass*)pyclass;
     const std::string& lcname = Cppyy::GetScopedFinalName(klass->fCppType);
-    Cppyy::TCppScope_t scope = Cppyy::NewGetScope(TypeManip::extract_namespace(lcname));
+    Cppyy::TCppScope_t scope = Cppyy::GetScope(TypeManip::extract_namespace(lcname));
     return FindBinaryOperator(lcname, "", op, scope, false);
 }
 
@@ -329,21 +329,21 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
         // TODO: the following should remain sync with what clingwrapper does in its
         // type remapper; there must be a better way?
         if (lcname == "str" || lcname == "unicode" || lcname == "complex")
-            scope = Cppyy::NewGetScope("std");
-        else scope = Cppyy::NewGetScope(TypeManip::extract_namespace(lcname));
+            scope = Cppyy::GetScope("std");
+        else scope = Cppyy::GetScope(TypeManip::extract_namespace(lcname));
     }
     if (scope)
         pyfunc = BuildOperator(lcname, rcname, op, scope, reverse);
 
-    if (!pyfunc && scope != Cppyy::NewGetGlobalScope())// search in global scope anyway
-        pyfunc = BuildOperator(lcname, rcname, op, Cppyy::NewGetGlobalScope(), reverse);
+    if (!pyfunc && scope != Cppyy::GetGlobalScope())// search in global scope anyway
+        pyfunc = BuildOperator(lcname, rcname, op, Cppyy::GetGlobalScope(), reverse);
 
     if (!pyfunc) {
     // For GNU on clang, search the internal __gnu_cxx namespace for binary operators (is
     // typically the case for STL iterators operator==/!=.
     // TODO: only look in __gnu_cxx for iterators (and more generally: do lookups in the
     //       namespace where the class is defined
-        static Cppyy::TCppScope_t gnucxx = Cppyy::NewGetScope("__gnu_cxx");
+        static Cppyy::TCppScope_t gnucxx = Cppyy::GetScope("__gnu_cxx");
         if (gnucxx)
             pyfunc = BuildOperator(lcname, rcname, op, gnucxx, reverse);
     }
@@ -351,7 +351,7 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
     if (!pyfunc) {
     // Same for clang (on Mac only?). TODO: find proper pre-processor magic to only use those
     // specific namespaces that are actually around; although to be sure, this isn't expensive.
-        static Cppyy::TCppScope_t std__1 = Cppyy::NewGetScope("std::__1");
+        static Cppyy::TCppScope_t std__1 = Cppyy::GetScope("std::__1");
 
         if (std__1
 #ifdef __APPLE__
@@ -366,7 +366,7 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
     // One more, mostly for Mac, but again not sure whether this is not a general issue. Some
     // operators are declared as friends only in classes, so then they're not found in the
     // global namespace, so this helper let's the compiler resolve the operator.
-        static Cppyy::TCppScope_t s_intern = Cppyy::NewGetScope("__cppyy_internal");
+        static Cppyy::TCppScope_t s_intern = Cppyy::GetScope("__cppyy_internal");
         if (s_intern) {
             std::stringstream fname, proto;
             if (strncmp(op, "==", 2) == 0) { fname << "is_equal<"; }
@@ -607,7 +607,7 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
 //----------------------------------------------------------------------------
 static inline bool check_scope(const std::string& name)
 {
-    return (bool)Cppyy::NewGetScope(CPyCppyy::TypeManip::clean_type(name));
+    return (bool)Cppyy::GetScope(CPyCppyy::TypeManip::clean_type(name));
 }
 
 void CPyCppyy::Utility::ConstructCallbackPreamble(const std::string& retType,

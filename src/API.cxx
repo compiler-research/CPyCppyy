@@ -123,7 +123,7 @@ PyObject* CPyCppyy::Instance_FromVoidPtr(
         return nullptr;
 
 // perform cast (the call will check TClass and addr, and set python errors)
-    PyObject* pyobject = BindCppObjectNoCast(addr, Cppyy::NewGetScope(classname), false);
+    PyObject* pyobject = BindCppObjectNoCast(addr, Cppyy::GetScope(classname), false);
 
 // give ownership, for ref-counting, to the python side, if so requested
     if (python_owns && CPPInstance_Check(pyobject))

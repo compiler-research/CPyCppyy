@@ -19,14 +19,14 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
     using namespace CPyCppyy;
 
 // method declaration
-    std::string retType = Cppyy::GetMethodResultType(method);
+    std::string retType = Cppyy::GetMethodReturnTypeAsString(method);
     code << "  " << retType << " " << mtCppName << "(";
 
 // build out the signature with predictable formal names
     Cppyy::TCppIndex_t nArgs = Cppyy::GetMethodNumArgs(method);
     std::vector<std::string> argtypes; argtypes.reserve(nArgs);
     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
-        argtypes.push_back(Cppyy::GetMethodArgType(method, i));
+        argtypes.push_back(Cppyy::GetMethodArgTypeAsString(method, i));
         if (i != 0) code << ", ";
         code << argtypes.back() << " arg" << i;
     }
@@ -111,7 +111,7 @@ static void build_constructors(
             for (size_t j = first; j < arg_tots[i]; ++j) {
                 if (j != first) code << ", ";
                 bool isRValue = CPyCppyy::TypeManip::compound(\
-                    Cppyy::GetMethodArgType(methods[i].first, j-first)) == "&&";
+                    Cppyy::GetMethodArgTypeAsString(methods[i].first, j-first)) == "&&";
                 if (isRValue) code << "std::move(";
                 code << "a" << j;
                 if (isRValue) code << ")";
@@ -127,11 +127,10 @@ namespace {
 using namespace Cppyy;
 
 static inline
-std::vector<TCppIndex_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
+std::vector<TCppMethod_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
 {
 // Recursively walk the inheritance tree to find the overloads of the named method
-    std::vector<TCppIndex_t> result;
-    result = GetMethodIndicesFromName(tbase, mtCppName);
+    auto result = GetMethodsFromName(tbase, mtCppName);
     if (result.empty()) {
         for (TCppIndex_t ibase = 0; ibase < GetNumBases(tbase); ++ibase) {
             TCppScope_t b = GetScope(GetBaseName(tbase, ibase));
@@ -253,18 +252,16 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
     for (BaseInfos_t::size_type ibase = 0; ibase < base_infos.size(); ++ibase) {
         const auto& binfo = base_infos[ibase];
 
-        const Cppyy::TCppIndex_t nMethods = Cppyy::GetNumMethods(binfo.btype);
+        std::vector<Cppyy::TCppMethod_t> methods = Cppyy::GetClassMethods(binfo.btype);
         bool cctor_found = false, default_found = false, any_ctor_found = false;
-        for (Cppyy::TCppIndex_t imeth = 0; imeth < nMethods; ++imeth) {
-            Cppyy::TCppMethod_t method = Cppyy::GetMethod(binfo.btype, imeth);
-
+        for (auto &method : methods) {
             if (Cppyy::IsConstructor(method)) {
                 any_ctor_found = true;
                 if (Cppyy::IsPublicMethod(method) || Cppyy::IsProtectedMethod(method)) {
                     Cppyy::TCppIndex_t nreq = Cppyy::GetMethodReqArgs(method);
                     if (nreq == 0) default_found = true;
                     else if (!cctor_found && nreq == 1) {
-                        const std::string& argtype = Cppyy::GetMethodArgType(method, 0);
+                        const std::string& argtype = Cppyy::GetMethodArgTypeAsString(method, 0);
                         if (TypeManip::compound(argtype) == "&" && TypeManip::clean_type(argtype, false) == binfo.bname_scoped)
                             cctor_found = true;
                     }
@@ -285,7 +282,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                 if (Cppyy::IsProtectedMethod(method)) {
                     protected_names.insert(mtCppName);
 
-                    code << "  " << Cppyy::GetMethodResultType(method) << " " << mtCppName << "(";
+                    code << "  " << Cppyy::GetMethodReturnTypeAsString(method) << " " << mtCppName << "(";
                     Cppyy::TCppIndex_t nArgs = Cppyy::GetMethodNumArgs(method);
                     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
                         if (i != 0) code << ", ";
@@ -334,7 +331,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
         if (PyDict_Size(clbs)) {
             size_t nbases = Cppyy::GetNumBases(binfo.btype);
             for (size_t ibase = 0; ibase < nbases; ++ibase) {
-                Cppyy::TCppScope_t tbase = (Cppyy::TCppScope_t)Cppyy::NewGetScope( \
+                Cppyy::TCppScope_t tbase = (Cppyy::TCppScope_t)Cppyy::GetScope( \
                     Cppyy::GetBaseName(binfo.btype, ibase));
 
                 PyObject* keys = PyDict_Keys(clbs);
@@ -342,10 +339,10 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                 // TODO: should probably invert this looping; but that makes handling overloads clunky
                     PyObject* key = PyList_GET_ITEM(keys, i);
                     std::string mtCppName = CPyCppyy_PyText_AsString(key);
-                    const auto& v = FindBaseMethod(tbase, mtCppName);
-                    for (auto idx : v)
-                        InjectMethod(Cppyy::GetMethod(tbase, idx), mtCppName, code);
-                    if (!v.empty()) {
+                    const auto& methods = FindBaseMethod(tbase, mtCppName);
+                    for (auto method : methods)
+                        InjectMethod(method, mtCppName, code);
+                    if (!methods.empty()) {
                         if (PyDict_DelItem(clbs, key) != 0) PyErr_Clear();
                     }
                 }
@@ -386,18 +383,17 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 // pull in data members that are protected
     bool setPublic = false;
     for (const auto& binfo : base_infos) {
-        Cppyy::TCppIndex_t nData = Cppyy::GetNumDatamembers(binfo.btype);
-        for (Cppyy::TCppIndex_t idata = 0; idata < nData; ++idata) {
-            if (Cppyy::IsProtectedData(binfo.btype, idata)) {
-                const std::string dm_name = Cppyy::GetDatamemberName(binfo.btype, idata);
+        std::vector<Cppyy::TCppScope_t> datamems = Cppyy::GetDatamembers(binfo.btype);
+        for (auto data : datamems) {
+            if (Cppyy::IsProtectedData(data)) {
+                const std::string dm_name = Cppyy::GetFinalName(data);
                 if (dm_name != "_internal_self") {
-                    const std::string& dname = Cppyy::GetDatamemberName(binfo.btype, idata);
-                    protected_names.insert(dname);
+                    protected_names.insert(dm_name);
                     if (!setPublic) {
                         code << "public:\n";
                         setPublic = true;
                     }
-                    code << "  using " << binfo.bname << "::" << dname << ";\n";
+                    code << "  using " << binfo.bname << "::" << dm_name << ";\n";
                 }
             }
         }
@@ -440,7 +436,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
 // keep track internally of the actual C++ type (this is used in
 // CPPConstructor to call the dispatcher's one instead of the base)
-    Cppyy::TCppScope_t disp = Cppyy::NewGetScope("__cppyy_internal::"+derivedName);
+    Cppyy::TCppScope_t disp = Cppyy::GetScope("__cppyy_internal::"+derivedName);
     if (!disp) {
         err << "failed to retrieve the internal dispatcher";
         return false;

@@ -29,11 +29,11 @@
 
 // Cppyy types
 namespace Cppyy {
-    typedef size_t      TCppScope_t;
+    typedef void*       TCppScope_t;
     typedef TCppScope_t TCppType_t;
     typedef void*       TCppEnum_t;
     typedef void*       TCppObject_t;
-    typedef intptr_t    TCppMethod_t;
+    typedef void*       TCppMethod_t;
 
     typedef size_t      TCppIndex_t;
     typedef void*       TCppFuncAddr_t;

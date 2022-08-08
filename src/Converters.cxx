@@ -1019,7 +1019,7 @@ CPPYY_IMPL_BASIC_CONVERTER_NB(
     LDouble, PY_LONG_DOUBLE, PY_LONG_DOUBLE, c_longdouble, PyFloat_FromDouble, PyFloat_AsDouble, 'g')
 
 CPyCppyy::ComplexDConverter::ComplexDConverter(bool keepControl) :
-    InstanceConverter(Cppyy::NewGetScope("std::complex<double>"), keepControl) {}
+    InstanceConverter(Cppyy::GetScope("std::complex<double>"), keepControl) {}
 
 // special case for std::complex<double>, maps it to/from Python's complex
 bool CPyCppyy::ComplexDConverter::SetArg(
@@ -1787,7 +1787,7 @@ static inline bool CPyCppyy_PyUnicodeAsBytes2Buffer(PyObject* pyobject, T& buffe
 
 #define CPPYY_IMPL_STRING_AS_PRIMITIVE_CONVERTER(name, type, F1, F2)         \
 CPyCppyy::name##Converter::name##Converter(bool keepControl) :               \
-    InstanceConverter(Cppyy::NewGetScope(#type), keepControl) {}                \
+    InstanceConverter(Cppyy::GetScope(#type), keepControl) {}                \
                                                                              \
 bool CPyCppyy::name##Converter::SetArg(                                      \
     PyObject* pyobject, Parameter& para, CallContext* ctxt)                  \
@@ -1837,7 +1837,7 @@ bool CPyCppyy::STLStringViewConverter::SetArg(
     if (!CPPInstance_Check(pyobject))
         return false;
 
-    static Cppyy::TCppScope_t sStringID = Cppyy::NewGetScope("std::string");
+    static Cppyy::TCppScope_t sStringID = Cppyy::GetScope("std::string");
     CPPInstance* pyobj = (CPPInstance*)pyobject;
     if (pyobj->ObjectIsA() == sStringID) {
         void* ptr = pyobj->GetObject();
@@ -1855,7 +1855,7 @@ bool CPyCppyy::STLStringViewConverter::SetArg(
 #endif
 
 CPyCppyy::STLWStringConverter::STLWStringConverter(bool keepControl) :
-    InstanceConverter(Cppyy::NewGetScope("std::wstring"), keepControl) {}
+    InstanceConverter(Cppyy::GetScope("std::wstring"), keepControl) {}
 
 bool CPyCppyy::STLWStringConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* ctxt)
@@ -1968,7 +1968,7 @@ bool CPyCppyy::InstancePtrConverter<ISCONST>::SetArg(
         return false;
 
     Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
-    if (oisa && (oisa == fClass || Cppyy::IsSubtype(oisa, fClass))) {
+    if (oisa && (oisa == fClass || Cppyy::IsSubclass(oisa, fClass))) {
     // depending on memory policy, some objects need releasing when passed into functions
         if (!KeepControl() && !UseStrictOwnership(ctxt))
             pyobj->CppOwns();
@@ -2015,7 +2015,7 @@ bool CPyCppyy::InstancePtrConverter<ISCONST>::ToMemory(PyObject* value, void* ad
         return false;
     }
 
-    if (Cppyy::IsSubtype(pyobj->ObjectIsA(), fClass)) {
+    if (Cppyy::IsSubclass(pyobj->ObjectIsA(), fClass)) {
     // depending on memory policy, some objects need releasing when passed into functions
         if (!KeepControl() && CallContext::sMemoryPolicy != CallContext::kUseStrict)
             ((CPPInstance*)value)->CppOwns();
@@ -2037,7 +2037,7 @@ bool CPyCppyy::InstanceConverter::SetArg(
     CPPInstance* pyobj = GetCppInstance(pyobject);
     if (pyobj) {
         auto oisa = pyobj->ObjectIsA();
-        if (oisa && (oisa == fClass || Cppyy::IsSubtype(oisa, fClass))) {
+        if (oisa && (oisa == fClass || Cppyy::IsSubclass(oisa, fClass))) {
         // calculate offset between formal and actual arguments
             para.fValue.fVoidp = pyobj->GetObject();
             if (!para.fValue.fVoidp)
@@ -2101,7 +2101,7 @@ bool CPyCppyy::InstanceRefConverter::SetArg(
         Cppyy::TCppType_t cls = 0;
         if (pyobj->IsSmart()) {
             cls = pyobj->ObjectIsA(false);
-            if (cls && Cppyy::IsSubtype(cls, fClass)) {
+            if (cls && Cppyy::IsSubclass(cls, fClass)) {
                 para.fValue.fVoidp = pyobj->GetObjectRaw();
                 argset = true;
             }
@@ -2109,7 +2109,7 @@ bool CPyCppyy::InstanceRefConverter::SetArg(
 
         if (!argset) {
             cls = pyobj->ObjectIsA();
-            if (cls && Cppyy::IsSubtype(cls, fClass)) {
+            if (cls && Cppyy::IsSubclass(cls, fClass)) {
                 para.fValue.fVoidp = pyobj->GetObject();
                 argset = true;
             }
@@ -2194,7 +2194,7 @@ bool CPyCppyy::InstancePtrPtrConverter<ISREFERENCE>::SetArg(
         return false;              // not a cppyy object (TODO: handle SWIG etc.)
     }
 
-    if (Cppyy::IsSubtype(pyobj->ObjectIsA(), fClass)) {
+    if (Cppyy::IsSubclass(pyobj->ObjectIsA(), fClass)) {
     // depending on memory policy, some objects need releasing when passed into functions
         if (!KeepControl() && !UseStrictOwnership(ctxt))
             pyobj->CppOwns();
@@ -2235,7 +2235,7 @@ bool CPyCppyy::InstancePtrPtrConverter<ISREFERENCE>::ToMemory(
         return false;              // not a cppyy object (TODO: handle SWIG etc.)
     }
 
-    if (Cppyy::IsSubtype(pyobj->ObjectIsA(), fClass)) {
+    if (Cppyy::IsSubclass(pyobj->ObjectIsA(), fClass)) {
     // depending on memory policy, some objects need releasing when passed into functions
         if (!KeepControl() && CallContext::sMemoryPolicy != CallContext::kUseStrict)
             pyobj->CppOwns();
@@ -2277,7 +2277,7 @@ bool CPyCppyy::InstanceArrayConverter::SetArg(
     if (!CPPInstance_Check(first))
         return false;              // should not happen
 
-    if (Cppyy::IsSubtype(((CPPInstance*)first)->ObjectIsA(), fClass)) {
+    if (Cppyy::IsSubclass(((CPPInstance*)first)->ObjectIsA(), fClass)) {
     // no memory policies supported; set pointer (may be null) and declare success
         para.fValue.fVoidp = ((CPPInstance*)first)->GetObject();
         para.fTypeCode = 'p';
@@ -2577,9 +2577,9 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
                 return nullptr;
 
         // TODO: is there no easier way?
-            static Cppyy::TCppScope_t scope = Cppyy::NewGetScope("__cppyy_internal");
-            const auto& idx = Cppyy::GetMethodIndicesFromName(scope, wname.str());
-            wpraddress = Cppyy::GetFunctionAddress(Cppyy::GetMethod(scope, idx[0]), false);
+            static Cppyy::TCppScope_t scope = Cppyy::GetScope("__cppyy_internal");
+            const auto& methods = Cppyy::GetMethodsFromName(scope, wname.str());
+            wpraddress = Cppyy::GetFunctionAddress(methods[0], false);
             sWrapperReference[wpraddress] = ref;
 
         // cache the new wrapper
@@ -2719,7 +2719,7 @@ bool CPyCppyy::SmartPtrConverter::SetArg(
 
 // for the case where we have a 'hidden' smart pointer:
     if (Cppyy::TCppType_t tsmart = pyobj->GetSmartIsA()) {
-        if (Cppyy::IsSubtype(tsmart, fSmartPtrType)) {
+        if (Cppyy::IsSubclass(tsmart, fSmartPtrType)) {
         // depending on memory policy, some objects need releasing when passed into functions
             if (!fKeepControl && !UseStrictOwnership(ctxt))
                 ((CPPInstance*)pyobject)->CppOwns();
@@ -2738,7 +2738,7 @@ bool CPyCppyy::SmartPtrConverter::SetArg(
     }
 
 // for the case where we have an 'exposed' smart pointer:
-    if (!pyobj->IsSmart() && Cppyy::IsSubtype(oisa, fSmartPtrType)) {
+    if (!pyobj->IsSmart() && Cppyy::IsSubclass(oisa, fSmartPtrType)) {
     // calculate offset between formal and actual arguments
         para.fValue.fVoidp = pyobj->GetObject();
         if (oisa != fSmartPtrType) {
@@ -2752,7 +2752,7 @@ bool CPyCppyy::SmartPtrConverter::SetArg(
     }
 
 // for the case where we have an ordinary object to convert
-    if (!pyobj->IsSmart() && Cppyy::IsSubtype(oisa, fUnderlyingType)) {
+    if (!pyobj->IsSmart() && Cppyy::IsSubclass(oisa, fUnderlyingType)) {
     // create the relevant smart pointer and make the pyobject "smart"
         CPPInstance* pysmart = (CPPInstance*)ConvertImplicit(fSmartPtrType, pyobject, para, ctxt, false);
         if (!CPPInstance_Check(pysmart)) {
@@ -2771,7 +2771,7 @@ bool CPyCppyy::SmartPtrConverter::SetArg(
     }
 
 // final option, try mapping pointer types held (TODO: do not allow for non-const ref)
-    if (pyobj->IsSmart() && Cppyy::IsSubtype(oisa, fUnderlyingType)) {
+    if (pyobj->IsSmart() && Cppyy::IsSubclass(oisa, fUnderlyingType)) {
         para.fValue.fVoidp = ((CPPInstance*)pyobject)->GetSmartObject();
         para.fTypeCode = 'V';
         return true;
@@ -2972,9 +2972,9 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
     }
 
 //-- nothing? ok, collect information about the type and possible qualifiers/decorators
-    bool isConst = strncmp(resolvedType.c_str(), "const", 5) == 0;
-    const std::string& cpd = TypeManip::compound(resolvedType);
-    std::string realType   = TypeManip::clean_type(resolvedType, false, true);
+    bool isConst = strncmp(/* resolvedType */ fullType.c_str(), "const", 5) == 0;
+    const std::string& cpd = TypeManip::compound(/* resolvedType */ fullType);
+    std::string realType   = TypeManip::clean_type(/* resolvedType */ fullType, false, true);
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gConvFactories.find((isConst ? "const " : "") + realType + cpd);
@@ -3032,7 +3032,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         auto pos = realType.find('<');
         std::string value_type = realType.substr(pos+1, realType.size()-pos-2);
         Converter* cnv = nullptr; bool use_byte_cnv = false;
-        if (cpd == "" && Cppyy::NewGetScope(value_type)) {
+        if (cpd == "" && Cppyy::GetScope(value_type)) {
         // initializer list of object values does not work as the target is raw
         // memory; simply use byte copies
 
@@ -3056,7 +3056,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
     // get actual converter for normal passing
         Converter* cnv = selectInstanceCnv(
-            Cppyy::NewGetScope(realType), cpd, dims, isConst, control);
+            Cppyy::GetScope(realType), cpd, dims, isConst, control);
 
         if (cnv) {
         // get the type of the underlying (TODO: use target_type?)
@@ -3075,7 +3075,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 
 // converters for known C++ classes and default (void*)
     Converter* result = nullptr;
-    if (klass || (klass = Cppyy::NewGetFullScope(realType))) {
+    if (klass || (klass = Cppyy::GetFullScope(realType))) {
         Cppyy::TCppType_t raw{0};
         if (Cppyy::GetSmartPtrInfo(realType, &raw, nullptr)) {
             if (cpd == "") {

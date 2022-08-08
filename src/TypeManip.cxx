@@ -170,6 +170,9 @@ std::string CPyCppyy::TypeManip::compound(const std::string& name)
         return scpd.str();
     }
 
+    // XXX: remove this hack
+    if (cpd == " *") return "*";
+
     return cpd;
 }
 

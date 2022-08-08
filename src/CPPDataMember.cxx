@@ -64,7 +64,7 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
             const std::string& enum_scope = TypeManip::extract_namespace(enum_type);
 
             PyObject* pyscope = nullptr;
-            if (enum_scope.empty()) pyscope = GetScopeProxy(Cppyy::NewGetGlobalScope());
+            if (enum_scope.empty()) pyscope = GetScopeProxy(Cppyy::GetGlobalScope());
             else pyscope = CreateScopeProxy(enum_scope);
             if (pyscope) {
                 PyObject* pyEnumType = PyObject_GetAttrString(pyscope,
@@ -311,14 +311,12 @@ PyTypeObject CPPDataMember_Type = {
 
 
 //- public members -----------------------------------------------------------
-void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t idata)
+void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data)
 {
-    printf("Bruh\n");
     fEnclosingScope = scope;
-    fScope          = idata;
-    fOffset         = Cppyy::NewGetDatamemberOffset(scope, idata); // XXX: Check back here // TODO: make lazy
-    printf("  fOffset => %p\n", fOffset);
-    fFlags          = Cppyy::NewIsStaticDatamember(idata) ? kIsStaticData : 0;
+    fScope          = data;
+    fOffset         = Cppyy::GetDatamemberOffset(data); // XXX: Check back here // TODO: make lazy
+    fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
 
     // std::vector<dim_t> dims;
     int ndim = 0; Py_ssize_t size = 0;
@@ -332,8 +330,8 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
     // if (!dims.empty())
     //     fFlags |= kIsArrayType;
 
-    const std::string name = Cppyy::NewGetFinalName(idata);
-    const std::string type = Cppyy::NewGetDatamemberTypeAsString(idata);
+    const std::string name = Cppyy::GetFinalName(data);
+    const std::string type = Cppyy::GetDatamemberTypeAsString(data);
     // fFullType = Cppyy::GetDatamemberType(scope, idata);
     // if (Cppyy::IsEnumData(scope, idata)) {
     //     if (fFullType.find("(anonymous)") == std::string::npos) {
@@ -344,7 +342,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
     //     fFullType = Cppyy::ResolveEnum(fFullType);
     //     fFlags |= kIsConstData;
     // } else
-    if (Cppyy::NewIsConstVar(idata)) {
+    if (Cppyy::IsConstVar(data)) {
         fFlags |= kIsConstData;
     }
 
@@ -354,14 +352,14 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t i
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
 // builtins are not declared as such if more than 1-dim (TODO: fix in clingwrapper)
     // if (!dims.empty() && fFullType.back() != '*') {
-    //     if (Cppyy::NewGetScope(fFullType)) fFullType += '*';
+    //     if (Cppyy::GetScope(fFullType)) fFullType += '*';
     //     else if (fFullType.back() != ']') {
     //         for (auto d: dims) fFullType += d == UNKNOWN_SIZE ? "*" : "[]";
     //     }
     // }
 
     // if (dims.empty())
-    fConverter = CreateConverter(type, 0, Cppyy::NewGetTypeScope(idata));
+    fConverter = CreateConverter(type, 0, Cppyy::GetTypeScope(data));
     // else
     //     fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
 
