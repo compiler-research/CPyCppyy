@@ -58,6 +58,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string ResolveName(const std::string& cppitem_name);
     CPPYY_IMPORT
+    TCppType_t ResolveType(TCppType_t type);
+    CPPYY_IMPORT
     std::string ResolveEnum(const std::string& enum_type);
     CPPYY_IMPORT
     TCppScope_t GetScope(const std::string& name, TCppScope_t parent_scope = 0);
@@ -278,6 +280,8 @@ namespace Cppyy {
     std::string GetDatamemberName(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
     TCppType_t GetDatamemberType(TCppScope_t var);
+    CPPYY_IMPORT
+    std::string GetTypeAsString(TCppType_t type);
     CPPYY_IMPORT
     std::string GetDatamemberTypeAsString(TCppScope_t var);
     CPPYY_IMPORT

@@ -124,6 +124,7 @@ public:
 
 // create a converter based on its full type name and dimensions
 CPYCPPYY_EXTERN Converter* CreateConverter(const std::string& name, cdims_t = 0, Cppyy::TCppScope_t = 0);
+CPYCPPYY_EXTERN Converter* CreateConverter(Cppyy::TCppType_t type, cdims_t = 0, Cppyy::TCppScope_t = 0);
 
 // delete a previously created converter
 CPYCPPYY_EXTERN void DestroyConverter(Converter* p);
@@ -151,6 +152,7 @@ public:
 
 // create an executor based on its full type name
 CPYCPPYY_EXTERN Executor* CreateExecutor(const std::string& name, cdims_t = 0);
+CPYCPPYY_EXTERN Executor* CreateExecutor(Cppyy::TCppType_t type, cdims_t = 0);
 
 // delete a previously created executor
 CPYCPPYY_EXTERN void DestroyConverter(Converter* p);

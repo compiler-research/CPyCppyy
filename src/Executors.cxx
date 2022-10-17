@@ -867,6 +867,101 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(const std::string& fullType, cdims_
    return result;                  // may still be null
 }
 
+CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dims)
+{
+// The matching of the fulltype to an executor factory goes through up to 4 levels:
+//   1) full, qualified match
+//   2) drop '&' as by ref/full type is often pretty much the same python-wise
+//   3) C++ classes, either by ref/ptr or by value
+//   4) additional special case for enums
+//
+// If all fails, void is used, which will cause the return type to be ignored on use
+
+// an exactly matching executor is best
+    std::string fullType = Cppyy::GetTypeAsString(type);
+    ExecFactories_t::iterator h = gExecFactories.find(fullType);
+    if (h != gExecFactories.end())
+        return (h->second)(dims);
+
+// resolve typedefs etc.
+    const std::string& resolvedType = Cppyy::GetTypeAsString(Cppyy::ResolveType(type));
+
+// a full, qualified matching executor is preferred
+    if (resolvedType != fullType) {
+         h = gExecFactories.find(resolvedType);
+         if (h != gExecFactories.end())
+              return (h->second)(dims);
+    }
+
+//-- nothing? ok, collect information about the type and possible qualifiers/decorators
+    bool isConst = strncmp(resolvedType.c_str(), "const", 5)  == 0;
+    const std::string& cpd = TypeManip::compound(resolvedType);
+    std::string realType = TypeManip::clean_type(resolvedType, false);
+
+// accept unqualified type (as python does not know about qualifiers)
+    h = gExecFactories.find(realType + cpd);
+    if (h != gExecFactories.end())
+        return (h->second)(dims);
+
+// drop const, as that is mostly meaningless to python (with the exception
+// of c-strings, but those are specialized in the converter map)
+    if (isConst) {
+        realType = TypeManip::remove_const(realType);
+        h = gExecFactories.find(realType + cpd);
+        if (h != gExecFactories.end())
+            return (h->second)(dims);
+    }
+
+// simple array types
+    if (!cpd.empty() && (std::string::size_type)std::count(cpd.begin(), cpd.end(), '*') == cpd.size()) {
+        h = gExecFactories.find(realType + " ptr");
+        if (h != gExecFactories.end())
+            return (h->second)((!dims || dims.ndim() < (dim_t)cpd.size()) ? dims_t(cpd.size()) : dims);
+    }
+
+//-- still nothing? try pointer instead of array (for builtins)
+    if (cpd == "[]") {
+        h = gExecFactories.find(realType + "*");
+        if (h != gExecFactories.end())
+            return (h->second)(dims);
+    }
+
+// C++ classes and special cases
+    Executor* result = 0;
+    if (Cppyy::TCppType_t klass = Cppyy::GetFullScope(realType)) {
+        if (resolvedType.find("iterator") != std::string::npos || gIteratorTypes.find(fullType) != gIteratorTypes.end()) {
+            if (cpd == "")
+                return new IteratorExecutor(klass);
+        }
+
+        if (cpd == "")
+            result = new InstanceExecutor(klass);
+        else if (cpd == "&")
+            result = new InstanceRefExecutor(klass);
+        else if (cpd == "**" || cpd == "*[]" || cpd == "&*")
+            result = new InstancePtrPtrExecutor(klass);
+        else if (cpd == "*&")
+            result = new InstancePtrRefExecutor(klass);
+        else if (cpd == "[]") {
+            Py_ssize_t asize = TypeManip::array_size(resolvedType);
+            if (0 < asize)
+                result = new InstanceArrayExecutor(klass, asize);
+            else
+                result = new InstancePtrRefExecutor(klass);
+        } else
+            result = new InstancePtrExecutor(klass);
+    } else {
+    // unknown: void* may work ("user knows best"), void will fail on use of return value
+        h = (cpd == "") ? gExecFactories.find("void") : gExecFactories.find("void ptr");
+    }
+
+    if (!result && h != gExecFactories.end())
+    // executor factory available, use it to create executor
+        result = (h->second)(dims);
+
+   return result;                  // may still be null
+}
+
 //----------------------------------------------------------------------------
 CPYCPPYY_EXPORT
 void CPyCppyy::DestroyExecutor(Executor* p)

@@ -1787,7 +1787,7 @@ static inline bool CPyCppyy_PyUnicodeAsBytes2Buffer(PyObject* pyobject, T& buffe
 
 #define CPPYY_IMPL_STRING_AS_PRIMITIVE_CONVERTER(name, type, F1, F2)         \
 CPyCppyy::name##Converter::name##Converter(bool keepControl) :               \
-    InstanceConverter(Cppyy::GetScope(#type), keepControl) {}                \
+    InstanceConverter(Cppyy::GetFullScope(#type), keepControl) {}            \
                                                                              \
 bool CPyCppyy::name##Converter::SetArg(                                      \
     PyObject* pyobject, Parameter& para, CallContext* ctxt)                  \
@@ -3097,9 +3097,10 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
                ) {
                 static STLIteratorConverter c;
                 result = &c;
-            } else
+            } else {
        // -- CLING WORKAROUND
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
+            }
         }
     } else {
         std::smatch sm;
@@ -3121,17 +3122,213 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         result = new NotImplementedConverter();
     }
 
-    if (!result && h != gConvFactories.end())
+    if (!result && h != gConvFactories.end()) {
     // converter factory available, use it to create converter
         result = (h->second)(dims);
-    else if (!result) {
+    } else if (!result) {
     // default to something reasonable, assuming "user knows best"
-        if (cpd.size() == 2 && cpd != "&&") // "**", "*[]", "*&"
+        if (cpd.size() == 2 && cpd != "&&") {// "**", "*[]", "*&"
             result = new VoidPtrPtrConverter(dims.ndim());
-        else if (!cpd.empty())
+        } else if (!cpd.empty()) {
             result = new VoidArrayConverter();        // "user knows best"
-        else
+        } else {
             result = new NotImplementedConverter();   // fails on use
+        }
+    }
+
+    return result;
+}
+
+CPYCPPYY_EXPORT
+CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t dims, Cppyy::TCppScope_t klass)
+{
+// The matching of the fulltype to a converter factory goes through up to five levels:
+//   1) full, exact match
+//   2) match of decorated, unqualified type
+//   3) accept const ref as by value
+//   4) accept ref as pointer
+//   5) generalized cases (covers basically all C++ classes)
+//
+// If all fails, void is used, which will generate a run-time warning when used.
+
+// an exactly matching converter is best
+    // printf(" CC2: h\n");
+    std::string fullType = Cppyy::GetTypeAsString(type);
+    ConvFactories_t::iterator h = gConvFactories.find(fullType);
+    if (h != gConvFactories.end()) {
+        return (h->second)(dims);
+    }
+
+// resolve typedefs etc.
+    const std::string& resolvedType = Cppyy::GetTypeAsString(Cppyy::ResolveType(type));
+
+// a full, qualified matching converter is preferred
+    if (resolvedType != fullType) {
+        h = gConvFactories.find(resolvedType);
+        if (h != gConvFactories.end())
+            return (h->second)(dims);
+    }
+
+//-- nothing? ok, collect information about the type and possible qualifiers/decorators
+    bool isConst = strncmp(resolvedType.c_str(), "const", 5) == 0;
+    const std::string& cpd = TypeManip::compound(resolvedType);
+    std::string realType   = TypeManip::clean_type(resolvedType, false, true);
+
+// accept unqualified type (as python does not know about qualifiers)
+    h = gConvFactories.find((isConst ? "const " : "") + realType + cpd);
+    if (h != gConvFactories.end())
+        return (h->second)(dims);
+
+// drop const, as that is mostly meaningless to python (with the exception
+// of c-strings, but those are specialized in the converter map)
+    if (isConst) {
+        h = gConvFactories.find(realType + cpd);
+        if (h != gConvFactories.end())
+            return (h->second)(dims);
+    }
+
+//-- still nothing? try pointer instead of array (for builtins)
+    if (cpd.compare(0, 3, "*[]") == 0) {
+    // special case, array of pointers
+        h = gConvFactories.find(realType + " ptr");
+        if (h != gConvFactories.end()) {
+        // upstream treats the pointer type as the array element type, but that pointer is
+        // treated as a low-level view as well, unless it's a void*/char* so adjust the dims
+            if (realType != "void" && realType != "char") {
+                dim_t newdim = dims.ndim() == UNKNOWN_SIZE ? 2 : dims.ndim()+1;
+                dims_t newdims = dims_t(newdim);
+            // TODO: sometimes the array size is known and can thus be verified; however,
+            // currently the meta layer does not provide this information
+                newdims[0] = dims ? dims[0] : UNKNOWN_SIZE;     // the array
+                newdims[1] = UNKNOWN_SIZE;                      // the pointer
+                if (2 < newdim) {
+                    for (int i = 2; i < (newdim-1); ++i)
+                        newdims[i] = dims[i-1];
+                }
+
+                return (h->second)(newdims);
+            }
+            return (h->second)(dims);
+        }
+
+    } else if (!cpd.empty() && (std::string::size_type)std::count(cpd.begin(), cpd.end(), '*') == cpd.size()) {
+    // simple array; set or resize as necessary
+        h = gConvFactories.find(realType + " ptr");
+        if (h != gConvFactories.end())
+            return (h->second)((!dims && 1 < cpd.size()) ? dims_t(cpd.size()) : dims);
+
+    }  else if (2 <= cpd.size() && (std::string::size_type)std::count(cpd.begin(), cpd.end(), '[') == cpd.size() / 2) {
+    // fixed array, dims will have size if available
+        h = gConvFactories.find(realType + " ptr");
+        if (h != gConvFactories.end())
+            return (h->second)(dims);
+    }
+
+//-- special case: initializer list
+    if (realType.compare(0, 21, "std::initializer_list") == 0) {
+    // get the type of the list and create a converter (TODO: get hold of value_type?)
+        auto pos = realType.find('<');
+        std::string value_type = realType.substr(pos+1, realType.size()-pos-2);
+        Converter* cnv = nullptr; bool use_byte_cnv = false;
+        if (cpd == "" && Cppyy::GetScope(value_type)) {
+        // initializer list of object values does not work as the target is raw
+        // memory; simply use byte copies
+
+        // by convention, leave cnv as nullptr
+            use_byte_cnv = true;
+        } else
+            cnv = CreateConverter(value_type);
+        if (cnv || use_byte_cnv)
+            return new InitializerListConverter(cnv, Cppyy::SizeOf(value_type));
+    }
+
+//-- still nothing? use a generalized converter
+    bool control = cpd == "&" || isConst;
+
+//-- special case: std::function
+    auto pos = resolvedType.find("std::function<");
+    if (pos == 0 /* std:: */ || pos == 6 /* const std:: */ ) {
+
+    // get actual converter for normal passing
+        Converter* cnv = selectInstanceCnv(
+            Cppyy::GetScope(realType), cpd, dims, isConst, control);
+
+        if (cnv) {
+        // get the type of the underlying (TODO: use target_type?)
+            auto pos1 = resolvedType.find("(", pos+14);
+            auto pos2 = resolvedType.rfind(")");
+            if (pos1 != std::string::npos && pos2 != std::string::npos) {
+                auto sz1 = pos1-pos-14;
+                if (resolvedType[pos+14+sz1-1] == ' ') sz1 -= 1;
+
+                return new StdFunctionConverter(cnv,
+                    resolvedType.substr(pos+14, sz1), resolvedType.substr(pos1, pos2-pos1+1));
+            } else if (cnv->HasState())
+                delete cnv;
+        }
+    }
+
+// converters for known C++ classes and default (void*)
+    Converter* result = nullptr;
+    if (klass || (klass = Cppyy::GetFullScope(realType))) {
+        Cppyy::TCppType_t raw{0};
+        if (Cppyy::GetSmartPtrInfo(realType, &raw, nullptr)) {
+            if (cpd == "") {
+                result = new SmartPtrConverter(klass, raw, control);
+            } else if (cpd == "&") {
+                result = new SmartPtrConverter(klass, raw);
+            } else if (cpd == "*" && dims.ndim() == UNKNOWN_SIZE) {
+                result = new SmartPtrConverter(klass, raw, control, true);
+            }
+        }
+
+        if (!result) {
+        // CLING WORKAROUND -- special case for STL iterators
+            if (realType.rfind("__gnu_cxx::__normal_iterator", 0) /* vector */ == 0
+#ifdef __APPLE__
+                || realType.rfind("__wrap_iter", 0) == 0
+#endif
+                // TODO: Windows?
+               ) {
+                static STLIteratorConverter c;
+                result = &c;
+            } else {
+       // -- CLING WORKAROUND
+                result = selectInstanceCnv(klass, cpd, dims, isConst, control);
+            }
+        }
+    } else if (resolvedType.find("(*)") != std::string::npos ||
+               (resolvedType.find("::*)") != std::string::npos)) {
+    // this is a function function pointer
+    // TODO: find better way of finding the type
+        auto pos1 = resolvedType.find('(');
+        auto pos2 = resolvedType.find("*)");
+        auto pos3 = resolvedType.rfind(')');
+        result = new FunctionPointerConverter(
+            resolvedType.substr(0, pos1), resolvedType.substr(pos2+2, pos3-pos2-1));
+    }
+
+    if (!result && cpd == "&&") {
+    // for builtin, can use const-ref for r-ref
+        h = gConvFactories.find("const " + realType + "&");
+        if (h != gConvFactories.end())
+            return (h->second)(dims);
+    // else, unhandled moves
+        result = new NotImplementedConverter();
+    }
+
+    if (!result && h != gConvFactories.end()) {
+    // converter factory available, use it to create converter
+        result = (h->second)(dims);
+    } else if (!result) {
+    // default to something reasonable, assuming "user knows best"
+        if (cpd.size() == 2 && cpd != "&&") {// "**", "*[]", "*&"
+            result = new VoidPtrPtrConverter(dims.ndim());
+        } else if (!cpd.empty()) {
+            result = new VoidArrayConverter();        // "user knows best"
+        } else {
+            result = new NotImplementedConverter();   // fails on use
+        }
     }
 
     return result;

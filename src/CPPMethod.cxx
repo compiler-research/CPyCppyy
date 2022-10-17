@@ -238,7 +238,7 @@ bool CPyCppyy::CPPMethod::InitConverters_()
 
 // setup the dispatch cache
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
-        const std::string& fullType = Cppyy::GetMethodArgTypeAsString(fMethod, iarg);
+        Cppyy::TCppType_t fullType = Cppyy::GetMethodArgType(fMethod, iarg);
         Converter* conv = CreateConverter(fullType);
         if (!conv) {
             PyErr_Format(PyExc_TypeError, "argument type %s not handled", fullType.c_str());
@@ -255,9 +255,11 @@ bool CPyCppyy::CPPMethod::InitConverters_()
 bool CPyCppyy::CPPMethod::InitExecutor_(Executor*& executor, CallContext* /* ctxt */)
 {
 // install executor conform to the return type
-    executor = CreateExecutor(
-        (bool)fMethod == true ? Cppyy::GetMethodReturnTypeAsString(fMethod) \
-                              : Cppyy::GetScopedFinalName(fScope));
+    if (fMethod) {
+        executor = CreateExecutor(Cppyy::GetMethodReturnType(fMethod));
+    } else {
+        executor = CreateExecutor(Cppyy::GetScopedFinalName(fScope));
+    }
 
     if (!executor)
         return false;
