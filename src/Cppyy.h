@@ -60,7 +60,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppType_t ResolveType(TCppType_t type);
     CPPYY_IMPORT
-    std::string ResolveEnum(const std::string& enum_type);
+    std::string ResolveEnum(TCppScope_t enum_type);
     CPPYY_IMPORT
     TCppScope_t GetScope(const std::string& name, TCppScope_t parent_scope = 0);
     CPPYY_IMPORT
@@ -309,10 +309,13 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppEnum_t  GetEnum(TCppScope_t scope, const std::string& enum_name);
     CPPYY_IMPORT
-    TCppIndex_t GetNumEnumData(TCppEnum_t);
+    TCppScope_t GetEnumScope(TCppScope_t);
+    CPPYY_IMPORT
+    std::vector<TCppScope_t> GetEnumConstants(TCppScope_t scope);
     CPPYY_IMPORT
     std::string GetEnumDataName(TCppEnum_t, TCppIndex_t idata);
     CPPYY_IMPORT
+    long long   GetEnumDataValue(TCppScope_t scope);
 
     CPPYY_IMPORT
     TCppScope_t InstantiateTemplateClass(const std::string& templ_name);
