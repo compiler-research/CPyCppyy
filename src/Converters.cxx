@@ -1019,7 +1019,7 @@ CPPYY_IMPL_BASIC_CONVERTER_NB(
     LDouble, PY_LONG_DOUBLE, PY_LONG_DOUBLE, c_longdouble, PyFloat_FromDouble, PyFloat_AsDouble, 'g')
 
 CPyCppyy::ComplexDConverter::ComplexDConverter(bool keepControl) :
-    InstanceConverter(Cppyy::GetScope("std::complex<double>"), keepControl) {}
+    InstanceConverter(Cppyy::GetFullScope("std::complex<double>"), keepControl) {}
 
 // special case for std::complex<double>, maps it to/from Python's complex
 bool CPyCppyy::ComplexDConverter::SetArg(
@@ -1837,7 +1837,7 @@ bool CPyCppyy::STLStringViewConverter::SetArg(
     if (!CPPInstance_Check(pyobject))
         return false;
 
-    static Cppyy::TCppScope_t sStringID = Cppyy::GetScope("std::string");
+    static Cppyy::TCppScope_t sStringID = Cppyy::GetFullScope("std::string");
     CPPInstance* pyobj = (CPPInstance*)pyobject;
     if (pyobj->ObjectIsA() == sStringID) {
         void* ptr = pyobj->GetObject();
@@ -1855,7 +1855,7 @@ bool CPyCppyy::STLStringViewConverter::SetArg(
 #endif
 
 CPyCppyy::STLWStringConverter::STLWStringConverter(bool keepControl) :
-    InstanceConverter(Cppyy::GetScope("std::wstring"), keepControl) {}
+    InstanceConverter(Cppyy::GetFullScope("std::wstring"), keepControl) {}
 
 bool CPyCppyy::STLWStringConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* ctxt)

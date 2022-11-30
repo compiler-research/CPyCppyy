@@ -389,7 +389,7 @@ PyObject* CPyCppyy::STLStringRefExecutor::Execute(
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
 {
 // execute <method> with argument <self, ctxt>, return python string return value
-    static Cppyy::TCppScope_t sSTLStringScope = Cppyy::GetScope("std::string");
+    static Cppyy::TCppScope_t sSTLStringScope = Cppyy::GetFullScope("std::string");
 
     std::string* result = (std::string*)GILCallR(method, self, ctxt);
     if (!fAssignable) {
@@ -524,7 +524,7 @@ CPPYY_IMPL_ARRAY_EXEC(ComplexL, std::complex<long>)
 PyObject* CPyCppyy::Complex##code##Executor::Execute(                        \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt) \
 {                                                                            \
-    static Cppyy::TCppScope_t scopeid = Cppyy::GetScope("std::complex<"#type">");\
+    static Cppyy::TCppScope_t scopeid = Cppyy::GetFullScope("std::complex<"#type">");\
     std::complex<type>* result =                                             \
         (std::complex<type>*)GILCallO(method, self, ctxt, scopeid);          \
     if (!result) {                                                           \
@@ -546,7 +546,7 @@ PyObject* CPyCppyy::STLStringExecutor::Execute(
 // execute <method> with argument <self, ctxt>, construct python string return value
 
 // TODO: make use of GILLCallS (?!)
-    static Cppyy::TCppScope_t sSTLStringScope = Cppyy::GetScope("std::string");
+    static Cppyy::TCppType_t sSTLStringScope = Cppyy::GetFullScope("std::string");
     std::string* result = (std::string*)GILCallO(method, self, ctxt, sSTLStringScope);
     if (!result)
         result = new std::string{};
@@ -563,7 +563,7 @@ PyObject* CPyCppyy::STLWStringExecutor::Execute(
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
 {
 // execute <method> with argument <self, ctxt>, construct python string return value
-    static Cppyy::TCppScope_t sSTLWStringScope = Cppyy::GetScope("std::wstring");
+    static Cppyy::TCppScope_t sSTLWStringScope = Cppyy::GetFullScope("std::wstring");
     std::wstring* result = (std::wstring*)GILCallO(method, self, ctxt, sSTLWStringScope);
     if (!result) {
         wchar_t w = L'\0';

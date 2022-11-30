@@ -351,7 +351,7 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
     if (!pyfunc) {
     // Same for clang (on Mac only?). TODO: find proper pre-processor magic to only use those
     // specific namespaces that are actually around; although to be sure, this isn't expensive.
-        static Cppyy::TCppScope_t std__1 = Cppyy::GetScope("std::__1");
+        static Cppyy::TCppScope_t std__1 = Cppyy::GetFullScope("std::__1");
 
         if (std__1
 #ifdef __APPLE__

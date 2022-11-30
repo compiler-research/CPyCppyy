@@ -126,7 +126,7 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteFast(
         result = nullptr;           // error already set
     } catch (std::exception& e) {
     // attempt to set the exception to the actual type, to allow catching with the Python C++ type
-        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("std::exception");
+        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetFullScope("std::exception");
 
         ctxt->fFlags |= CallContext::kCppException;
 

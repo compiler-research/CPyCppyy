@@ -652,7 +652,7 @@ static Py_hash_t op_hash(CPPInstance* self)
         return h;
     }
 
-    Cppyy::TCppScope_t stdhash = Cppyy::GetScope("std::hash<"+Cppyy::GetScopedFinalName(self->ObjectIsA())+">");
+    Cppyy::TCppScope_t stdhash = Cppyy::GetFullScope("std::hash<"+Cppyy::GetScopedFinalName(self->ObjectIsA())+">");
     if (stdhash) {
         PyObject* hashcls = CreateScopeProxy(stdhash);
         PyObject* dct = PyObject_GetAttr(hashcls, PyStrings::gDict);
@@ -683,7 +683,7 @@ static Py_hash_t op_hash(CPPInstance* self)
 //----------------------------------------------------------------------------
 static PyObject* op_str_internal(PyObject* pyobj, PyObject* lshift, bool isBound)
 {
-    static Cppyy::TCppScope_t sOStringStreamID = Cppyy::GetScope("std::ostringstream");
+    static Cppyy::TCppScope_t sOStringStreamID = Cppyy::GetFullScope("std::ostringstream");
     std::ostringstream s;
     PyObject* pys = BindCppObjectNoCast(&s, sOStringStreamID);
     Py_INCREF(pys);

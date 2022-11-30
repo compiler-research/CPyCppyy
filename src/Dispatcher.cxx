@@ -436,7 +436,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
 // keep track internally of the actual C++ type (this is used in
 // CPPConstructor to call the dispatcher's one instead of the base)
-    Cppyy::TCppScope_t disp = Cppyy::GetScope("__cppyy_internal::"+derivedName);
+    Cppyy::TCppScope_t disp = Cppyy::GetFullScope("__cppyy_internal::"+derivedName);
     if (!disp) {
         err << "failed to retrieve the internal dispatcher";
         return false;
