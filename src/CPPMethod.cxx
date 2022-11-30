@@ -241,7 +241,8 @@ bool CPyCppyy::CPPMethod::InitConverters_()
         Cppyy::TCppType_t fullType = Cppyy::GetMethodArgType(fMethod, iarg);
         Converter* conv = CreateConverter(fullType);
         if (!conv) {
-            PyErr_Format(PyExc_TypeError, "argument type %s not handled", fullType.c_str());
+            PyErr_Format(PyExc_TypeError, "argument type %s not handled",
+                Cppyy::GetTypeAsString(fullType).c_str());
             return false;
         }
 
