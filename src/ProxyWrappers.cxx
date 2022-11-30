@@ -225,8 +225,8 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         }
 
     // template members; handled by adding a dispatcher to the class
-        bool storeOnTemplate =
-            isTemplate ? true : (!isConstructor && Cppyy::ExistsMethodTemplate(scope, mtCppName));
+        bool storeOnTemplate = false; //XXX
+            //isTemplate ? true : (!isConstructor && Cppyy::ExistsMethodTemplate(scope, mtCppName));
         if (storeOnTemplate) {
             sync_templates(pyclass, mtCppName, mtName);
         // continue processing to actually add the method so that the proxy can find
@@ -486,6 +486,10 @@ static PyObject* BuildCppClassBases(Cppyy::TCppScope_t klass)
             }
             Py_DECREF(pybases);
             pybases = newpybases;
+        }
+        // XXX: Check later if still required
+        if (PyErr_Occurred()) {
+            PyErr_Clear();
         }
     }
 
