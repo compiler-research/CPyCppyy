@@ -593,6 +593,8 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
             }
         }
 
+        printf("======== %s\n", tmpl_name.c_str());
+
     // add a comma, as needed (no space as internally, final names don't have them)
         if (i != nArgs-1)
             tmpl_name.push_back(',');

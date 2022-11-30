@@ -320,6 +320,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t InstantiateTemplateClass(const std::string& templ_name);
 
+    CPPYY_IMPORT
+    TCppScope_t DumpScope(TCppScope_t scope);
 } // namespace Cppyy
 
 #endif // !CPYCPPYY_CPPYY_H

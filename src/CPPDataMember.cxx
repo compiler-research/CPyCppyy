@@ -162,6 +162,7 @@ static int dm_set(CPPDataMember* dm, CPPInstance* pyobj, PyObject* value)
     }
 
     intptr_t address = (intptr_t)dm->GetAddress(pyobj);
+    printf("~~~~~~~~~~~~~ set_pp %p ~~~~~~~~~~~~\n", address);
     if (!address || address == -1 /* Cling error */)
         return errret;
 
@@ -318,6 +319,8 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
     fOffset         = Cppyy::GetDatamemberOffset(data); // XXX: Check back here // TODO: make lazy
     fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
 
+    printf("%s ============= %ld\n", Cppyy::GetScopedFinalName(data).c_str(), fOffset);
+
     // std::vector<dim_t> dims;
     int ndim = 0; Py_ssize_t size = 0;
     // while (0 < (size = Cppyy::GetDimensionSize(scope, idata, ndim))) {
@@ -346,7 +349,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
         fFlags |= kIsConstData;
     }
 
-    printf("Type => %s\n", type.c_str());
+    // printf("Type => %s\n", Cppyy::GetTypeAsString(type).c_str());
 
 // if this data member is an array, the conversion needs to be pointer to object for instances,
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
@@ -369,7 +372,6 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
 //-----------------------------------------------------------------------------
 void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, const std::string& name, void* address)
 {
-    printf("jort\n");
     fEnclosingScope = scope;
     fDescription    = CPyCppyy_PyText_FromString(name.c_str());
     fOffset         = (intptr_t)address;
@@ -382,16 +384,19 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, const std::string& n
 //-----------------------------------------------------------------------------
 void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
 {
+    printf("~~~~~~here1\n");
 // class attributes, global properties
     if (fFlags & kIsStaticData)
         return (void*)fOffset;
 
+    printf("~~~~~~here2\n");
 // special case: non-static lookup through class
     if (!pyobj) {
         PyErr_SetString(PyExc_AttributeError, "attribute access requires an instance");
         return nullptr;
     }
 
+    printf("~~~~~~here3\n");
 // instance attributes; requires valid object for full address
     if (!CPPInstance_Check(pyobj)) {
         PyErr_Format(PyExc_TypeError,
@@ -399,18 +404,21 @@ void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
         return nullptr;
     }
 
+    printf("~~~~~~here4\n");
     void* obj = pyobj->GetObject();
     if (!obj) {
         PyErr_SetString(PyExc_ReferenceError, "attempt to access a null-pointer");
         return nullptr;
    }
 
+    printf("~~~~~~here5\n");
 // the proxy's internal offset is calculated from the enclosing class
     ptrdiff_t offset = 0;
     Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
     if (oisa != fEnclosingScope)
         offset = Cppyy::GetBaseOffset(oisa, fEnclosingScope, obj, 1 /* up-cast */);
 
+    printf("~~~~~~here6 fo: %ld  bo: %ld  obj: %p\n", fOffset, offset, obj);
     return (void*)((intptr_t)obj + offset + fOffset);
 }
 

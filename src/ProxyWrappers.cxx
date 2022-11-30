@@ -163,7 +163,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
-    printf("  %s\n", Cppyy::GetFinalName(scope).c_str());
+    // printf("  BSPD : %s\n", Cppyy::GetFinalName(scope).c_str());
 
 // load all public methods and data members
     typedef std::vector<PyCallable*> Callables_t;
@@ -252,7 +252,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         } else if (isStubbedOperator) {
             pycall = new CPPOperator(scope, method, mtName);
         } else {                             // member function
-            printf("\t%s\n", mtCppName.c_str());
+            // printf("\tBSPD: %s\n", mtCppName.c_str());
             pycall = new CPPMethod(scope, method);
         }
 
@@ -558,7 +558,7 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
     // retrieve C++ class (this verifies name, and is therefore done first)
     // const std::string& lookup = scName.empty() ? name : (scName+"::"+name);
     Cppyy::TCppScope_t klass = Cppyy::GetScope(name, parent_scope);
-    printf("   heree\n");
+    printf("   CPS : heree %p\n", klass);
 
     if (!(bool)klass) {
     // // could be an enum, which are treated seperately in CPPScope (TODO: maybe they

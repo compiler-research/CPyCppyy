@@ -51,6 +51,7 @@ namespace {
 static inline rtype GILCall##tcode(                                          \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt)\
 {                                                                            \
+    printf(#tcode);                                                          \
     if (!ReleasesGIL(ctxt))                                                  \
         return Cppyy::Call##tcode(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs());\
     GILControl gc{};                                                         \
