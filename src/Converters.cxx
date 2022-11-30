@@ -3173,6 +3173,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
     bool isConst = strncmp(resolvedType.c_str(), "const", 5) == 0;
     const std::string& cpd = TypeManip::compound(resolvedType);
     std::string realType   = TypeManip::clean_type(resolvedType, false, true);
+    std::string realUnresolvedType   = TypeManip::clean_type(fullType, false, true);
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gConvFactories.find((isConst ? "const " : "") + realType + cpd);
@@ -3310,7 +3311,10 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
-        h = gConvFactories.find("const " + realType + "&");
+        h = gConvFactories.find("const " + realType + " &");
+        if (h != gConvFactories.end())
+            return (h->second)(dims);
+        h = gConvFactories.find("const " + realUnresolvedType + " &");
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
