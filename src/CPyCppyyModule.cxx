@@ -433,8 +433,10 @@ static PyObject* MakeCppTemplateClass(PyObject*, PyObject* args)
         Utility::ConstructTemplateArgs(PyTuple_GET_ITEM(args, 0), args, nullptr, Utility::kNone, 1);
     if (!tmpl_name.size())
         return nullptr;
+    
+    Cppyy::TCppScope_t scope = Cppyy::InstantiateTemplateClass(tmpl_name);
 
-    return CreateScopeProxy(tmpl_name);
+    return CreateScopeProxy(scope);
 }
 
 //----------------------------------------------------------------------------

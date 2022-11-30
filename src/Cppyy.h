@@ -313,7 +313,9 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetEnumDataName(TCppEnum_t, TCppIndex_t idata);
     CPPYY_IMPORT
-    long long   GetEnumDataValue(TCppEnum_t, TCppIndex_t idata);
+
+    CPPYY_IMPORT
+    TCppScope_t InstantiateTemplateClass(const std::string& templ_name);
 
 } // namespace Cppyy
 
