@@ -171,7 +171,7 @@ std::string CPyCppyy::TypeManip::compound(const std::string& name)
     }
 
     // XXX: remove this hack
-    if (cpd == " *") return "*";
+    if (!cpd.empty() && cpd[0] == ' ') return cpd.substr(1, cpd.length() - 1);
 
     return cpd;
 }
