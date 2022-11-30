@@ -449,7 +449,7 @@ int CPyCppyy::CPPMethod::GetPriority()
                 priority -=   10;      // prefer double, float, etc. over conversion
 
         // integer types
-            if (strstr(aname.c_str(), "bool"))
+            if (strstr(aname.c_str(), "_Bool"))
                 priority +=    1;      // bool over int (does accept 1 and 0)
             else if (strstr(aname.c_str(), "long long"))
                 priority +=   -5;      // will very likely fit

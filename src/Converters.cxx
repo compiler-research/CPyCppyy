@@ -3398,9 +3398,9 @@ public:
         CPyCppyy::ConvFactories_t& gf = gConvFactories;
 
     // factories for built-ins
-        gf["bool"] =                        (cf_t)+[](cdims_t) { static BoolConverter c{};           return &c; };
-        gf["const bool&"] =                 (cf_t)+[](cdims_t) { static ConstBoolRefConverter c{};   return &c; };
-        gf["bool&"] =                       (cf_t)+[](cdims_t) { static BoolRefConverter c{};        return &c; };
+        gf["_Bool"] =                       (cf_t)+[](cdims_t) { static BoolConverter c{};           return &c; };
+        gf["const _Bool&"] =                (cf_t)+[](cdims_t) { static ConstBoolRefConverter c{};   return &c; };
+        gf["_Bool&"] =                      (cf_t)+[](cdims_t) { static BoolRefConverter c{};        return &c; };
         gf["char"] =                        (cf_t)+[](cdims_t) { static CharConverter c{};           return &c; };
         gf["const char&"] =                 (cf_t)+[](cdims_t) { static ConstCharRefConverter c{};   return &c; };
         gf["char&"] =                       (cf_t)+[](cdims_t) { static CharRefConverter c{};        return &c; };
@@ -3460,7 +3460,7 @@ public:
         gf["void"] =                        (cf_t)+[](cdims_t) { static VoidConverter c{};            return &c; };
 
     // pointer/array factories
-        gf["bool ptr"] =                    (cf_t)+[](cdims_t d) { return new BoolArrayConverter{d}; };
+        gf["_Bool ptr"] =                   (cf_t)+[](cdims_t d) { return new BoolArrayConverter{d}; };
         gf["const signed char[]"] =         (cf_t)+[](cdims_t d) { return new SCharArrayConverter{d}; };
         gf["signed char[]"] =               gf["const signed char[]"];
         gf["signed char**"] =               (cf_t)+[](cdims_t)   { return new SCharArrayConverter{{UNKNOWN_SIZE, UNKNOWN_SIZE}}; };

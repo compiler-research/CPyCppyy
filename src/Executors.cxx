@@ -1027,9 +1027,9 @@ public:
         CPyCppyy::ExecFactories_t& gf = gExecFactories;
 
     // factories for built-ins
-        gf["bool"] =                        (ef_t)+[](cdims_t) { static BoolExecutor e{};          return &e; };
-        gf["bool&"] =                       (ef_t)+[](cdims_t) { return new BoolRefExecutor{}; };
-        gf["const bool&"] =                 (ef_t)+[](cdims_t) { static BoolConstRefExecutor e{};  return &e; };
+        gf["_Bool"] =                       (ef_t)+[](cdims_t) { static BoolExecutor e{};          return &e; };
+        gf["_Bool&"] =                      (ef_t)+[](cdims_t) { return new BoolRefExecutor{}; };
+        gf["const _Bool&"] =                (ef_t)+[](cdims_t) { static BoolConstRefExecutor e{};  return &e; };
         gf["char"] =                        (ef_t)+[](cdims_t) { static CharExecutor e{};          return &e; };
         gf["signed char"] =                 gf["char"];
         gf["unsigned char"] =               (ef_t)+[](cdims_t) { static UCharExecutor e{};         return &e; };
@@ -1079,7 +1079,7 @@ public:
 
     // pointer/array factories
         gf["void ptr"] =                    (ef_t)+[](cdims_t d) { return new VoidArrayExecutor{d};     };
-        gf["bool ptr"] =                    (ef_t)+[](cdims_t d) { return new BoolArrayExecutor{d};     };
+        gf["_Bool ptr"] =                   (ef_t)+[](cdims_t d) { return new BoolArrayExecutor{d};     };
         gf["unsigned char ptr"] =           (ef_t)+[](cdims_t d) { return new UCharArrayExecutor{d};    };
         gf["const unsigned char ptr"] =     gf["unsigned char ptr"];
 #if __cplusplus > 201402L
