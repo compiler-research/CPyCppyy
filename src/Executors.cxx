@@ -254,7 +254,7 @@ PyObject* CPyCppyy::ShortExecutor::Execute(
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
 {
 // execute <method> with argument <self, ctxt>, construct python int return value
-    return PyInt_FromLong((short) 0 /* XXX: GILCallH(method, self, ctxt) */);
+    return PyInt_FromLong((short)GILCallH(method, self, ctxt));
 }
 
 //----------------------------------------------------------------------------
