@@ -404,7 +404,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
     code << "public:\n  static void _init_dispatchptr(" << derivedName << "* inst, PyObject* self) {\n";
     if (1 < base_infos.size()) {
         for (const auto& binfo : base_infos) {
-             if (Cppyy::GetDatamemberIndex(binfo.btype, "_internal_self") != (Cppyy::TCppIndex_t)-1) {
+             if (Cppyy::CheckDatamember(binfo.btype, "_internal_self")) {
                  code << "    " << binfo.bname << "::_init_dispatchptr(inst, self);\n";
                  disp_inited += 1;
              }

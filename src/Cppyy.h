@@ -160,7 +160,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsAggregate(TCppType_t type);
     CPPYY_IMPORT
-    bool IsDefaultConstructable(TCppType_t type);
+    bool IsDefaultConstructable(TCppScope_t scope);
     CPPYY_IMPORT
     bool IsVariable(TCppScope_t scope);
 
@@ -272,8 +272,8 @@ namespace Cppyy {
     bool IsStaticMethod(TCppMethod_t method);
 
 // data member reflection information ----------------------------------------
-    CPPYY_IMPORT
-    TCppIndex_t GetNumDatamembers(TCppScope_t scope, bool accept_namespace = false);
+    // CPPYY_IMPORT
+    // TCppIndex_t GetNumDatamembers(TCppScope_t scope, bool accept_namespace = false);
     CPPYY_IMPORT
     std::vector<TCppScope_t> GetDatamembers(TCppScope_t scope);
     CPPYY_IMPORT
@@ -287,9 +287,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     intptr_t    GetDatamemberOffset(TCppScope_t var);
     CPPYY_IMPORT
-    TCppIndex_t GetDatamemberIndex(TCppScope_t scope, const std::string& name);
-    CPPYY_IMPORT
-    bool CheckDatamember(TCppScope_t scope, const std::string& name);
+    bool        CheckDatamember(TCppScope_t scope, const std::string& name);
 
 // data member properties ----------------------------------------------------
     CPPYY_IMPORT
@@ -306,14 +304,14 @@ namespace Cppyy {
     int  GetDimensionSize(TCppScope_t scope, TCppIndex_t idata, int dimension);
 
 // enum properties -----------------------------------------------------------
-    CPPYY_IMPORT
-    TCppEnum_t  GetEnum(TCppScope_t scope, const std::string& enum_name);
+    // CPPYY_IMPORT
+    // TCppEnum_t  GetEnum(TCppScope_t scope, const std::string& enum_name);
     CPPYY_IMPORT
     TCppScope_t GetEnumScope(TCppScope_t);
     CPPYY_IMPORT
     std::vector<TCppScope_t> GetEnumConstants(TCppScope_t scope);
-    CPPYY_IMPORT
-    std::string GetEnumDataName(TCppEnum_t, TCppIndex_t idata);
+    // CPPYY_IMPORT
+    // std::string GetEnumDataName(TCppEnum_t, TCppIndex_t idata);
     CPPYY_IMPORT
     long long   GetEnumDataValue(TCppScope_t scope);
 
