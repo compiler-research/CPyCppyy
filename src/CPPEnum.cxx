@@ -138,7 +138,7 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
 
     CPPEnum* pyenum = nullptr;
 
-    Cppyy::TCppScope_t etype = Cppyy::GetParentScope(scope);
+    Cppyy::TCppScope_t etype = scope;
     const std::string& ename = Cppyy::GetScopedFinalName(scope);
     if (etype) {
     // create new enum type with labeled values in place, with a meta-class
