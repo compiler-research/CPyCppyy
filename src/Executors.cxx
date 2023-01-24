@@ -525,7 +525,7 @@ CPPYY_IMPL_ARRAY_EXEC(ComplexL, std::complex<long>)
 PyObject* CPyCppyy::Complex##code##Executor::Execute(                        \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt) \
 {                                                                            \
-    static Cppyy::TCppScope_t scopeid = Cppyy::GetFullScope("std::complex<"#type">");\
+    static Cppyy::TCppType_t scopeid = Cppyy::GetComplexType(#type);         \
     std::complex<type>* result =                                             \
         (std::complex<type>*)GILCallO(method, self, ctxt, scopeid);          \
     if (!result) {                                                           \
