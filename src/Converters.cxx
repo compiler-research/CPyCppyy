@@ -3300,7 +3300,8 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         } else
             cnv = CreateConverter(value_type);
         if (cnv || use_byte_cnv)
-            return new InitializerListConverter(cnv, Cppyy::SizeOf(value_type));
+            return new InitializerListConverter(
+                Cppyy::GetScope(realType), cnv, Cppyy::SizeOf(value_type));
     }
 
 //-- still nothing? use a generalized converter
