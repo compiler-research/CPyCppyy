@@ -279,9 +279,11 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetDatamemberName(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
-    TCppType_t GetDatamemberType(TCppScope_t var);
+    TCppType_t  GetDatamemberType(TCppScope_t var);
     CPPYY_IMPORT
     std::string GetTypeAsString(TCppType_t type);
+    CPPYY_IMPORT
+    TCppType_t  GetType(const std::string& name);
     CPPYY_IMPORT
     std::string GetDatamemberTypeAsString(TCppScope_t var);
     CPPYY_IMPORT
