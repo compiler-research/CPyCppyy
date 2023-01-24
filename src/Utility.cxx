@@ -573,6 +573,8 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
     tmpl_name.reserve(128);
     if (pyname)
         tmpl_name.append(CPyCppyy_PyText_AsString(pyname));
+    if (tmpl_name == "complex")
+        tmpl_name = "std::complex";
     tmpl_name.push_back('<');
 
     if (pcnt) *pcnt = 0;     // count number of times 'pref' is used
