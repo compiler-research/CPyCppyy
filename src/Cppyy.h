@@ -285,6 +285,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppType_t  GetType(const std::string& name);
     CPPYY_IMPORT
+    TCppType_t  GetComplexType(const std::string& element_type);
+    CPPYY_IMPORT
     std::string GetDatamemberTypeAsString(TCppScope_t var);
     CPPYY_IMPORT
     intptr_t    GetDatamemberOffset(TCppScope_t var);
