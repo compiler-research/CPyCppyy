@@ -51,9 +51,12 @@ namespace {
 static inline rtype GILCall##tcode(                                          \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt)\
 {                                                                            \
-    printf(#tcode);                                                          \
-    if (!ReleasesGIL(ctxt))                                                  \
+    printf("========%s\n", #tcode);                                          \
+    if (!ReleasesGIL(ctxt)) {                                                \
+        printf("Not ReleaseGIL \n");                                         \
         return Cppyy::Call##tcode(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs());\
+    }                                                                        \
+    printf("ReleaseGIL \n");                                                 \
     GILControl gc{};                                                         \
     return Cppyy::Call##tcode(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs());\
 }
@@ -81,6 +84,7 @@ CPPYY_IMPL_GILCALL(void*,          R)
 static inline Cppyy::TCppObject_t GILCallO(Cppyy::TCppMethod_t method,
     Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt, Cppyy::TCppType_t klass)
 {
+    printf("))))))))))))) %p, %p\n", klass, Cppyy::GetType("double"));
 #ifdef WITH_THREAD
     if (!ReleasesGIL(ctxt))
 #endif
@@ -494,6 +498,7 @@ PyObject* CPyCppyy::VoidArrayExecutor::Execute(
 PyObject* CPyCppyy::name##ArrayExecutor::Execute(                            \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt) \
 {                                                                            \
+    printf("CREATING LOW LEVEL VIEW\n");                                     \
     return CreateLowLevelView((type*)GILCallR(method, self, ctxt), fShape);  \
 }
 
@@ -899,6 +904,7 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
     const std::string& cpd = TypeManip::compound(resolvedType);
     std::string realType = TypeManip::clean_type(resolvedType, false);
     const std::string compounded = cpd.empty() ? realType : realType + " " + cpd;
+    printf("CE:    const: %d  cpd: %s  rt: %s\n", isConst, cpd.c_str(), realType.c_str());
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gExecFactories.find(compounded);

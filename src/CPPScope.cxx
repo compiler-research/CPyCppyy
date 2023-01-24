@@ -500,7 +500,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                     Utility::FetchError(errors);
                 }
             } else {
-                printf("   MGA: 5.5.1.2\n");
+                printf("   MGA: 5.5.1.2,  pyclass = %p, pyname = %p\n");
                 PyType_Type.tp_setattro(pyclass, pyname, attr);
             }
         } else {

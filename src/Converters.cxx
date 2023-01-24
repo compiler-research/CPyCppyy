@@ -3020,7 +3020,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
             return (h->second)(dims);
     }
 
-    // printf(" CC: hereee\n");
+    printf(" CC: hereee\n");
 //-- still nothing? try pointer instead of array (for builtins)
     if (cpd.compare(0, 3, "*[]") == 0) {
     // special case, array of pointers
@@ -3218,12 +3218,14 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 // resolve typedefs etc.
     const std::string& resolvedType = Cppyy::GetTypeAsString(Cppyy::ResolveType(type));
 
-    // printf(" CC2: here\n");
+    printf(" CC2: here, resolvedType: %s\n", resolvedType.c_str());
 // a full, qualified matching converter is preferred
     if (resolvedType != fullType) {
         h = gConvFactories.find(resolvedType);
-        if (h != gConvFactories.end())
+        if (h != gConvFactories.end()) {
+            printf("  CC2: found\n");
             return (h->second)(dims);
+        }
     }
 
 //-- nothing? ok, collect information about the type and possible qualifiers/decorators
@@ -3246,7 +3248,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
             return (h->second)(dims);
     }
 
-    // printf(" CC2: hereee\n");
+    printf(" CC2: hereee\n");
 //-- still nothing? try pointer instead of array (for builtins)
     if (cpd.compare(0, 3, "*[]") == 0) {
     // special case, array of pointers

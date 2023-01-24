@@ -91,14 +91,20 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
         }
     }
 
+    printf("dm_get: 3\n");
     if (dm->fConverter != 0) {
+        printf(" dm_get: 3.1\n");
         PyObject* result = dm->fConverter->FromMemory((dm->fFlags & kIsArrayType) ? &address : address);
-        if (!result)
+        if (!result) {
+            printf(" dm_get: 3.1.1\n");
             return result;
+        }
+        printf(" dm_get: 3.2\n");
 
     // low level views are expensive to create, so cache them on the object instead
         bool isLLView = LowLevelView_CheckExact(result);
         if (isLLView && CPPInstance_Check(pyobj)) {
+            printf(" dm_get: 3.2.1\n");
             Py_INCREF(result);
             pyobj->GetDatamemberCache().push_back(std::make_pair(dm->fOffset, result));
             dm->fFlags |= kIsCachable;
@@ -110,6 +116,7 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
     // end up being "stand-alone")
     // TODO: should be done for LLViews as well
         else if (pyobj && CPPInstance_Check(result)) {
+            printf(" dm_get: 3.2.2\n");
             if (PyObject_SetAttr(result, PyStrings::gLifeLine, (PyObject*)pyobj) == -1)
                 PyErr_Clear();     // ignored
         }
@@ -362,6 +369,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
     // }
 
     // if (dims.empty())
+    printf("                  DM:S : %s\n", Cppyy::GetTypeAsString(type).c_str());
     fConverter = CreateConverter(type, 0, Cppyy::GetTypeScope(data));
     // else
     //     fConverter = CreateConverter(fFullType, {(dim_t)dims.size(), dims.data()});
@@ -418,7 +426,7 @@ void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
     if (oisa != fEnclosingScope)
         offset = Cppyy::GetBaseOffset(oisa, fEnclosingScope, obj, 1 /* up-cast */);
 
-    printf("~~~~~~here6 fo: %ld  bo: %ld  obj: %p\n", fOffset, offset, obj);
+    printf("~~~~~~here6 fo: %ld  bo: %ld  obj: %p  ret: %p\n", fOffset, offset, obj, ((intptr_t)obj + offset + fOffset));
     return (void*)((intptr_t)obj + offset + fOffset);
 }
 
