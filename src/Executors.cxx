@@ -898,9 +898,10 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
     bool isConst = strncmp(resolvedType.c_str(), "const", 5)  == 0;
     const std::string& cpd = TypeManip::compound(resolvedType);
     std::string realType = TypeManip::clean_type(resolvedType, false);
+    const std::string compounded = cpd.empty() ? realType : realType + " " + cpd;
 
 // accept unqualified type (as python does not know about qualifiers)
-    h = gExecFactories.find(realType + cpd);
+    h = gExecFactories.find(compounded);
     if (h != gExecFactories.end())
         return (h->second)(dims);
 
@@ -908,7 +909,7 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 // of c-strings, but those are specialized in the converter map)
     if (isConst) {
         realType = TypeManip::remove_const(realType);
-        h = gExecFactories.find(realType + cpd);
+        h = gExecFactories.find(compounded);
         if (h != gExecFactories.end())
             return (h->second)(dims);
     }
