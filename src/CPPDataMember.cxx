@@ -334,7 +334,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
     //     fFlags |= kIsArrayType;
 
     const std::string name = Cppyy::GetFinalName(data);
-    const std::string type = Cppyy::GetDatamemberTypeAsString(data);
+    Cppyy::TCppType_t type = Cppyy::GetDatamemberType(data);
     // fFullType = Cppyy::GetDatamemberType(scope, idata);
     // if (Cppyy::IsEnumData(scope, idata)) {
     //     if (fFullType.find("(anonymous)") == std::string::npos) {
