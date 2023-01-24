@@ -1011,7 +1011,7 @@ namespace {
 
 using namespace CPyCppyy;
 
-#define WSTRING "std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t> >"
+#define WSTRING "class std::basic_string<wchar_t, class std::char_traits<wchar_t>, class std::allocator<wchar_t> >"
 
 //-- aliasing special case: C complex (is binary compatible with C++ std::complex)
 #ifndef _WIN32
@@ -1075,8 +1075,8 @@ public:
         gf["double &"] =                    (ef_t)+[](cdims_t) { return new DoubleRefExecutor{}; };
         gf["long double"] =                 (ef_t)+[](cdims_t) { static LongDoubleExecutor e{}; return &e; }; // TODO: lost precision
         gf["long double &"] =               (ef_t)+[](cdims_t) { return new LongDoubleRefExecutor{}; };
-        gf["std::complex<double>"] =        (ef_t)+[](cdims_t) { static ComplexDExecutor e{};    return &e; };
-        gf["std::complex<double> &"] =      (ef_t)+[](cdims_t) { return new ComplexDRefExecutor{}; };
+        gf["class std::complex<double>"] =        (ef_t)+[](cdims_t) { static ComplexDExecutor e{};    return &e; };
+        gf["class std::complex<double> &"] =      (ef_t)+[](cdims_t) { return new ComplexDRefExecutor{}; };
         gf["void"] =                        (ef_t)+[](cdims_t) { static VoidExecutor e{};       return &e; };
 
     // pointer/array factories
@@ -1085,8 +1085,8 @@ public:
         gf["unsigned char ptr"] =           (ef_t)+[](cdims_t d) { return new UCharArrayExecutor{d};    };
         gf["const unsigned char ptr"] =     gf["unsigned char ptr"];
 #if __cplusplus > 201402L
-        gf["std::byte ptr"] =               (ef_t)+[](cdims_t d) { return new ByteArrayExecutor{d};     };
-        gf["const std::byte ptr"] =         gf["std::byte ptr"];
+        gf["class std::byte ptr"] =               (ef_t)+[](cdims_t d) { return new ByteArrayExecutor{d};     };
+        gf["const class std::byte ptr"] =         gf["class std::byte ptr"];
 #endif
         gf["int8_t ptr"] =                  (ef_t)+[](cdims_t d) { return new Int8ArrayExecutor{d};    };
         gf["uint8_t ptr"] =                 (ef_t)+[](cdims_t d) { return new UInt8ArrayExecutor{d};   };
@@ -1100,28 +1100,28 @@ public:
         gf["unsigned long long ptr"] =      (ef_t)+[](cdims_t d) { return new ULLongArrayExecutor{d};   };
         gf["float ptr"] =                   (ef_t)+[](cdims_t d) { return new FloatArrayExecutor{d};    };
         gf["double ptr"] =                  (ef_t)+[](cdims_t d) { return new DoubleArrayExecutor{d};   };
-        gf["std::complex<float> ptr"] =     (ef_t)+[](cdims_t d) { return new ComplexFArrayExecutor{d}; };
-        gf["std::complex<double> ptr"] =    (ef_t)+[](cdims_t d) { return new ComplexDArrayExecutor{d}; };
-        gf["std::complex<int> ptr"] =       (ef_t)+[](cdims_t d) { return new ComplexIArrayExecutor{d}; };
-        gf["std::complex<long> ptr"] =      (ef_t)+[](cdims_t d) { return new ComplexLArrayExecutor{d}; };
+        gf["class std::complex<float> ptr"] =     (ef_t)+[](cdims_t d) { return new ComplexFArrayExecutor{d}; };
+        gf["class std::complex<double> ptr"] =    (ef_t)+[](cdims_t d) { return new ComplexDArrayExecutor{d}; };
+        gf["class std::complex<int> ptr"] =       (ef_t)+[](cdims_t d) { return new ComplexIArrayExecutor{d}; };
+        gf["class std::complex<long> ptr"] =      (ef_t)+[](cdims_t d) { return new ComplexLArrayExecutor{d}; };
 
     // aliases
         gf["internal_enum_type_t"] =        gf["int"];
         gf["internal_enum_type_t &"] =      gf["int &"];
         gf["internal_enum_type_t ptr"] =    gf["int ptr"];
 #if __cplusplus > 201402L
-        gf["std::byte"] =                   gf["uint8_t"];
-        gf["std::byte &"] =                 gf["uint8_t &"];
-        gf["const std::byte &"] =           gf["const uint8_t &"];
+        gf["class class std::byte"] =                   gf["uint8_t"];
+        gf["class class std::byte &"] =                 gf["uint8_t &"];
+        gf["const class std::byte &"] =           gf["const uint8_t &"];
 #endif
-        gf["std::int8_t"] =                 gf["int8_t"];
-        gf["std::int8_t &"] =               gf["int8_t &"];
-        gf["const std::int8_t &"] =         gf["const int8_t &"];
-        gf["std::int8_t ptr"] =             gf["int8_t ptr"];
-        gf["std::uint8_t"] =                gf["uint8_t"];
-        gf["std::uint8_t &"] =              gf["uint8_t &"];
-        gf["const std::uint8_t &"] =        gf["const uint8_t &"];
-        gf["std::uint8_t ptr"] =            gf["uint8_t ptr"];
+        gf["class std::int8_t"] =                 gf["int8_t"];
+        gf["class std::int8_t &"] =               gf["int8_t &"];
+        gf["const class std::int8_t &"] =         gf["const int8_t &"];
+        gf["class std::int8_t ptr"] =             gf["int8_t ptr"];
+        gf["class std::uint8_t"] =                gf["uint8_t"];
+        gf["class std::uint8_t &"] =              gf["uint8_t &"];
+        gf["const class std::uint8_t &"] =        gf["const uint8_t &"];
+        gf["class std::uint8_t ptr"] =            gf["uint8_t ptr"];
 #ifdef _WIN32
         gf["__int64"] =                     gf["long long"];
         gf["__int64&"] =                    gf["long long&"];
@@ -1130,10 +1130,10 @@ public:
         gf["unsigned __int64&"] =           gf["unsigned long long&"];
         gf["unsigned __int64 ptr"] =        gf["unsigned long long ptr"];
 #endif
-        gf[CCOMPLEX_D] =                    gf["std::complex<double>"];
-        gf[CCOMPLEX_D " &"] =               gf["std::complex<double> &"];
-        gf[CCOMPLEX_F " ptr"] =             gf["std::complex<float> ptr"];
-        gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
+        gf[CCOMPLEX_D] =                    gf["class std::complex<double>"];
+        gf[CCOMPLEX_D " &"] =               gf["class std::complex<double> &"];
+        gf[CCOMPLEX_F " ptr"] =             gf["class std::complex<float> ptr"];
+        gf[CCOMPLEX_D " ptr"] =             gf["class std::complex<double> ptr"];
 
     // factories for special cases
         gf["const char *"] =                (ef_t)+[]() { static CStringExecutor e{};     return &e; };
@@ -1143,10 +1143,10 @@ public:
         gf["wchar_t *"] =                   (ef_t)+[](cdims_t) { static WCStringExecutor e{};    return &e;};
         gf["char16_t *"] =                  (ef_t)+[](cdims_t) { static CString16Executor e{};   return &e;};
         gf["char32_t *"] =                  (ef_t)+[](cdims_t) { static CString32Executor e{};   return &e;};
-        gf["std::string"] =                 (ef_t)+[](cdims_t) { static STLStringExecutor e{};   return &e; };
-        gf["std::string &"] =               (ef_t)+[](cdims_t) { return new STLStringRefExecutor{}; };
-        gf["std::wstring"] =                (ef_t)+[](cdims_t) { static STLWStringExecutor e{};  return &e; };
-        gf[WSTRING] =                       gf["std::wstring"];
+        gf["class std::string"] =                 (ef_t)+[](cdims_t) { static STLStringExecutor e{};   return &e; };
+        gf["class std::string &"] =               (ef_t)+[](cdims_t) { return new STLStringRefExecutor{}; };
+        gf["class std::wstring"] =                (ef_t)+[](cdims_t) { static STLWStringExecutor e{};  return &e; };
+        gf[WSTRING] =                       gf["class std::wstring"];
         gf["__init__"] =                    (ef_t)+[](cdims_t) { static ConstructorExecutor e{}; return &e; };
         gf["PyObject *"] =                  (ef_t)+[](cdims_t) { static PyObjectExecutor e{};    return &e; };
         gf["_object *"] =                   gf["PyObject *"];
