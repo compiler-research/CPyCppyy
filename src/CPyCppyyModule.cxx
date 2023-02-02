@@ -436,7 +436,7 @@ static PyObject* MakeCppTemplateClass(PyObject*, PyObject* args)
     
     Cppyy::TCppScope_t scope = Cppyy::InstantiateTemplateClass(tmpl_name);
 
-    return CreateScopeProxy(scope);
+    printf("````````````````````\n");
 }
 
 //----------------------------------------------------------------------------

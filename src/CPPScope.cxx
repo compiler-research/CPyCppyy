@@ -318,6 +318,10 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
     std::string name = CPyCppyy_PyText_AsString(pyname);
     std::string type = Cppyy::GetScopedFinalName(((CPPScope *)pyclass)->fCppType);
     printf("MGA: Name: %s \tType: %s\n", name.c_str(), type.c_str());
+    if (type == "std::complex") {
+        Cppyy::TCppScope_t temp = ((CPPScope *)pyclass)->fCppType;
+        Cppyy::DumpScope(temp);
+    }
 
     PyObject* possibly_shadowed = nullptr;
     if (attr) {
