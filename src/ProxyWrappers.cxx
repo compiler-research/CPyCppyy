@@ -681,9 +681,8 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         }
     }
 
-    std::string name = Cppyy::GetFinalName(scope);
-    PyObject* pycppname = CPyCppyy_PyText_FromString(Cppyy::GetScopedFinalName(scope).c_str());
-    printf("CPS2: %s\n", Cppyy::GetScopedFinalName(scope).c_str());
+    std::string name = Cppyy::GetScopedFinalName(scope);
+    printf("CPS2: %s\n", name.c_str());
     printf("CPS2: parent: %s\n", Cppyy::GetScopedFinalName(Cppyy::GetParentScope(scope)).c_str());
 
     if (Cppyy::IsTemplate(scope)) {
