@@ -866,7 +866,7 @@ PyObject* CPyCppyy::CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyO
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::BindCppObjectNoCast(Cppyy::TCppObject_t address,
-        Cppyy::TCppType_t klass, const unsigned flags)
+        Cppyy::TCppScope_t klass, const unsigned flags)
 {
 // only known or knowable objects will be bound (null object is ok)
     if (!klass) {
@@ -939,7 +939,7 @@ PyObject* CPyCppyy::BindCppObjectNoCast(Cppyy::TCppObject_t address,
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::BindCppObject(Cppyy::TCppObject_t address,
-        Cppyy::TCppType_t klass, const unsigned flags)
+        Cppyy::TCppScope_t klass, const unsigned flags)
 {
 // if the object is a null pointer, return a typed one (as needed for overloading)
     if (!address)
@@ -980,7 +980,7 @@ PyObject* CPyCppyy::BindCppObject(Cppyy::TCppObject_t address,
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::BindCppObjectArray(
-    Cppyy::TCppObject_t address, Cppyy::TCppType_t klass, cdims_t dims)
+    Cppyy::TCppObject_t address, Cppyy::TCppScope_t klass, cdims_t dims)
 {
 // TODO: this function exists for symmetry; need to figure out if it's useful
     return TupleOfInstances_New(address, klass, dims);

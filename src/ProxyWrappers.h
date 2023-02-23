@@ -22,11 +22,11 @@ PyObject* CreateExcScopeProxy(PyObject* pyscope, PyObject* pyname, PyObject* par
 
 // bind a C++ object into a Python proxy object (flags are CPPInstance::Default)
 PyObject* BindCppObjectNoCast(Cppyy::TCppObject_t object,
-    Cppyy::TCppType_t klass, const unsigned flags = 0);
+    Cppyy::TCppScope_t klass, const unsigned flags = 0);
 PyObject* BindCppObject(Cppyy::TCppObject_t object,
-    Cppyy::TCppType_t klass, const unsigned flags = 0);
+    Cppyy::TCppScope_t klass, const unsigned flags = 0);
 PyObject* BindCppObjectArray(
-    Cppyy::TCppObject_t address, Cppyy::TCppType_t klass, cdims_t dims);
+    Cppyy::TCppObject_t address, Cppyy::TCppScope_t klass, cdims_t dims);
 
 } // namespace CPyCppyy
 

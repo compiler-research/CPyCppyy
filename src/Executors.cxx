@@ -96,7 +96,7 @@ static inline Cppyy::TCppObject_t GILCallO(Cppyy::TCppMethod_t method,
 }
 
 static inline Cppyy::TCppObject_t GILCallConstructor(
-    Cppyy::TCppMethod_t method, Cppyy::TCppType_t klass, CPyCppyy::CallContext* ctxt)
+    Cppyy::TCppMethod_t method, Cppyy::TCppScope_t klass, CPyCppyy::CallContext* ctxt)
 {
 #ifdef WITH_THREAD
     if (!ReleasesGIL(ctxt))
@@ -591,7 +591,7 @@ PyObject* CPyCppyy::InstancePtrExecutor::Execute(
 }
 
 //----------------------------------------------------------------------------
-CPyCppyy::InstanceExecutor::InstanceExecutor(Cppyy::TCppType_t klass) :
+CPyCppyy::InstanceExecutor::InstanceExecutor(Cppyy::TCppScope_t klass) :
     fClass(klass), fFlags(CPPInstance::kIsValue | CPPInstance::kIsOwner)
 {
     /* empty */
@@ -622,7 +622,7 @@ PyObject* CPyCppyy::InstanceExecutor::Execute(
 
 
 //----------------------------------------------------------------------------
-CPyCppyy::IteratorExecutor::IteratorExecutor(Cppyy::TCppType_t klass) :
+CPyCppyy::IteratorExecutor::IteratorExecutor(Cppyy::TCppScope_t klass) :
     InstanceExecutor(klass)
 {
     fFlags |= CPPInstance::kNoWrapConv;     // adds to flags from base class
@@ -742,7 +742,7 @@ PyObject* CPyCppyy::ConstructorExecutor::Execute(
 {
 // package return address in PyObject* for caller to handle appropriately (see
 // CPPConstructor for the actual build of the PyObject)
-    return (PyObject*)GILCallConstructor(method, (Cppyy::TCppType_t)klass, ctxt);
+    return (PyObject*)GILCallConstructor(method, (Cppyy::TCppScope_t)klass, ctxt);
 }
 
 //----------------------------------------------------------------------------
