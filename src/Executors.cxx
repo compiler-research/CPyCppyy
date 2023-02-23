@@ -890,21 +890,23 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
         return (h->second)(dims);
 
 // resolve typedefs etc.
-    const std::string& resolvedType = Cppyy::GetTypeAsString(Cppyy::ResolveType(type));
+    Cppyy::TCppType_t resolvedType = Cppyy::ResolveType(type);
+    const std::string& resolvedTypeStr = Cppyy::GetTypeAsString(resolvedType);
 
 // a full, qualified matching executor is preferred
-    if (resolvedType != fullType) {
-         h = gExecFactories.find(resolvedType);
+    if (resolvedTypeStr != fullType) {
+         h = gExecFactories.find(resolvedTypeStr);
          if (h != gExecFactories.end())
               return (h->second)(dims);
     }
 
 //-- nothing? ok, collect information about the type and possible qualifiers/decorators
-    bool isConst = strncmp(resolvedType.c_str(), "const", 5)  == 0;
-    const std::string& cpd = TypeManip::compound(resolvedType);
-    std::string realType = TypeManip::clean_type(resolvedType, false);
-    const std::string compounded = cpd.empty() ? realType : realType + " " + cpd;
-    printf("CE:    const: %d  cpd: %s  rt: %s\n", isConst, cpd.c_str(), realType.c_str());
+    bool isConst = strncmp(resolvedTypeStr.c_str(), "const", 5)  == 0;
+    const std::string& cpd = TypeManip::compound(resolvedTypeStr);
+    Cppyy::TCppType_t realType = Cppyy::GetRealType(resolvedType);
+    std::string realTypeStr = Cppyy::GetTypeAsString(realType);
+    const std::string compounded = cpd.empty() ? realTypeStr : realTypeStr + " " + cpd;
+    printf("CE:    const: %d  cpd: %s  rt: %s  restype: %s\n", isConst, cpd.c_str(), realTypeStr.c_str(), resolvedTypeStr.c_str());
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gExecFactories.find(compounded);
@@ -914,7 +916,7 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 // drop const, as that is mostly meaningless to python (with the exception
 // of c-strings, but those are specialized in the converter map)
     if (isConst) {
-        realType = TypeManip::remove_const(realType);
+        realTypeStr = TypeManip::remove_const(realTypeStr);
         h = gExecFactories.find(compounded);
         if (h != gExecFactories.end())
             return (h->second)(dims);
@@ -922,22 +924,23 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 
 // simple array types
     if (!cpd.empty() && (std::string::size_type)std::count(cpd.begin(), cpd.end(), '*') == cpd.size()) {
-        h = gExecFactories.find(realType + " ptr");
+        h = gExecFactories.find(realTypeStr + " ptr");
         if (h != gExecFactories.end())
             return (h->second)((!dims || dims.ndim() < (dim_t)cpd.size()) ? dims_t(cpd.size()) : dims);
     }
 
 //-- still nothing? try pointer instead of array (for builtins)
     if (cpd == "[]") {
-        h = gExecFactories.find(realType + "*");
+        h = gExecFactories.find(realTypeStr + "*");
         if (h != gExecFactories.end())
             return (h->second)(dims);
     }
 
 // C++ classes and special cases
     Executor* result = 0;
-    if (Cppyy::TCppType_t klass = Cppyy::GetFullScope(realType)) {
-        if (resolvedType.find("iterator") != std::string::npos || gIteratorTypes.find(fullType) != gIteratorTypes.end()) {
+    if (Cppyy::IsClassType(realType)) {
+        Cppyy::TCppScope_t klass = Cppyy::GetScopeFromType(realType);
+        if (resolvedTypeStr.find("iterator") != std::string::npos || gIteratorTypes.find(fullType) != gIteratorTypes.end()) {
             if (cpd == "")
                 return new IteratorExecutor(klass);
         }
@@ -951,7 +954,7 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
         else if (cpd == "*&")
             result = new InstancePtrRefExecutor(klass);
         else if (cpd == "[]") {
-            Py_ssize_t asize = TypeManip::array_size(resolvedType);
+            Py_ssize_t asize = TypeManip::array_size(resolvedTypeStr);
             if (0 < asize)
                 result = new InstanceArrayExecutor(klass, asize);
             else
