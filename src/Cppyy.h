@@ -60,6 +60,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppType_t ResolveType(TCppType_t type);
     CPPYY_IMPORT
+    TCppType_t GetRealType(TCppType_t type);
+    CPPYY_IMPORT
     std::string ResolveEnum(TCppScope_t enum_type);
     CPPYY_IMPORT
     TCppScope_t GetScope(const std::string& name, TCppScope_t parent_scope = 0);
@@ -127,7 +129,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     char*         CallS(TCppMethod_t method, TCppObject_t self, size_t nargs, void* args, size_t* length);
     CPPYY_IMPORT
-    TCppObject_t  CallConstructor(TCppMethod_t method, TCppType_t type, size_t nargs, void* args);
+    TCppObject_t  CallConstructor(TCppMethod_t method, TCppScope_t klass, size_t nargs, void* args);
     CPPYY_IMPORT
     void          CallDestructor(TCppType_t type, TCppObject_t self);
     CPPYY_IMPORT
@@ -151,6 +153,8 @@ namespace Cppyy {
     bool IsNamespace(TCppScope_t scope);
     CPPYY_IMPORT
     bool IsTemplate(TCppScope_t handle);
+    CPPYY_IMPORT
+    bool IsTemplateInstantiation(TCppScope_t handle);
     CPPYY_IMPORT
     bool IsAbstract(TCppType_t type);
     CPPYY_IMPORT
@@ -282,6 +286,8 @@ namespace Cppyy {
     TCppType_t  GetDatamemberType(TCppScope_t var);
     CPPYY_IMPORT
     std::string GetTypeAsString(TCppType_t type);
+    CPPYY_IMPORT
+    bool IsClassType(TCppType_t type);
     CPPYY_IMPORT
     TCppType_t  GetType(const std::string& name);
     CPPYY_IMPORT
