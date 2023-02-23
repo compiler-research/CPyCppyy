@@ -681,7 +681,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         }
     }
 
-    std::string name = Cppyy::GetScopedFinalName(scope);
+    std::string name = Cppyy::GetFinalName(scope);
     printf("CPS2: %s\n", name.c_str());
     printf("CPS2: parent: %s\n", Cppyy::GetScopedFinalName(Cppyy::GetParentScope(scope)).c_str());
 
@@ -690,7 +690,8 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         // a "naked" templated class is requested: return callable proxy for instantiations
         PyObject* pytcl = PyObject_GetAttr(gThisModule, PyStrings::gTemplate);
         PyObject* pytemplate = PyObject_CallFunction(
-            pytcl, const_cast<char*>("s"), const_cast<char*>(name.c_str()));
+            pytcl, const_cast<char*>("s"),
+            const_cast<char*>(Cppyy::GetScopedFinalName(scope).c_str()));
         Py_DECREF(pytcl);
 
         // cache the result
@@ -771,6 +772,9 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
 
     // store on parent if found/created and complete
     if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {
+        // FIXME: This is to mimic original behaviour. Still required?
+        if (Cppyy::IsTemplateInstantiation(scope))
+            name = Cppyy::GetScopedFinalName(scope);
         AddScopeToParent(parent, name, pyscope);
     }
     Py_DECREF(parent);
