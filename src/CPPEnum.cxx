@@ -140,7 +140,9 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
 
     Cppyy::TCppScope_t etype = scope;
     const std::string& ename = Cppyy::GetScopedFinalName(scope);
+#ifdef PRINT_DEBUG
     printf("     CEN: 1, ename = %s, name = %s\n", ename.c_str(), name.c_str());
+#endif
     if (etype) {
     // create new enum type with labeled values in place, with a meta-class
     // to make sure the enum values are read-only
@@ -188,7 +190,9 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
         std::vector<Cppyy::TCppScope_t> econstants = Cppyy::GetEnumConstants(etype);
         for (auto *econstant : econstants) {
             PyObject* val = pyval_from_enum(resolved, pyenum, pyside_type, econstant);
+#ifdef PRINT_DEBUG
             printf("      CEN: 1.1.1, %s\n", Cppyy::GetFinalName(econstant).c_str());
+#endif
             PyObject* pydname = CPyCppyy_PyText_FromString(Cppyy::GetFinalName(econstant).c_str());
             PyObject_SetAttr(pyenum, pydname, val);
             PyObject_SetAttr(val, PyStrings::gCppName, pydname);

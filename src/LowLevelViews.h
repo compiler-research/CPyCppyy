@@ -67,7 +67,9 @@ CPPYY_DECL_VIEW_CREATOR(std::complex<long>);
 PyObject* CreateLowLevelView(const char**, cdims_t shape = 0);
 
 inline PyObject* CreatePointerView(void* ptr, cdims_t shape = 0) {
-    printf(">>>>>>>>%p [%d]\n", ptr, shape == 0 ? 0 : shape.ndim());
+#ifdef PRINT_DEBUG
+    printf("CreatePointerView: addr: %p [%d]\n", ptr, shape == 0 ? 0 : shape.ndim());
+#endif
     return CreateLowLevelView((uintptr_t*)ptr, shape);
 }
 

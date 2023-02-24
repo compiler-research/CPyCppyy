@@ -103,27 +103,39 @@ void TemplateProxy::AdoptTemplate(PyCallable* pc)
 PyObject* TemplateProxy::Instantiate(const std::string& fname,
     CPyCppyy_PyArgs_t args, size_t nargsf, Utility::ArgPreference pref, int* pcnt)
 {
+#ifdef PRINT_DEBUG
     printf("TP::I : 0\n");
+#endif
 // Instantiate (and cache) templated methods, return method if any
     std::string proto = "";
 
 #if PY_VERSION_HEX >= 0x03080000
     bool isNS = (((CPPScope*)fTI->fPyClass)->fFlags & CPPScope::kIsNamespace);
+#ifdef PRINT_DEBUG
     printf("TP::I : 1, %d\n", (bool) isNS);
+#endif
     if (!isNS && !fSelf && CPyCppyy_PyArgs_GET_SIZE(args, nargsf)) {
+#ifdef PRINT_DEBUG
         printf(" TP::I : 1.1\n");
+#endif
         args   += 1;
         nargsf -= 1;
     }
 #endif
 
     Py_ssize_t argc = CPyCppyy_PyArgs_GET_SIZE(args, nargsf);
+#ifdef PRINT_DEBUG
     printf("TP::I : 2, %d\n", argc);
+#endif
     if (argc != 0) {
+#ifdef PRINT_DEBUG
         printf(" TP::I : 2.1\n");
+#endif
         PyObject* tpArgs = PyTuple_New(argc);
         for (Py_ssize_t i = 0; i < argc; ++i) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.1.1\n");
+#endif
             PyObject* itemi = CPyCppyy_PyArgs_GET_ITEM(args, i);
 
             bool bArgSet = false;
@@ -131,81 +143,119 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
         // special case for arrays
             PyObject* pytc = PyObject_GetAttr(itemi, PyStrings::gTypeCode);
             if (pytc) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.1.1\n");
+#endif
                 PyObject* pyptrname = TC2CppName(pytc, "*", true);
                 if (pyptrname) {
+#ifdef PRINT_DEBUG
                     printf("    TP::I : 2.1.1.1.1\n");
+#endif
                     PyTuple_SET_ITEM(tpArgs, i, pyptrname);
                     bArgSet = true;
                 // string added, but not counted towards nStrings
                 }
                 Py_DECREF(pytc); pytc = nullptr;
             } else {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.1.2\n");
+#endif
                 PyErr_Clear();
             }
 
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.1.2\n");
+#endif
         // if not arg set, try special case for ctypes
             if (!bArgSet) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.2.1\n");
+#endif
                 pytc = PyObject_GetAttr(itemi, PyStrings::gCTypesType);
             }
 
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.1.3\n");
+#endif
             if (!bArgSet && pytc) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.3.1\n");
+#endif
                 PyObject* pyactname = TC2CppName(pytc, "&", false);
                 if (!pyactname) {
+#ifdef PRINT_DEBUG
                     printf("    TP::I : 2.1.3.1.1\n");
+#endif
                 // _type_ of a pointer to c_type is that type, which will have a type
                     PyObject* newpytc = PyObject_GetAttr(pytc, PyStrings::gCTypesType);
                     Py_DECREF(pytc);
                     pytc = newpytc;
                     if (pytc) {
+#ifdef PRINT_DEBUG
                         printf("     TP::I : 2.1.3.1.1.1\n");
+#endif
                         pyactname = TC2CppName(pytc, "*", false);
                     } else {
+#ifdef PRINT_DEBUG
                         printf("     TP::I : 2.1.3.1.1.2\n");
+#endif
                         PyErr_Clear();
                     }
                 }
                 Py_XDECREF(pytc); pytc = nullptr;
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.3.2\n");
+#endif
                 if (pyactname) {
+#ifdef PRINT_DEBUG
                     printf("    TP::I : 2.1.3.2.1\n");
+#endif
                     PyTuple_SET_ITEM(tpArgs, i, pyactname);
                     bArgSet = true;
                 // string added, but not counted towards nStrings
                 }
             } else {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.3.2\n");
+#endif
                 PyErr_Clear();
             }
 
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.1.4\n");
+#endif
             if (!bArgSet) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 2.1.4.1\n");
+#endif
             // normal case (may well fail)
                 PyErr_Clear();
                 PyObject* tp = (PyObject*)Py_TYPE(itemi);
                 Py_INCREF(tp);
                 PyTuple_SET_ITEM(tpArgs, i, tp);
             }
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.1.5\n");
+#endif
         }
 
 #if PY_VERSION_HEX >= 0x03080000
+#ifdef PRINT_DEBUG
         printf(" TP::I : 2.2\n");
+#endif
         PyObject* pyargs = PyTuple_New(argc);
         for (Py_ssize_t i = 0; i < argc; ++i) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.2.1\n");
+#endif
             PyObject* item = CPyCppyy_PyArgs_GET_ITEM(args, i);
             Py_INCREF(item);
             PyTuple_SET_ITEM(pyargs, i, item);
         }
 #else
+#ifdef PRINT_DEBUG
         printf(" TP::I : 2.3\n");
+#endif
         Py_INCREF(args);
         PyObject* pyargs = args;
 #endif
@@ -214,14 +264,20 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
 
         Py_DECREF(pyargs);
         Py_DECREF(tpArgs);
+#ifdef PRINT_DEBUG
         printf(" TP::I : 2.4\n");
+#endif
         if (name_v1.size()) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 2.4.1\n");
+#endif
             proto = name_v1.substr(1, name_v1.size()-2);
         }
     }
 
+#ifdef PRINT_DEBUG
     printf("TP::I : 3\n");
+#endif
 // the following causes instantiation as necessary
     Cppyy::TCppScope_t scope = ((CPPClass*)fTI->fPyClass)->fCppType;
     Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(scope, fname, proto);
@@ -237,24 +293,34 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
     // TODO: this caches the lookup method before the call, meaning that failing overloads
     // can add already existing overloads to the set of methods.
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.1\n");
+#endif
         std::string resname = Cppyy::GetMethodFullName(cppmeth);
 
     // An initializer_list is preferred for the argument types, but should not leak into
     // the argument types. If it did, replace with vector and lookup anew.
         if (resname.find("initializer_list") != std::string::npos) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.1.1\n");
+#endif
             auto pos = proto.find("initializer_list");
             while (pos != std::string::npos) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 3.1.1.1\n");
+#endif
                 proto.replace(pos, 16, "vector");
                 pos = proto.find("initializer_list", pos + 6);
             }
 
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.1.2\n");
+#endif
             Cppyy::TCppMethod_t m2 = Cppyy::GetMethodTemplate(scope, fname, proto);
             if (m2 && m2 != cppmeth) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 3.1.2.1\n");
+#endif
             // replace if the new method with vector was found; otherwise just continue
             // with the previously found method with initializer_list.
                 cppmeth = m2;
@@ -262,7 +328,9 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
             }
         }
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.2\n");
+#endif
         bool bExactMatch = fname == resname;
 
     // lookup on existing name in case this was an overload, not a caching, failure
@@ -270,14 +338,20 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
         PyObject* pycachename = CPyCppyy_PyText_InternFromString(fname.c_str());
         PyObject* pyol = PyObject_GetItem(dct, pycachename);
         if (!pyol) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.2.1\n");
+#endif
             PyErr_Clear();
         }
         bool bIsCppOL = CPPOverload_Check(pyol);
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.3\n");
+#endif
         if (pyol && !bIsCppOL && !TemplateProxy_Check(pyol)) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.3.1\n");
+#endif
         // unknown object ... leave well alone
             Py_DECREF(pyol);
             Py_DECREF(pycachename);
@@ -285,15 +359,21 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
             return nullptr;
         }
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.4\n");
+#endif
     // find the full name if the requested one was partial
         PyObject* exact = nullptr;
         PyObject* pyresname = CPyCppyy_PyText_FromString(resname.c_str());
         if (!bExactMatch) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.4.1\n");
+#endif
             exact = PyObject_GetItem(dct, pyresname);
             if (!exact) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 3.4.1.1\n");
+#endif
                 PyErr_Clear();
             }
         }
@@ -302,38 +382,56 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
         bool bIsConstructor = false, bNeedsRebind = true;
 
         PyCallable* meth = nullptr;
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.5\n");
+#endif
         if (Cppyy::IsNamespace(scope)) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.5.1\n");
+#endif
             meth = new CPPFunction(scope, cppmeth);
             bNeedsRebind = false;
         } else if (Cppyy::IsStaticMethod(cppmeth)) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.5.2\n");
+#endif
             meth = new CPPClassMethod(scope, cppmeth);
             bNeedsRebind = false;
         } else if (Cppyy::IsConstructor(cppmeth)) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.5.3\n");
+#endif
             bIsConstructor = true;
             meth = new CPPConstructor(scope, cppmeth);
         } else {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.5.4\n");
+#endif
             meth = new CPPMethod(scope, cppmeth);
         }
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.6\n");
+#endif
     // Case 1/2: method simply did not exist before
         if (!pyol) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.6.1\n");
+#endif
         // actual overload to use (now owns meth)
             pyol = (PyObject*)CPPOverload_New(fname, meth);
             if (bIsConstructor) {
+#ifdef PRINT_DEBUG
                 printf("   TP::I : 3.6.1.1\n");
+#endif
             // TODO: this is an ugly hack :(
                 ((CPPOverload*)pyol)->fMethodInfo->fFlags |= \
                     CallContext::kIsCreator | CallContext::kIsConstructor;
             }
 
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.6.2\n");
+#endif
         // add to class dictionary
             PyType_Type.tp_setattro(fTI->fPyClass, pycachename, pyol);
         }
@@ -341,7 +439,9 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
     // Case 3/4: pre-existing method that was either not found b/c the full
     // templated name was constructed in this call or it failed as overload
         else if (bIsCppOL) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.6.3\n");
+#endif
         // TODO: see above, since the call hasn't happened yet, this overload may
         // already exist and fail again.
             ((CPPOverload*)pyol)->AdoptMethod(meth);   // takes ownership
@@ -350,16 +450,22 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
     // Case 5: must be a template proxy, meaning that current template name is not
     // a template overload
         else {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.6.4\n");
+#endif
             ((TemplateProxy*)pyol)->AdoptTemplate(meth->Clone());
             Py_DECREF(pyol);
             pyol = (PyObject*)CPPOverload_New(fname, meth);      // takes ownership
         }
 
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.7\n");
+#endif
     // Special Case if name was aliased (e.g. typedef in template instantiation)
         if (!exact && !bExactMatch) {
+#ifdef PRINT_DEBUG
             printf("  TP::I : 3.7.1\n");
+#endif
             PyType_Type.tp_setattro(fTI->fPyClass, pyresname, pyol);
         }
 
@@ -371,11 +477,15 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
         PyObject* pymeth =
             CPPOverload_Type.tp_descr_get(pyol, bNeedsRebind ? fSelf : nullptr, (PyObject*)&CPPOverload_Type);
         Py_DECREF(pyol);
+#ifdef PRINT_DEBUG
         printf(" TP::I : 3.8\n");
+#endif
         return pymeth;
     }
 
+#ifdef PRINT_DEBUG
     printf("TP::I : 4\n");
+#endif
     PyErr_Format(PyExc_TypeError, "Failed to instantiate \"%s(%s)\"", fname.c_str(), proto.c_str());
     return nullptr;
 }
@@ -533,10 +643,14 @@ static inline PyObject* SelectAndForward(TemplateProxy* pytmpl, CPPOverload* pym
     CPyCppyy_PyArgs_t args, size_t nargsf, PyObject* kwds,
     bool implicitOkay, bool use_targs, uint64_t sighash, std::vector<Utility::PyError_t>& errors)
 {
+#ifdef PRINT_DEBUG
     printf("SaF: 1\n");
+#endif
 // Forward a call to known overloads, if any.
     if (pymeth->HasMethods()) {
+#ifdef PRINT_DEBUG
         printf(" SaF: 1.1\n");
+#endif
         PyObject* pycall = CPPOverload_Type.tp_descr_get(
             (PyObject*)pymeth, pytmpl->fSelf, (PyObject*)&CPPOverload_Type);
 
@@ -547,14 +661,20 @@ static inline PyObject* SelectAndForward(TemplateProxy* pytmpl, CPPOverload* pym
         PyObject* result = CPyCppyy_tp_call(pycall, args, nargsf, kwds);
         Py_DECREF(pycall);
         if (result) {
+#ifdef PRINT_DEBUG
             printf(" SaF: 1.1.1\n");
+#endif
             UpdateDispatchMap(pytmpl, use_targs, sighash, pymeth);
             TPPCALL_RETURN;
         }
+#ifdef PRINT_DEBUG
         printf("SaF: 1.2\n");
+#endif
         Utility::FetchError(errors);
     }
+#ifdef PRINT_DEBUG
     printf("SaF: 2\n");
+#endif
 
     return nullptr;
 }
@@ -628,17 +748,23 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
     size_t nargsf = PyTuple_GET_SIZE(args);
 #endif
 
+#ifdef PRINT_DEBUG
     printf("tc:0\n");
+#endif
     PyObject *pymeth = nullptr, *result = nullptr;
 
 // short-cut through memoization map
     Py_ssize_t argc = CPyCppyy_PyArgs_GET_SIZE(args, nargsf);
     uint64_t sighash = HashSignature(args, argc);
 
+#ifdef PRINT_DEBUG
     printf("tc:1, argc = %d, %d\n", argc, (bool) pytmpl->fSelf);
+#endif
     CPPOverload* ol = nullptr;
     if (!pytmpl->fTemplateArgs) {
+#ifdef PRINT_DEBUG
         printf(" tc:1.1\n");
+#endif
     // look for known signatures ...
         auto& v = pytmpl->fTI->fDispatchMap[""];
         for (const auto& p : v) {
@@ -649,7 +775,9 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         }
 
         if (ol != nullptr) {
+#ifdef PRINT_DEBUG
             printf(" tc:1.2\n");
+#endif
             if (!pytmpl->fSelf || pytmpl->fSelf == Py_None) {
                 result = CPyCppyy_tp_call((PyObject*)ol, args, nargsf, kwds);
             } else {
@@ -663,15 +791,21 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         }
     }
 
+#ifdef PRINT_DEBUG
     printf("tc:2, %ld, %d\n", CPyCppyy_PyArgs_GET_SIZE(args, nargsf), (bool) pytmpl->fSelf);
+#endif
 // container for collecting errors
     std::vector<Utility::PyError_t> errors;
     if (ol) Utility::FetchError(errors);
 
+#ifdef PRINT_DEBUG
     printf("tc:3, %s, %ld, %d\n", pytmpl->fTI->fCppName.c_str(), CPyCppyy_PyArgs_GET_SIZE(args, nargsf), (bool) pytmpl->fSelf);
+#endif
 // case 1: explicit template previously selected through subscript
     if (pytmpl->fTemplateArgs) {
+#ifdef PRINT_DEBUG
         printf(" tc:3.1\n");
+#endif
     // instantiate explicitly
         PyObject* pyfullname = CPyCppyy_PyText_FromString(pytmpl->fTI->fCppName.c_str());
         CPyCppyy_PyText_Append(&pyfullname, pytmpl->fTemplateArgs);
@@ -683,10 +817,14 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         else  // by-passes custom scope getattr that searches into Cling
             pymeth = PyType_Type.tp_getattro(pytmpl->fTI->fPyClass, pyfullname);
 
+#ifdef PRINT_DEBUG
         printf(" tc:3.2\n");
+#endif
     // attempt call if found (this may fail if there are specializations)
         if (CPPOverload_Check(pymeth)) {
+#ifdef PRINT_DEBUG
             printf("  tc:3.2.1\n");
+#endif
         // since the template args are fully explicit, allow implicit conversion of arguments
             result = CallMethodImp(pytmpl, pymeth, args, nargsf, kwds, true, sighash);
             if (result) {
@@ -695,7 +833,9 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
             }
             Utility::FetchError(errors);
         } else if (pymeth && PyCallable_Check(pymeth)) {
+#ifdef PRINT_DEBUG
             printf("  tc:3.2.2\n");
+#endif
         // something different (user provided?)
             result = CPyCppyy_PyObject_Call(pymeth, args, nargsf, kwds);
             Py_DECREF(pymeth);
@@ -708,12 +848,16 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
             PyErr_Clear();
 
         Py_ssize_t argc2 = CPyCppyy_PyArgs_GET_SIZE(args, nargsf);
+#ifdef PRINT_DEBUG
         printf(" tc:3.3, %s,  argc = %ld\n", CPyCppyy_PyText_AsString(pyfullname), argc2);
+#endif
     // not cached or failed call; try instantiation
         pymeth = pytmpl->Instantiate(
             CPyCppyy_PyText_AsString(pyfullname), args, nargsf, Utility::kNone);
         if (pymeth) {
+#ifdef PRINT_DEBUG
             printf("  tc:3.3.1\n");
+#endif
         // attempt actual call; same as above, allow implicit conversion of arguments
             result = CallMethodImp(pytmpl, pymeth, args, nargsf, kwds, true, sighash);
             if (result) {
@@ -722,7 +866,9 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
             }
         }
 
+#ifdef PRINT_DEBUG
         printf(" tc:3.4\n");
+#endif
     // no drop through if failed (if implicit was desired, don't provide template args)
         Utility::FetchError(errors);
         PyObject* topmsg = CPyCppyy_PyText_FromFormat(
@@ -733,24 +879,32 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         return nullptr;
     }
 
+#ifdef PRINT_DEBUG
     printf("tc:4, %ld, %d\n", CPyCppyy_PyArgs_GET_SIZE(args, nargsf), (bool) pytmpl->fSelf);
+#endif
 // case 2: select known non-template overload
     result = SelectAndForward(pytmpl, pytmpl->fTI->fNonTemplated, args, nargsf, kwds,
         true /* implicitOkay */, false /* use_targs */, sighash, errors);
     if (result)
         return result;
 
+#ifdef PRINT_DEBUG
     printf("tc:5, %ld, %d\n", CPyCppyy_PyArgs_GET_SIZE(args, nargsf), (bool) pytmpl->fSelf);
+#endif
 // case 3: select known template overload
     result = SelectAndForward(pytmpl, pytmpl->fTI->fTemplated, args, nargsf, kwds,
         false /* implicitOkay */, true /* use_targs */, sighash, errors);
     if (result)
         return result;
 
+#ifdef PRINT_DEBUG
     printf("tc:6, %d\n", (bool) pytmpl->fSelf);
+#endif
 // case 4: auto-instantiation from types of arguments
     for (auto pref : {Utility::kReference, Utility::kPointer, Utility::kValue}) {
+#ifdef PRINT_DEBUG
         printf(" tc:6.1, %s, argc = %ld\n", pytmpl->fTI->fCppName.c_str(), CPyCppyy_PyArgs_GET_SIZE(args, nargsf));
+#endif
         // TODO: no need to loop if there are no non-instance arguments; also, should any
         // failed lookup be removed?
         int pcnt = 0;
@@ -764,14 +918,18 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         if (!pcnt) break;         // preference never used; no point trying others
     }
 
+#ifdef PRINT_DEBUG
     printf("tc:7\n");
+#endif
 // case 5: low priority methods, such as ones that take void* arguments
     result = SelectAndForward(pytmpl, pytmpl->fTI->fLowPriority, args, nargsf, kwds,
         false /* implicitOkay */, false /* use_targs */, sighash, errors);
     if (result)
         return result;
 
+#ifdef PRINT_DEBUG
     printf("tc:8\n");
+#endif
 // error reporting is fraud, given the numerous steps taken, but more details seems better
     if (!errors.empty()) {
         PyObject* topmsg = CPyCppyy_PyText_FromString("Template method resolution failed:");
@@ -877,7 +1035,9 @@ void TemplateProxy::Set(const std::string& cppname, const std::string& pyname, P
 //= CPyCppyy method proxy access to internals ================================
 static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
 {
+#ifdef PRINT_DEBUG
     printf("to: 1\n");
+#endif
 // Select and call a specific C++ overload, based on its signature.
     const char* sigarg = nullptr;
     int want_const = -1;

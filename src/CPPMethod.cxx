@@ -119,7 +119,9 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteFast(
 // code duplication with ProtectedCall()
     PyObject* result = nullptr;
 
+#ifdef PRINT_DEBUG
     printf("~~~~~~~~~ Executing: %s %p %ld\n", Cppyy::GetFinalName(fMethod).c_str(), self, offset);
+#endif
 
     try {       // C++ try block
         result = fExecutor->Execute(fMethod, (Cppyy::TCppObject_t)((intptr_t)self+offset), ctxt);

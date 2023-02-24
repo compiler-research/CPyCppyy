@@ -390,10 +390,14 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
 // it can recurse if the type is list or tuple and needs matching on std::vector.
     using namespace CPyCppyy;
     using namespace CPyCppyy::Utility;
+#ifdef PRINT_DEBUG
     printf("ATN: 1\n");
+#endif
 
     if (tn == (PyObject*)&PyInt_Type) {
+#ifdef PRINT_DEBUG
         printf(" ATN: 1.1\n");
+#endif
         if (arg) {
 #if PY_VERSION_HEX < 0x03000000
             long l = PyInt_AS_LONG(arg);
@@ -439,9 +443,13 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
     }
 #endif
 
+#ifdef PRINT_DEBUG
     printf("ATN: 3\n");
+#endif
     if (tn == (PyObject*)&PyFloat_Type) {
+#ifdef PRINT_DEBUG
         printf(" ATN: 3.1\n");
+#endif
     // special case for floats (Python-speak for double) if from argument (only)
         tmpl_name.append(arg ? "double" : "float");
         return true;
@@ -456,9 +464,13 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
         return true;
     }
 
+#ifdef PRINT_DEBUG
     printf("ATN: 4\n");
+#endif
     if (tn == (PyObject*)&PyList_Type || tn == (PyObject*)&PyTuple_Type) {
+#ifdef PRINT_DEBUG
         printf(" ATN: 4.1\n");
+#endif
         if (arg && PySequence_Size(arg)) {
             std::string subtype{"std::initializer_list<"};
             PyObject* item = PySequence_GetItem(arg, 0);
@@ -473,11 +485,15 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
         return true;
     }
 
+#ifdef PRINT_DEBUG
     printf("ATN: 5\n");
+#endif
     if (CPPScope_Check(tn)) {
         auto cpp_type = Cppyy::GetScopedFinalName(((CPPClass*)tn)->fCppType);
         tmpl_name.append(cpp_type);
+#ifdef PRINT_DEBUG
         printf(" ATN: 5.1, %s\n", cpp_type);
+#endif
         if (arg) {
         // try to specialize the type match for the given object
             CPPInstance* pyobj = (CPPInstance*)arg;
@@ -582,7 +598,9 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
     tmpl_name.reserve(128);
     if (PyObject_HasAttr(pyname, PyStrings::gCppName)) {
         PyObject* tpName = PyObject_GetAttr(pyname, PyStrings::gCppName);
+#ifdef PRINT_DEBUG
         printf("CTA: 1, %s\n", CPyCppyy_PyText_AsString(tpName));
+#endif
     }
     if (pyname)
         tmpl_name.append(CPyCppyy_PyText_AsString(pyname));
@@ -597,7 +615,9 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
     // add type as string to name
         PyObject* tn = justOne ? tpArgs : PyTuple_GET_ITEM(tpArgs, i);
         if (CPyCppyy_PyText_Check(tn)) {
+#ifdef PRINT_DEBUG
             printf("CTA: %s, %d/%d\n", CPyCppyy_PyText_AsString(tn), i, nArgs);
+#endif
             tmpl_name.append(CPyCppyy_PyText_AsString(tn));
     // some commmon numeric types (separated out for performance: checking for
     // __cpp_name__ and/or __name__ is rather expensive)
@@ -609,7 +629,9 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
             }
         }
 
+#ifdef PRINT_DEBUG
         printf("======== %s\n", tmpl_name.c_str());
+#endif
 
     // add a comma, as needed (no space as internally, final names don't have them)
         if (i != nArgs-1)
