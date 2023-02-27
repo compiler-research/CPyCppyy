@@ -611,7 +611,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
     }
 
 // convert 2nd argument first (used for both pointer value and instance cases)
-    Cppyy::TCppType_t cast_type = 0;
+    Cppyy::TCppScope_t cast_type = 0;
     PyObject* arg1 = PyTuple_GET_ITEM(args, 1);
     if (!CPyCppyy_PyText_Check(arg1)) {          // not string, then class
         if (CPPScope_Check(arg1))
@@ -622,7 +622,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
         Py_INCREF(arg1);
 
     if (!cast_type && arg1) {
-        cast_type = (Cppyy::TCppType_t)Cppyy::GetScope(CPyCppyy_PyText_AsString(arg1));
+        cast_type = (Cppyy::TCppScope_t)Cppyy::GetScope(CPyCppyy_PyText_AsString(arg1));
         Py_DECREF(arg1);
     }
 
@@ -639,7 +639,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
     // if this instance's class has a relation to the requested one, calculate the
     // offset, erase if from any caches, and update the pointer and type
         CPPInstance* arg0_pyobj = (CPPInstance*)arg0;
-        Cppyy::TCppType_t cur_type = arg0_pyobj->ObjectIsA(false /* check_smart */);
+        Cppyy::TCppScope_t cur_type = arg0_pyobj->ObjectIsA(false /* check_smart */);
 
         bool isPython = CPPScope_Check(arg1) && \
             (((CPPClass*)arg1)->fFlags & CPPScope::kIsPython);
@@ -650,7 +650,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
         }
 
         int direction = 0;
-        Cppyy::TCppType_t base = 0, derived = 0;
+        Cppyy::TCppScope_t base = 0, derived = 0;
         if (Cppyy::IsSubclass(cast_type, cur_type)) {
             derived = cast_type;
             base    = cur_type;

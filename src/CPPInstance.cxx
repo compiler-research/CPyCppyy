@@ -495,8 +495,8 @@ static inline void* cast_actual(void* obj) {
     if (((CPPInstance*)obj)->fFlags & CPPInstance::kIsActual)
         return address;
 
-    Cppyy::TCppType_t klass = ((CPPClass*)Py_TYPE((PyObject*)obj))->fCppType;
-    Cppyy::TCppType_t clActual = klass /* XXX: Cppyy::GetActualClass(klass, address) */;
+    Cppyy::TCppScope_t klass = ((CPPClass*)Py_TYPE((PyObject*)obj))->fCppType;
+    Cppyy::TCppScope_t clActual = klass /* XXX: Cppyy::GetActualClass(klass, address) */;
     if (clActual && clActual != klass) {
         intptr_t offset = Cppyy::GetBaseOffset(
              clActual, klass, address, -1 /* down-cast */, true /* report errors */);
