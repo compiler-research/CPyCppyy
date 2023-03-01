@@ -705,10 +705,15 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
 #endif
         // a "naked" templated class is requested: return callable proxy for instantiations
         PyObject* pytcl = PyObject_GetAttr(gThisModule, PyStrings::gTemplate);
+        PyObject* cppscope = PyLong_FromVoidPtr(scope);
         PyObject* pytemplate = PyObject_CallFunction(
-            pytcl, const_cast<char*>("s"),
-            const_cast<char*>(Cppyy::GetScopedFinalName(scope).c_str()));
+            pytcl, const_cast<char*>("sO"),
+            const_cast<char*>(Cppyy::GetScopedFinalName(scope).c_str()),
+            cppscope);
         Py_DECREF(pytcl);
+#ifdef PRINT_DEBUG
+        printf("CPS2: pointer for template %p\n", scope);
+#endif
 
         // cache the result
         AddScopeToParent(parent, name, pytemplate);
