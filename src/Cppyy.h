@@ -77,6 +77,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t GetScopeFromType(TCppScope_t type);
     CPPYY_IMPORT
+    TCppType_t  GetTypeFromScope(TCppScope_t klass);
+    CPPYY_IMPORT
     TCppScope_t GetGlobalScope();
     CPPYY_IMPORT
     TCppType_t  GetActualClass(TCppType_t klass, TCppObject_t obj);
@@ -326,7 +328,8 @@ namespace Cppyy {
     long long   GetEnumDataValue(TCppScope_t scope);
 
     CPPYY_IMPORT
-    TCppScope_t InstantiateTemplateClass(const std::string& templ_name);
+    TCppScope_t InstantiateTemplateClass(
+        TCppScope_t tmpl, TCppType_t* types, size_t types_size);
 
     CPPYY_IMPORT
     TCppScope_t DumpScope(TCppScope_t scope);
