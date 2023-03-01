@@ -417,7 +417,7 @@ static PyObject* SetCppLazyLookup(PyObject*, PyObject* args)
 }
 
 //----------------------------------------------------------------------------
-static PyObject* MakeCppTemplateClass(PyObject*, PyObject* args)
+static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
 {
 // Create a binding for a templated class instantiation.
 
@@ -427,14 +427,15 @@ static PyObject* MakeCppTemplateClass(PyObject*, PyObject* args)
         PyErr_Format(PyExc_TypeError, "too few arguments for template instantiation");
         return nullptr;
     }
+    PyObject *cppscope = PyTuple_GET_ITEM(args, 0);
+    void * tmpl = PyLong_AsVoidPtr(cppscope);
 
 // build "< type, type, ... >" part of class name (modifies pyname)
-    const std::string& tmpl_name =
-        Utility::ConstructTemplateArgs(PyTuple_GET_ITEM(args, 0), args, nullptr, Utility::kNone, 1);
-    if (!tmpl_name.size())
-        return nullptr;
-    
-    Cppyy::TCppScope_t scope = Cppyy::InstantiateTemplateClass(tmpl_name);
+    std::vector<Cppyy::TCppType_t> types =
+        Utility::GetTemplateArgsTypes(cppscope, args, nullptr, Utility::kNone, 1);
+
+    Cppyy::TCppScope_t scope = 
+        Cppyy::InstantiateTemplateClass(tmpl, types.data(), types.size());
 
 #ifdef PRINT_DEBUG
     printf("MCTC````````````````````\n");
