@@ -162,7 +162,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
 // some properties that'll affect building the dictionary
     bool isNamespace = Cppyy::IsNamespace(scope);
-    bool isAbstract  = Cppyy::IsAbstract(scope);
+    bool isComplete = Cppyy::IsComplete(scope);
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
@@ -179,7 +179,11 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 
 // functions in namespaces are properly found through lazy lookup, so do not
 // create them until needed (the same is not true for data members)
-    std::vector<Cppyy::TCppMethod_t> methods = Cppyy::GetClassMethods(scope);
+    std::vector<Cppyy::TCppMethod_t> methods;
+    // FIXME: GetClassMethods should take methods as a reference to avoid copy.
+    if (isComplete)
+      methods = Cppyy::GetClassMethods(scope);
+
     for (auto &method : methods) {
 
     // do not expose non-public methods as the Cling wrappers as those won't compile
@@ -245,7 +249,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         else if (isConstructor) {           // ctor
             mtName = "__init__";
             hasConstructor = true;
-            if (!isAbstract) {
+            if (!Cppyy::IsAbstract(scope)) {
                 if (flags & CPPScope::kIsMultiCross) {
                     pycall = new CPPMultiConstructor(scope, method);
                 } else
@@ -322,13 +326,13 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 // add a pseudo-default ctor, if none defined
     if (!hasConstructor) {
         PyCallable* defctor = nullptr;
-        if (isAbstract) {
+        if (!isComplete) {
+            ((CPPScope*)pyclass)->fFlags |= CPPScope::kIsInComplete;
+            defctor = new CPPIncompleteClassConstructor(scope, (Cppyy::TCppMethod_t)0);
+        } else if (Cppyy::IsAbstract(scope)) {
             defctor = new CPPAbstractClassConstructor(scope, (Cppyy::TCppMethod_t)0);
         } else if (isNamespace) {
             defctor = new CPPNamespaceConstructor(scope, (Cppyy::TCppMethod_t)0);
-        } else if (!Cppyy::IsComplete(scope)) {
-            ((CPPScope*)pyclass)->fFlags |= CPPScope::kIsInComplete;
-            defctor = new CPPIncompleteClassConstructor(scope, (Cppyy::TCppMethod_t)0);
         } else {
             defctor = new CPPAllPrivateClassConstructor(scope, (Cppyy::TCppMethod_t)0);
         }
