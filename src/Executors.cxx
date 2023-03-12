@@ -94,18 +94,19 @@ CPPYY_IMPL_GILCALL(PY_LONG_DOUBLE, LD)
 CPPYY_IMPL_GILCALL(void*,          R)
 
 static inline Cppyy::TCppObject_t GILCallO(Cppyy::TCppMethod_t method,
-    Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt, Cppyy::TCppType_t klass)
+    Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt, Cppyy::TCppScope_t klass)
 {
+    Cppyy::TCppType_t klass_ty = Cppyy::GetTypeFromScope(klass);
 #ifdef PRINT_DEBUG
     printf("GILCallO: %p, %p\n", klass, Cppyy::GetType("double"));
 #endif
 #ifdef WITH_THREAD
     if (!ReleasesGIL(ctxt))
 #endif
-        return Cppyy::CallO(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs(), klass);
+        return Cppyy::CallO(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs(), klass_ty);
 #ifdef WITH_THREAD
     GILControl gc{};
-    return Cppyy::CallO(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs(), klass);
+    return Cppyy::CallO(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs(), klass_ty);
 #endif
 }
 
