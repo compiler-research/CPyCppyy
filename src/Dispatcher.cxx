@@ -286,7 +286,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                     Cppyy::TCppIndex_t nArgs = Cppyy::GetMethodNumArgs(method);
                     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
                         if (i != 0) code << ", ";
-                        code << Cppyy::GetMethodArgType(method, i) << " arg" << i;
+                        code << Cppyy::GetMethodArgTypeAsString(method, i) << " arg" << i;
                     }
                     code << ") ";
                     if (Cppyy::IsConstMethod(method)) code << "const ";
