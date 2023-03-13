@@ -225,7 +225,7 @@ namespace CPyCppyy {
     PyObject* gIllException  = nullptr;
     PyObject* gAbrtException = nullptr;
     std::map<std::string, std::vector<PyObject*>> gPythonizations;
-    std::set<Cppyy::TCppType_t> gPinnedTypes;
+    std::set<Cppyy::TCppScope_t> gPinnedTypes;
     std::ostringstream gCapturedError;
     std::streambuf* gOldErrorBuffer = nullptr;
 }

@@ -61,7 +61,7 @@ public:
 // access to C++ pointer and type
     void*  GetObject();
     void*& GetObjectRaw() { return IsExtended() ? *(void**) fObject : fObject; }
-    Cppyy::TCppType_t ObjectIsA(bool check_smart = true) const;
+    Cppyy::TCppScope_t ObjectIsA(bool check_smart = true) const;
 
 // memory management: ownership of the underlying C++ object
     void PythonOwns();
@@ -109,7 +109,7 @@ inline void* CPPInstance::GetObject()
 }
 
 //----------------------------------------------------------------------------
-inline Cppyy::TCppType_t CPPInstance::ObjectIsA(bool check_smart) const
+inline Cppyy::TCppScope_t CPPInstance::ObjectIsA(bool check_smart) const
 {
 // Retrieve the C++ type identifier (or raw type if smart).
     if (check_smart || !IsSmart()) return ((CPPClass*)Py_TYPE(this))->fCppType;

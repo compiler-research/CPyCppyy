@@ -419,7 +419,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 }
 
 //----------------------------------------------------------------------------
-static void CollectUniqueBases(Cppyy::TCppType_t klass, std::deque<Cppyy::TCppScope_t>& uqb)
+static void CollectUniqueBases(Cppyy::TCppScope_t klass, std::deque<Cppyy::TCppScope_t>& uqb)
 {
 // collect bases in acceptable mro order, while removing duplicates (this may
 // break the overload resolution in esoteric cases, but otherwise the class can
@@ -427,7 +427,7 @@ static void CollectUniqueBases(Cppyy::TCppType_t klass, std::deque<Cppyy::TCppSc
     size_t nbases = Cppyy::GetNumBases(klass);
 
     for (size_t ibase = 0; ibase < nbases; ++ibase) {
-        Cppyy::TCppType_t tp = Cppyy::GetBaseScope(klass, ibase);
+        Cppyy::TCppScope_t tp = Cppyy::GetBaseScope(klass, ibase);
         int decision = 2;
         if (!tp) continue;   // means this base with not be available Python-side
         for (size_t ibase2 = 0; ibase2 < uqb.size(); ++ibase2) {
