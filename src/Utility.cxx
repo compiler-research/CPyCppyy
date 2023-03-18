@@ -596,14 +596,16 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
 // Note: directly appending to string is a lot faster than stringstream
     std::string tmpl_name;
     tmpl_name.reserve(128);
-    if (PyObject_HasAttr(pyname, PyStrings::gCppName)) {
-        PyObject* tpName = PyObject_GetAttr(pyname, PyStrings::gCppName);
-#ifdef PRINT_DEBUG
-        printf("CTA: 1, %s\n", CPyCppyy_PyText_AsString(tpName));
-#endif
-    }
     if (pyname)
         tmpl_name.append(CPyCppyy_PyText_AsString(pyname));
+
+#ifdef PRINT_DEBUG
+    if (PyObject_HasAttr(pyname, PyStrings::gCppName)) {
+        PyObject* tpName = PyObject_GetAttr(pyname, PyStrings::gCppName);
+        printf("CTA: 1, %s\n", CPyCppyy_PyText_AsString(tpName));
+    }
+#endif
+
     if (tmpl_name == "complex")
         tmpl_name = "std::complex";
     tmpl_name.push_back('<');
