@@ -437,9 +437,6 @@ static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
     Cppyy::TCppScope_t scope = 
         Cppyy::InstantiateTemplateClass(tmpl, types.data(), types.size());
 
-#ifdef PRINT_DEBUG
-    printf("MCTC````````````````````\n");
-#endif
     return CreateScopeProxy(scope);
 }
 
