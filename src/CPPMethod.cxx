@@ -442,7 +442,9 @@ int CPyCppyy::CPPMethod::GetPriority()
     const size_t nArgs = Cppyy::GetMethodNumArgs(fMethod);
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
         const std::string aname = Cppyy::GetMethodArgTypeAsString(fMethod, iarg);
-        Cppyy::TCppType_t type = Cppyy::GetMethodArgType(fMethod, iarg);
+        // FIXME: convert the string comparisons with comparison to the underlying
+        // type:
+        // Cppyy::TCppType_t type = Cppyy::GetMethodArgType(fMethod, iarg);
 
         if (Cppyy::IsBuiltin(aname)) {
         // complex type (note: double penalty: for complex and the template type)
