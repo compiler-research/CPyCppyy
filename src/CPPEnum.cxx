@@ -10,7 +10,7 @@ static PyObject* pytype_from_enum_type(const std::string& enum_type)
 {
     if (enum_type == "char")
         return (PyObject*)&CPyCppyy_PyText_Type;
-    else if (enum_type == "_Bool")
+    else if (enum_type == "bool")
         return (PyObject*)&PyInt_Type;     // can't use PyBool_Type as base
     else if (strstr("long", enum_type.c_str()))
         return (PyObject*)&PyLong_Type;
@@ -22,7 +22,7 @@ static PyObject* pyval_from_enum(const std::string& enum_type, PyObject* pytype,
         PyObject* btype, Cppyy::TCppScope_t enum_constant) {
     long long llval = Cppyy::GetEnumDataValue(enum_constant);
 
-    if (enum_type == "_Bool") {
+    if (enum_type == "bool") {
         PyObject* result = (bool)llval ? Py_True : Py_False;
         Py_INCREF(result);
         return result;                      // <- immediate return;
@@ -89,7 +89,7 @@ static PyObject* enum_repr(PyObject* self)
 // TODO: factor the following lookup with similar codes in Convertes and TemplateProxy.cxx
 
 static std::map<std::string, std::string> gCTypesNames = {
-    {"_Bool", "c_bool"},
+    {"bool", "c_bool"},
     {"char", "c_char"}, {"wchar_t", "c_wchar"},
     {"std::byte", "c_byte"}, {"int8_t", "c_byte"}, {"uint8_t", "c_ubyte"},
     {"short", "c_short"}, {"int16_t", "c_int16"}, {"unsigned short", "c_ushort"}, {"uint16_t", "c_uint16"},

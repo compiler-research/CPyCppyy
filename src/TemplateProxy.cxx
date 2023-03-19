@@ -23,7 +23,7 @@ static PyObject* TC2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
     if (CPyCppyy_PyText_Check(pytc)) {
         char tc = ((char*)CPyCppyy_PyText_AsString(pytc))[0];
         switch (tc) {
-            case '?': name = "_Bool";               break;
+            case '?': name = "bool";               break;
             case 'c': name = "char";               break;
             case 'b': name = "char";               break;
             case 'B': name = "unsigned char";      break;
