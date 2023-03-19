@@ -450,12 +450,10 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if (attr) {
         // cache the result
             if (CPPDataMember_Check(attr)) {
-                int i;
-                if (Cppyy::IsClass(scope)) {
-                    i = PyType_Type.tp_setattro(pyclass, pyname, attr);
-                }
-
-                i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
+                if (Cppyy::IsClass(scope))
+                    PyType_Type.tp_setattro(pyclass, pyname, attr);
+                else
+                  PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
 
                 Py_DECREF(attr);
                 // The call below goes through "dm_get"
