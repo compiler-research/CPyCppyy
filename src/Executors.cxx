@@ -47,28 +47,12 @@ namespace {
 } // unnamed namespace
 
 #ifdef WITH_THREAD
-#ifdef PRINT_DEBUG
-    #define _IMPL_GILCALL_PRINT_TCODE(tcode)                                  \
-        printf("CPPYY_IMPL_GILCALL: %s\n", #tcode);
-    #define _IMPL_GILCALL_PRINT_NRG                                           \
-        printf("CPPYY_IMPL_GILCALL: Not ReleaseGIL \n");
-    #define _IMPL_GILCALL_PRINT_RG                                            \
-        printf("CPPYY_IMPL_GILCALL: ReleaseGIL \n");
-#else
-    #define _IMPL_GILCALL_PRINT_TCODE(tcode)
-    #define _IMPL_GILCALL_PRINT_NRG
-    #define _IMPL_GILCALL_PRINT_RG
-#endif
 #define CPPYY_IMPL_GILCALL(rtype, tcode)                                     \
 static inline rtype GILCall##tcode(                                          \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt)\
 {                                                                            \
-    _IMPL_GILCALL_PRINT_TCODE(#tcode)                                        \
-    if (!ReleasesGIL(ctxt)) {                                                \
-        _IMPL_GILCALL_PRINT_NRG                                              \
+    if (!ReleasesGIL(ctxt))                                                  \
         return Cppyy::Call##tcode(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs());\
-    }                                                                        \
-    _IMPL_GILCALL_PRINT_RG                                                   \
     GILControl gc{};                                                         \
     return Cppyy::Call##tcode(method, self, ctxt->GetEncodedSize(), ctxt->GetArgs());\
 }
@@ -97,9 +81,6 @@ static inline Cppyy::TCppObject_t GILCallO(Cppyy::TCppMethod_t method,
     Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt, Cppyy::TCppScope_t klass)
 {
     Cppyy::TCppType_t klass_ty = Cppyy::GetTypeFromScope(klass);
-#ifdef PRINT_DEBUG
-    printf("GILCallO: %p, %p\n", klass, Cppyy::GetType("double"));
-#endif
 #ifdef WITH_THREAD
     if (!ReleasesGIL(ctxt))
 #endif
@@ -505,9 +486,6 @@ PyObject* CPyCppyy::VoidArrayExecutor::Execute(
         Py_INCREF(gNullPtrObject);
         return gNullPtrObject;
     }
-#ifdef PRINT_DEBUG
-    printf("****************** VoidArrayExecutor Triggerred\n");
-#endif
     return CreatePointerView(result, fShape);
 }
 
@@ -516,7 +494,6 @@ PyObject* CPyCppyy::VoidArrayExecutor::Execute(
 PyObject* CPyCppyy::name##ArrayExecutor::Execute(                            \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt) \
 {                                                                            \
-    printf("CREATING LOW LEVEL VIEW\n");                                     \
     return CreateLowLevelView((type*)GILCallR(method, self, ctxt), fShape);  \
 }
 
@@ -924,10 +901,6 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
     Cppyy::TCppType_t realType = Cppyy::GetRealType(resolvedType);
     std::string realTypeStr = Cppyy::GetTypeAsString(realType);
     const std::string compounded = cpd.empty() ? realTypeStr : realTypeStr + " " + cpd;
-#ifdef PRINT_DEBUG
-    printf("CE:   const: %d  cpd: %s  rt: %s  restype: %s\n", 
-        isConst, cpd.c_str(), realTypeStr.c_str(), resolvedTypeStr.c_str());
-#endif
 
 // accept unqualified type (as python does not know about qualifiers)
     h = gExecFactories.find(compounded);

@@ -19,7 +19,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <iostream>
 
 
 namespace CPyCppyy {
@@ -292,9 +291,6 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
                 result->fImp.fCppObjects = nullptr;
         }
     } else {
-#ifdef PRINT_DEBUG
-        printf("%s\n", Cppyy::GetScopedFinalName(result->fCppType).c_str());
-#endif
         result->fImp.fUsing = nullptr;
         result->fFlags |= CPPScope::kIsNamespace;
     }
@@ -311,9 +307,6 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
 //----------------------------------------------------------------------------
 static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 {
-#ifdef PRINT_DEBUG
-    printf("MGA: 0\n");
-#endif
 // normal type-based lookup
     PyObject* attr = PyType_Type.tp_getattro(pyclass, pyname);
     if (pyclass == (PyObject*)&CPPInstance_Type)
@@ -321,9 +314,6 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
     std::string name = CPyCppyy_PyText_AsString(pyname);
     std::string type = Cppyy::GetScopedFinalName(((CPPScope *)pyclass)->fCppType);
-#ifdef PRINT_DEBUG
-    printf("MGA: Name: %s \tType: %s\n", name.c_str(), type.c_str());
-#endif
     if (type == "std::complex") {
         Cppyy::TCppScope_t temp = ((CPPScope *)pyclass)->fCppType;
         Cppyy::DumpScope(temp);
@@ -331,28 +321,16 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 
     PyObject* possibly_shadowed = nullptr;
     if (attr) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 1.1\n");
-#endif
         if (CPPScope_Check(attr) && CPPScope_Check(pyclass) && !(((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace)) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 1.1.1\n");
-#endif
         // TODO: the goal here is to prevent typedefs that are shadowed in subclasses
         // to be found as from the base class. The better approach would be to find
         // all typedefs at class creation and insert placeholders to flag here. The
         // current typedef loop in gInterpreter won't do, however.
             PyObject* dct = PyObject_GetAttr(pyclass, PyStrings::gDict);
             if (dct) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 1.1.1.1\n");
-#endif
                 PyObject* attr_from_dict = PyObject_GetItem(dct, pyname);
                 Py_DECREF(dct);
                 if (attr_from_dict) {
-#ifdef PRINT_DEBUG
-                    printf("    MGA: 1.1.1.1.1\n");
-#endif
                     Py_DECREF(attr);
                     return attr_from_dict;
                 }
@@ -360,64 +338,33 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                 attr = nullptr;
             }
             PyErr_Clear();
-        } else {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 1.1.2\n");
-#endif
+        } else
             return attr;
-        }
     }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 2\n");
-#endif
-    if (!CPyCppyy_PyText_CheckExact(pyname) || !CPPScope_Check(pyclass)) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 2.1\n");
-#endif
+    if (!CPyCppyy_PyText_CheckExact(pyname) || !CPPScope_Check(pyclass))
         return possibly_shadowed;
-    }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 3\n");
-#endif
 // filter for python specials
     // std::string name = CPyCppyy_PyText_AsString(pyname);
     // std::string type = Cppyy::GetScopedFinalName(((CPPScope *)pyclass)->fCppType);
-    // printf("MGA: Name: %s \tType: %s\n", name.c_str(), type.c_str());
     if (name.size() >= 5 && name.compare(0, 2, "__") == 0 &&
-            name.compare(name.size()-2, name.size(), "__") == 0) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 3.1\n");
-#endif
+            name.compare(name.size()-2, name.size(), "__") == 0)
         return possibly_shadowed;
-    }
 
 // more elaborate search in case of failure (eg. for inner classes on demand)
     std::vector<Utility::PyError_t> errors;
     Utility::FetchError(errors);
     attr = CreateScopeProxy(name, pyclass);
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 4, %d\n", (bool) attr);
-#endif
     if (CPPScope_Check(attr) && (((CPPScope*)attr)->fFlags & CPPScope::kIsException)) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 4.1\n");
-#endif
     // Instead of the CPPScope, return a fresh exception class derived from CPPExcInstance.
         return CreateExcScopeProxy(attr, pyname, pyclass);
     }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 5\n");
-#endif
     bool templated_functions_checked = false;
     CPPScope* klass = ((CPPScope*)pyclass);
     if (!attr) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 5.1\n");
-#endif
         Utility::FetchError(errors);
         Cppyy::TCppScope_t scope = klass->fCppType;
 
@@ -425,16 +372,10 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
     // are available as "methods" even though they're not really that
         if ((klass->fFlags & CPPScope::kIsNamespace) || 
                 scope == Cppyy::GetGlobalScope()) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.1.1\n");
-#endif
         // tickle lazy lookup of functions
             const std::vector<Cppyy::TCppScope_t> methods =
                 Cppyy::GetMethodsFromName(scope, name);
             if (!methods.empty()) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.1.1.1\n");
-#endif
             // function exists, now collect overloads
                 std::vector<PyCallable*> overloads;
                 for (auto method : methods) {
@@ -444,34 +385,18 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
             // Note: can't re-use Utility::AddClass here, as there's the risk of
             // a recursive call. Simply add method directly, as we're guaranteed
             // that it doesn't exist yet.
-                if (Cppyy::ExistsMethodTemplate(scope, name)) {
-#ifdef PRINT_DEBUG
-                    printf("    MGA: 5.1.1.1.1\n");
-#endif
+                if (Cppyy::ExistsMethodTemplate(scope, name))
                     attr = add_template(pyclass, name, &overloads);
-                } else {
-#ifdef PRINT_DEBUG
-                    printf("    MGA: 5.1.1.1.2\n");
-#endif
+                else
                     attr = (PyObject*)CPPOverload_New(name, overloads);
-                }
                 templated_functions_checked = true;
             }
         }
 
-#ifdef PRINT_DEBUG
-        printf(" MGA: 5.2\n");
-#endif
         // tickle lazy lookup of data members
         if (!attr) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.2.1\n");
-#endif
             Cppyy::TCppScope_t var = Cppyy::GetNamed(name, scope);
             if (Cppyy::IsVariable(var)) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.2.1.1\n");
-#endif
                 attr = (PyObject*)CPPDataMember_New(scope, var);
             }
         }
@@ -496,154 +421,72 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         //     }
         // }
 
-#ifdef PRINT_DEBUG
-        printf(" MGA: 5.3, attr = %p\n", attr);
-#endif
     // function templates that have not been instantiated (namespaces _may_ have already
     // been taken care of, by their general function lookup above)
         if (!attr && !templated_functions_checked) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.3.1\n");
-#endif
-            if (Cppyy::ExistsMethodTemplate(scope, name)) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.3.1.1\n");
-#endif
+            if (Cppyy::ExistsMethodTemplate(scope, name))
                 attr = add_template(pyclass, name);
-            } else {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.3.1.2\n");
-#endif
+            else {
             // for completeness in error reporting
                 PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ template", name.c_str());
                 Utility::FetchError(errors);
             }
         }
 
-#ifdef PRINT_DEBUG
-        printf(" MGA: 5.4\n");
-#endif
     // enums types requested as type (rather than the constants)
         if (!attr) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.4.1\n");
-#endif
         // TODO: IsEnum should deal with the scope, using klass->GetListOfEnums()->FindObject()
             Cppyy::TCppScope_t enumerator = Cppyy::GetNamed(name, scope);
             if (Cppyy::IsEnum(enumerator)) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.4.1.1\n");
-#endif
             // enum types (incl. named and class enums)
                 attr = (PyObject*)CPPEnum_New(name, enumerator);
             } else {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.4.1.2\n");
-#endif
             // for completeness in error reporting
                 PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ enum", name.c_str());
                 Utility::FetchError(errors);
             }
         }
 
-#ifdef PRINT_DEBUG
-        printf(" MGA: 5.5\n");
-#endif
         if (attr) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.5.1\n");
-#endif
         // cache the result
             if (CPPDataMember_Check(attr)) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.5.1.1\n");
-#endif
-                    // printf(" attr => %p\n", attr);
-                    // auto attr2 = attr;
                 int i;
                 if (Cppyy::IsClass(scope)) {
                     i = PyType_Type.tp_setattro(pyclass, pyname, attr);
-#ifdef PRINT_DEBUG
-                    printf(" SETTING PYCLASS ATTRO: %d\n", i);
-#endif
                 }
 
                 i = PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
-#ifdef PRINT_DEBUG
-                printf(" SETTING PY_TYPE ATTRO: %d\n", i);
-#endif
-
-                // PyObject_Print((PyObject*)pyclass, stderr, Py_PRINT_RAW);
-                // printf("%d\n", i);
-                // if (PyErr_Occurred()) printf("ERRRRR\n\n");
 
                 Py_DECREF(attr);
                 // The call below goes through "dm_get"
                 attr = PyType_Type.tp_getattro(pyclass, pyname);
 
-#ifdef PRINT_DEBUG
-                printf("    MGA: 5.5.1.2, attr = %p\n", attr);
-#endif
                 if (!attr && PyErr_Occurred()) {
-#ifdef PRINT_DEBUG
-                    printf("    MGA: 5.5.1.1.1\n");
-#endif
                     Utility::FetchError(errors);
                 }
             } else {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 5.5.1.2,  pyclass = %p, pyname = %p\n");
-#endif
                 PyType_Type.tp_setattro(pyclass, pyname, attr);
             }
         } else {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 5.5.2\n");
-#endif
             Utility::FetchError(errors);
         }
     }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 6, %d\n", (bool) attr);
-#endif
     if (!attr && (klass->fFlags & CPPScope::kIsNamespace)) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 6.1\n");
-#endif
     // refresh using list as necessary
         const std::vector<Cppyy::TCppScope_t>& uv = Cppyy::GetUsingNamespaces(klass->fCppType);
         if (!klass->fImp.fUsing || uv.size() != klass->fImp.fUsing->size()) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 6.1.1\n");
-#endif
             if (klass->fImp.fUsing) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 6.1.1.1\n");
-#endif
                 for (auto pyref : *klass->fImp.fUsing) Py_DECREF(pyref);
                 klass->fImp.fUsing->clear();
-            } else {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 6.1.1.2\n");
-#endif
+            } else
                 klass->fImp.fUsing = new std::vector<PyObject*>;
-            }
 
-#ifdef PRINT_DEBUG
-            printf("  MGA: 6.1.2\n");
-#endif
         // reload and reset weak refs
             for (auto uid : uv) {
-#ifdef PRINT_DEBUG
-                printf("   MGA: 6.1.2.1\n");
-#endif
                 std::string uname = Cppyy::GetScopedFinalName(uid);
                 PyObject* pyuscope = CreateScopeProxy(uname);
                 if (pyuscope) {
-#ifdef PRINT_DEBUG
-                    printf("    MGA: 6.1.2.1.1\n");
-#endif
                     klass->fImp.fUsing->push_back(PyWeakref_NewRef(pyuscope, nullptr));
                 // the namespace may not otherwise be held, so tie the lifetimes
                     PyObject* llname = CPyCppyy_PyText_FromString(("__lifeline_"+uname).c_str());
@@ -654,20 +497,11 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
             }
         }
 
-#ifdef PRINT_DEBUG
-        printf(" MGA: 6.2\n");
-#endif
     // try all outstanding using namespaces in turn to find the attribute (will cache
     // locally later; TODO: doing so may cause pathological cases)
         for (auto pyref : *klass->fImp.fUsing) {
-#ifdef PRINT_DEBUG
-            printf(" MGA: 6.2.1\n");
-#endif
             PyObject* pyuscope = PyWeakref_GetObject(pyref);
             if (pyuscope) {
-#ifdef PRINT_DEBUG
-                printf("  MGA: 6.2.1.1\n");
-#endif
                 attr = PyObject_GetAttr(pyuscope, pyname);
                 if (attr) break;
                 PyErr_Clear();
@@ -679,66 +513,33 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
 // the dict now, to short-circuit future lookups (TODO: this is part of the workaround
 // described above of which the true solution is to loop over all typedefs at creation
 // time for the class)
-#ifdef PRINT_DEBUG
-    printf("MGA: 7\n");
-#endif
     if (possibly_shadowed) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 7.1\n");
-#endif
         if (attr) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 7.1.1\n");
-#endif
             Py_DECREF(possibly_shadowed);
         } else {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 7.1.2\n");
-#endif
             attr = possibly_shadowed;
             PyType_Type.tp_setattro(pyclass, pyname, attr);
         }
     }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 8\n");
-#endif
     if (attr) {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 8.1\n");
-#endif
         std::for_each(errors.begin(), errors.end(), Utility::PyError_t::Clear);
         PyErr_Clear();
     } else {
-#ifdef PRINT_DEBUG
-        printf(" MGA: 8.2\n");
-#endif
     // not found: prepare a full error report
         PyObject* topmsg = nullptr;
         PyObject* sklass = PyObject_Str(pyclass);
         if (sklass) {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 8.2.1\n");
-#endif
             topmsg = CPyCppyy_PyText_FromFormat("%s has no attribute \'%s\'. Full details:",
                 CPyCppyy_PyText_AsString(sklass), CPyCppyy_PyText_AsString(pyname));
             Py_DECREF(sklass);
         } else {
-#ifdef PRINT_DEBUG
-            printf("  MGA: 8.2.2\n");
-#endif
             topmsg = CPyCppyy_PyText_FromFormat("no such attribute \'%s\'. Full details:",
                 CPyCppyy_PyText_AsString(pyname));
         }
-#ifdef PRINT_DEBUG
-        printf(" MGA: 8.3\n");
-#endif
         SetDetailedException(errors, topmsg /* steals */, PyExc_AttributeError /* default error */);
     }
 
-#ifdef PRINT_DEBUG
-    printf("MGA: 9\n");
-#endif
     return attr;
 }
 

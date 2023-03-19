@@ -119,10 +119,6 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteFast(
 // code duplication with ProtectedCall()
     PyObject* result = nullptr;
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~~~~ Executing: %s %p %ld\n", Cppyy::GetFinalName(fMethod).c_str(), self, offset);
-#endif
-
     try {       // C++ try block
         result = fExecutor->Execute(fMethod, (Cppyy::TCppObject_t)((intptr_t)self+offset), ctxt);
     } catch (PyException&) {
@@ -241,10 +237,8 @@ bool CPyCppyy::CPPMethod::InitConverters_()
     fConverters.resize(nArgs);
 
 // setup the dispatch cache
-    // printf("Method : %s\n", Cppyy::GetFinalName(fMethod).c_str());
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
         Cppyy::TCppType_t fullType = Cppyy::GetMethodArgType(fMethod, iarg);
-        // printf("\tArg %d : %s\n", iarg, Cppyy::GetTypeAsString(fullType).c_str());
         Converter* conv = CreateConverter(fullType);
         if (!conv) {
             PyErr_Format(PyExc_TypeError, "argument type %s not handled",

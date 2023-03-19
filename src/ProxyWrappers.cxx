@@ -62,9 +62,6 @@ static PyObject* CreateNewCppProxyClass(Cppyy::TCppScope_t klass, PyObject* pyba
     }
 
     std::string name = Cppyy::GetFinalName(klass);
-#ifdef PRINT_DEBUG
-    printf("CNCPC: %s\n", name.c_str());
-#endif
 
 // create meta-class, add a dummy __module__ to pre-empt the default setting
     PyObject* args = Py_BuildValue((char*)"sO{}", (name+"_meta").c_str(), pymetabases);
@@ -166,7 +163,6 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
-    // printf("  BSPD : %s\n", Cppyy::GetFinalName(scope).c_str());
 
 // load all public methods and data members
     typedef std::vector<PyCallable*> Callables_t;
@@ -258,10 +254,8 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
                 pycall = new CPPAbstractClassConstructor(scope, method);
         } else if (isStubbedOperator) {
             pycall = new CPPOperator(scope, method, mtName);
-        } else {                             // member function
-            // printf("\tBSPD: %s\n", mtCppName.c_str());
+        } else                               // member function
             pycall = new CPPMethod(scope, method);
-        }
 
         if (storeOnTemplate) {
         // template proxy was already created in sync_templates call above, so
@@ -526,9 +520,6 @@ PyObject* CPyCppyy::CreateScopeProxy(PyObject*, PyObject* args)
 {
 // Build a python shadow class for the named C++ class.
     std::string cname = CPyCppyy_PyText_AsString(PyTuple_GetItem(args, 0));
-#ifdef PRINT_DEBUG
-    printf("CPS3: %s\n", cname.c_str());
-#endif
     if (PyErr_Occurred())
         return nullptr;
 
@@ -563,16 +554,9 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
         Py_INCREF(parent);
     }
 
-#ifdef PRINT_DEBUG
-    printf("CPS: Name: %s\n", name.c_str());
-#endif
-
     // retrieve C++ class (this verifies name, and is therefore done first)
     // const std::string& lookup = scName.empty() ? name : (scName+"::"+name);
     Cppyy::TCppScope_t klass = Cppyy::GetScope(name, parent_scope);
-#ifdef PRINT_DEBUG
-    printf("   CPS : heree %p\n", klass);
-#endif
 
     if (!(bool)klass) {
     // // could be an enum, which are treated seperately in CPPScope (TODO: maybe they
@@ -685,9 +669,6 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
 
     if (!parent) {
         Cppyy::TCppScope_t parent_scope = Cppyy::GetParentScope(scope);
-#ifdef PRINT_DEBUG
-        printf("CPS2: parent: %s\n", Cppyy::GetScopedFinalName(parent_scope).c_str());
-#endif
 
         if (parent_scope)
             parent = CreateScopeProxy(parent_scope);
@@ -698,15 +679,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     }
 
     std::string name = Cppyy::GetFinalName(scope);
-#ifdef PRINT_DEBUG
-    printf("CPS2: %s\n", name.c_str());
-    printf("CPS2: parent: %s\n", Cppyy::GetScopedFinalName(Cppyy::GetParentScope(scope)).c_str());
-#endif
-
     if (Cppyy::IsTemplate(scope)) {
-#ifdef PRINT_DEBUG
-        printf(" CPS2: 1.1\n");
-#endif
         // a "naked" templated class is requested: return callable proxy for instantiations
         PyObject* pytcl = PyObject_GetAttr(gThisModule, PyStrings::gTemplate);
         PyObject* cppscope = PyLong_FromVoidPtr(scope);
@@ -715,9 +688,6 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
             const_cast<char*>(Cppyy::GetScopedFinalName(scope).c_str()),
             cppscope);
         Py_DECREF(pytcl);
-#ifdef PRINT_DEBUG
-        printf("CPS2: pointer for template %p\n", scope);
-#endif
 
         // cache the result
         AddScopeToParent(parent, name, pytemplate);
@@ -726,22 +696,13 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         Py_XDECREF(parent);
         return pytemplate;
     }
-#ifdef PRINT_DEBUG
-    printf("CPS2: 2\n");
-#endif
 
     if (Cppyy::IsEnum(scope))
         return nullptr;
-#ifdef PRINT_DEBUG
-    printf("CPS2: 3\n");
-#endif
 
     // locate class by ID, if possible, to prevent parsing scopes/templates anew
     PyObject* pyscope = GetScopeProxy(scope);
     if (pyscope) {
-#ifdef PRINT_DEBUG
-        printf(" CPS2: 3.1\n");
-#endif
         if (parent) {
             AddScopeToParent(parent, name, pyscope);
             Py_DECREF(parent);
@@ -749,34 +710,19 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         return pyscope;
     }
 
-#ifdef PRINT_DEBUG
-    printf("CPS2: 4\n");
-#endif
     // if the scope was earlier found as actual, then we're done already, otherwise
     // build a new scope proxy
     if (!pyscope) {
-#ifdef PRINT_DEBUG
-        printf(" CPS2: 4.1\n");
-#endif
         // construct the base classes
         PyObject* pybases = BuildCppClassBases(scope);
         if (pybases != 0) {
-#ifdef PRINT_DEBUG
-            printf("  CPS2: 4.1.1\n");
-#endif
         // create a fresh Python class, given bases, name, and empty dictionary
             pyscope = CreateNewCppProxyClass(scope, pybases);
             Py_DECREF(pybases);
         }
 
-#ifdef PRINT_DEBUG
-        printf(" CPS2: 4.2\n");
-#endif
         // fill the dictionary, if successful
         if (pyscope) {
-#ifdef PRINT_DEBUG
-            printf("  CPS2: 4.2.1\n");
-#endif
             if (BuildScopeProxyDict(scope, pyscope, flags)) {
             // something failed in building the dictionary
                 Py_DECREF(pyscope);
@@ -784,29 +730,17 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
             }
         }
 
-#ifdef PRINT_DEBUG
-        printf(" CPS2: 4.3\n");
-#endif
         // store a ref from cppyy scope id to new python class
         if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {
-#ifdef PRINT_DEBUG
-            printf("  CPS2: 4.3.1\n");
-#endif
             gPyClasses[scope] = PyWeakref_NewRef(pyscope, nullptr);
 
             if (!(((CPPScope*)pyscope)->fFlags & CPPScope::kIsNamespace)) {
-#ifdef PRINT_DEBUG
-                printf("   CPS2: 4.3.1.1\n");
-#endif
                 // add python-style features to classes only
                 if (!Pythonize(pyscope, Cppyy::GetScopedFinalName(scope))) {
                     Py_DECREF(pyscope);
                     pyscope = nullptr;
                 }
             } else {
-#ifdef PRINT_DEBUG
-                printf("   CPS2: 4.3.1.2\n");
-#endif
                 // add to sys.modules to allow importing from this namespace
                 PyObject* pyfullname = PyObject_GetAttr(pyscope, PyStrings::gModule);
                 CPyCppyy_PyText_AppendAndDel(&pyfullname, CPyCppyy_PyText_FromString("."));
@@ -819,9 +753,6 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         }
     }
 
-#ifdef PRINT_DEBUG
-    printf("CPS2: 5\n");
-#endif
     // store on parent if found/created and complete
     if (pyscope && !(((CPPScope*)pyscope)->fFlags & CPPScope::kIsInComplete)) {
         // FIXME: This is to mimic original behaviour. Still required?

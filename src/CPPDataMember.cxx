@@ -48,9 +48,6 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
         }
     }
 
-#ifdef PRINT_DEBUG
-    printf("dm_get: 2\n");
-#endif
 // non-initialized or public data accesses through class (e.g. by help())
     void* address = dm->GetAddress(pyobj);
     if (!address || (intptr_t)address == -1 /* Cling error */)
@@ -94,30 +91,14 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
         }
     }
 
-#ifdef PRINT_DEBUG
-    printf("dm_get: 3\n");
-#endif
     if (dm->fConverter != 0) {
-#ifdef PRINT_DEBUG
-        printf(" dm_get: 3.1\n");
-#endif
         PyObject* result = dm->fConverter->FromMemory((dm->fFlags & kIsArrayType) ? &address : address);
-        if (!result) {
-#ifdef PRINT_DEBUG
-            printf(" dm_get: 3.1.1\n");
-#endif
+        if (!result)
             return result;
-        }
-#ifdef PRINT_DEBUG
-        printf(" dm_get: 3.2\n");
-#endif
 
     // low level views are expensive to create, so cache them on the object instead
         bool isLLView = LowLevelView_CheckExact(result);
         if (isLLView && CPPInstance_Check(pyobj)) {
-#ifdef PRINT_DEBUG
-            printf(" dm_get: 3.2.1\n");
-#endif
             Py_INCREF(result);
             pyobj->GetDatamemberCache().push_back(std::make_pair(dm->fOffset, result));
             dm->fFlags |= kIsCachable;
@@ -129,9 +110,6 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
     // end up being "stand-alone")
     // TODO: should be done for LLViews as well
         else if (pyobj && CPPInstance_Check(result)) {
-#ifdef PRINT_DEBUG
-            printf(" dm_get: 3.2.2\n");
-#endif
             if (PyObject_SetAttr(result, PyStrings::gLifeLine, (PyObject*)pyobj) == -1)
                 PyErr_Clear();     // ignored
         }
@@ -184,9 +162,6 @@ static int dm_set(CPPDataMember* dm, CPPInstance* pyobj, PyObject* value)
     }
 
     intptr_t address = (intptr_t)dm->GetAddress(pyobj);
-#ifdef PRINT_DEBUG
-    printf("~~~~~~~~~~~~~ set_pp %p ~~~~~~~~~~~~\n", address);
-#endif
     if (!address || address == -1 /* Cling error */)
         return errret;
 
@@ -343,10 +318,6 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
     fOffset         = Cppyy::GetDatamemberOffset(data); // XXX: Check back here // TODO: make lazy
     fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
 
-#ifdef PRINT_DEBUG
-    printf("%s ============= %ld\n", Cppyy::GetScopedFinalName(data).c_str(), fOffset);
-#endif
-
     // while (0 < (size = Cppyy::GetDimensionSize(scope, idata, ndim))) {
     //      ndim += 1;
     //      if (size == INT_MAX)      // meaning: incomplete array type
@@ -376,8 +347,6 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
         fFlags |= kIsConstData;
     }
 
-    // printf("Type => %s\n", Cppyy::GetTypeAsString(type).c_str());
-
 // if this data member is an array, the conversion needs to be pointer to object for instances,
 // to prevent the need for copying in the conversion; furthermore, fixed arrays' full type for
 // builtins are not declared as such if more than 1-dim (TODO: fix in clingwrapper)
@@ -388,9 +357,6 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
     //     }
     // }
 
-#ifdef PRINT_DEBUG
-    printf("                  DM:S : %s\n", Cppyy::GetTypeAsString(type).c_str());
-#endif
     if (dims.empty())
         fConverter = CreateConverter(type, 0);
     else
@@ -414,25 +380,16 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, const std::string& n
 //-----------------------------------------------------------------------------
 void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
 {
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here1\n");
-#endif
 // class attributes, global properties
     if (fFlags & kIsStaticData)
         return (void*)fOffset;
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here2\n");
-#endif
 // special case: non-static lookup through class
     if (!pyobj) {
         PyErr_SetString(PyExc_AttributeError, "attribute access requires an instance");
         return nullptr;
     }
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here3\n");
-#endif
 // instance attributes; requires valid object for full address
     if (!CPPInstance_Check(pyobj)) {
         PyErr_Format(PyExc_TypeError,
@@ -440,27 +397,18 @@ void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
         return nullptr;
     }
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here4\n");
-#endif
     void* obj = pyobj->GetObject();
     if (!obj) {
         PyErr_SetString(PyExc_ReferenceError, "attempt to access a null-pointer");
         return nullptr;
    }
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here5\n");
-#endif
 // the proxy's internal offset is calculated from the enclosing class
     ptrdiff_t offset = 0;
     Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
     if (oisa != fEnclosingScope)
         offset = Cppyy::GetBaseOffset(oisa, fEnclosingScope, obj, 1 /* up-cast */);
 
-#ifdef PRINT_DEBUG
-    printf("~~~~~~here6 fo: %ld  bo: %ld  obj: %p  ret: %p\n", fOffset, offset, obj, ((intptr_t)obj + offset + fOffset));
-#endif
     return (void*)((intptr_t)obj + offset + fOffset);
 }
 
