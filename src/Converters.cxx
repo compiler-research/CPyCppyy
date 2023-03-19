@@ -3375,8 +3375,8 @@ std::string::size_type dims2stringsz(cdims_t d) {
     return (d && d.ndim() != UNKNOWN_SIZE) ? d[0] : std::string::npos;
 }
 
-#define STRINGVIEW "class std::basic_string_view<char, class std::char_traits<char> >"
-#define WSTRING "class std::basic_string<wchar_t, class std::char_traits<wchar_t>, class std::allocator<wchar_t> >"
+#define STRINGVIEW "std::basic_string_view<char,std::char_traits<char> >"
+#define WSTRING "std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t> >"
 
 //-- aliasing special case: C complex (is binary compatible with C++ std::complex)
 #ifndef _WIN32
@@ -3451,8 +3451,8 @@ public:
         gf["long double"] =                 (cf_t)+[](cdims_t) { static LDoubleConverter c{};         return &c; };
         gf["const long double &"] =         (cf_t)+[](cdims_t) { static ConstLDoubleRefConverter c{}; return &c; };
         gf["long double &"] =               (cf_t)+[](cdims_t) { static LDoubleRefConverter c{};      return &c; };
-        gf["class std::complex<double>"] =        (cf_t)+[](cdims_t) { return new ComplexDConverter{}; };
-        gf["const class std::complex<double> &"] =(cf_t)+[](cdims_t) { return new ComplexDConverter{}; };
+        gf["std::complex<double>"] =        (cf_t)+[](cdims_t) { return new ComplexDConverter{}; };
+        gf["const std::complex<double> &"] =(cf_t)+[](cdims_t) { return new ComplexDConverter{}; };
         gf["void"] =                        (cf_t)+[](cdims_t) { static VoidConverter c{};            return &c; };
 
     // pointer/array factories
@@ -3477,24 +3477,24 @@ public:
         gf["float ptr"] =                   (cf_t)+[](cdims_t d) { return new FloatArrayConverter{d}; };
         gf["double ptr"] =                  (cf_t)+[](cdims_t d) { return new DoubleArrayConverter{d}; };
         gf["long double ptr"] =             (cf_t)+[](cdims_t d) { return new LDoubleArrayConverter{d}; };
-        gf["class std::complex<float> ptr"] =     (cf_t)+[](cdims_t d) { return new ComplexFArrayConverter{d}; };
-        gf["class std::complex<double> ptr"] =    (cf_t)+[](cdims_t d) { return new ComplexDArrayConverter{d}; };
+        gf["std::complex<float> ptr"] =     (cf_t)+[](cdims_t d) { return new ComplexFArrayConverter{d}; };
+        gf["std::complex<double> ptr"] =    (cf_t)+[](cdims_t d) { return new ComplexDArrayConverter{d}; };
         gf["void *"] =                      (cf_t)+[](cdims_t d) { return new VoidArrayConverter{(bool)d}; };
 
     // aliases
         gf["signed char"] =                 gf["char"];
         gf["const signed char &"] =         gf["const char &"];
 #if __cplusplus > 201402L
-        gf["class std::byte"] =                   gf["uint8_t"];
-        gf["const class std::byte &"] =           gf["const uint8_t &"];
-        gf["class std::byte &"] =                 gf["uint8 &"];
+        gf["std::byte"] =                   gf["uint8_t"];
+        gf["const std::byte &"] =           gf["const uint8_t &"];
+        gf["std::byte &"] =                 gf["uint8 &"];
 #endif
-        gf["class std::int8_t"] =                 gf["int8_t"];
-        gf["const class std::int8_t &"] =         gf["const int8_t &"];
-        gf["class std::int8_t&"] =                gf["int8_t &"];
-        gf["class std::uint8_t"] =                gf["uint8_t"];
-        gf["const class std::uint8_t &"] =        gf["const uint8_t &"];
-        gf["class std::uint8_t&"] =               gf["uint8_t &"];
+        gf["std::int8_t"] =                 gf["int8_t"];
+        gf["const std::int8_t &"] =         gf["const int8_t &"];
+        gf["std::int8_t&"] =                gf["int8_t &"];
+        gf["std::uint8_t"] =                gf["uint8_t"];
+        gf["const std::uint8_t &"] =        gf["const uint8_t &"];
+        gf["std::uint8_t&"] =               gf["uint8_t &"];
         gf["internal_enum_type_t"] =        gf["int"];
         gf["internal_enum_type_t &"] =      gf["int &"];
         gf["const internal_enum_type_t &"] =gf["const int &"];
@@ -3509,10 +3509,10 @@ public:
         gf["unsigned __int64 &"] =          gf["unsigned long long &"];
         gf["unsigned __int64 ptr"] =        gf["unsigned long long ptr"];
 #endif
-        gf[CCOMPLEX_D] =                    gf["class std::complex<double>"];
-        gf["const " CCOMPLEX_D " &"] =      gf["const class std::complex<double> &"];
-        gf[CCOMPLEX_F " ptr"] =             gf["class std::complex<float> ptr"];
-        gf[CCOMPLEX_D " ptr"] =             gf["class std::complex<double> ptr"];
+        gf[CCOMPLEX_D] =                    gf["std::complex<double>"];
+        gf["const " CCOMPLEX_D " &"] =      gf["const std::complex<double> &"];
+        gf[CCOMPLEX_F " ptr"] =             gf["std::complex<float> ptr"];
+        gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
 
     // factories for special cases
         gf["nullptr_t"] =                   (cf_t)+[](cdims_t) { static NullptrConverter c{};        return &c;};
@@ -3534,19 +3534,19 @@ public:
         gf["char**"] =                      gf["const char **"];
         gf["const char *[]"] =              (cf_t)+[](cdims_t d) { return new CStringArrayConverter{d}; };
         gf["char ptr"] =                    gf["const char *[]"];
-        gf["class std::string"] =                 (cf_t)+[](cdims_t) { return new STLStringConverter{}; };
-        gf["const class std::string &"] =         gf["class std::string"];
-        gf["class std::string &&"] =              (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
+        gf["std::string"] =                 (cf_t)+[](cdims_t) { return new STLStringConverter{}; };
+        gf["const std::string &"] =         gf["std::string"];
+        gf["std::string &&"] =              (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
 #if __cplusplus > 201402L
-        gf["class std::string_view"] =            (cf_t)+[](cdims_t) { return new STLStringViewConverter{}; };
-        gf[STRINGVIEW] =                    gf["class std::string_view"];
-        gf["class std::string_view &"] =          gf["class std::string_view"];
-        gf["const class " STRINGVIEW " &"] =      gf["class std::string_view"];
+        gf["std::string_view"] =            (cf_t)+[](cdims_t) { return new STLStringViewConverter{}; };
+        gf[STRINGVIEW] =                    gf["std::string_view"];
+        gf["std::string_view &"] =          gf["std::string_view"];
+        gf["const " STRINGVIEW " &"] =      gf["std::string_view"];
 #endif
-        gf["class std::wstring"] =                (cf_t)+[](cdims_t) { return new STLWStringConverter{}; };
-        gf[WSTRING] =                       gf["class std::wstring"];
-        gf["const class std::wstring &"] =        gf["class std::wstring"];
-        gf["const " WSTRING " &"] =         gf["class std::wstring"];
+        gf["std::wstring"] =                (cf_t)+[](cdims_t) { return new STLWStringConverter{}; };
+        gf[WSTRING] =                       gf["std::wstring"];
+        gf["const std::wstring &"] =        gf["std::wstring"];
+        gf["const " WSTRING " &"] =         gf["std::wstring"];
         gf["void *&"] =                     (cf_t)+[](cdims_t) { static VoidPtrRefConverter c{};     return &c; };
         gf["void **"] =                     (cf_t)+[](cdims_t d) { return new VoidPtrPtrConverter{d}; };
         gf["void ptr"] =                    gf["void **"];
