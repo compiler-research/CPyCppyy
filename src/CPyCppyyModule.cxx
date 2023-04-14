@@ -439,6 +439,14 @@ static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
     Cppyy::TCppScope_t scope = 
         Cppyy::InstantiateTemplateClass(tmpl, types.data(), types.size());
 
+    if (!scope) {
+      PyErr_Format(PyExc_SyntaxError,
+                   "Template instantiation failed: '%s' with args: '%s\n'",
+                   Cppyy::GetScopedFinalName(cppscope).c_str(),
+                   CPyCppyy_PyText_AsString(PyObject_Repr(args)));
+      return nullptr;
+    }
+
     return CreateScopeProxy(scope);
 }
 
