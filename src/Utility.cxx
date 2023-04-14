@@ -812,7 +812,14 @@ std::vector<Cppyy::TCppType_t> CPyCppyy::Utility::GetTemplateArgsTypes(
     // add type as string to name
         PyObject* tn = justOne ? tpArgs : PyTuple_GET_ITEM(tpArgs, i);
         if (CPyCppyy_PyText_Check(tn)) {
-            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tn)));
+            const char * tn_string = CPyCppyy_PyText_AsString(tn);
+            Cppyy::TCppType_t tn_type = Cppyy::GetType(tn_string);
+            if (!tn_type) {
+                PyErr_Format(PyExc_SyntaxError,
+                             "Cannot find arg: %s", tn_string);
+                return {};
+            }
+            types.push_back(tn_type);
     // some commmon numeric types (separated out for performance: checking for
     // __cpp_name__ and/or __name__ is rather expensive)
         } else {

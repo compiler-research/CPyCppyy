@@ -433,6 +433,8 @@ static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
 // build "< type, type, ... >" part of class name (modifies pyname)
     std::vector<Cppyy::TCppType_t> types =
         Utility::GetTemplateArgsTypes(cppscope, args, nullptr, Utility::kNone, 1);
+    if (PyErr_Occurred())
+      return nullptr;
 
     Cppyy::TCppScope_t scope = 
         Cppyy::InstantiateTemplateClass(tmpl, types.data(), types.size());
