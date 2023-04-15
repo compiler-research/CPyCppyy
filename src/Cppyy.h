@@ -36,6 +36,14 @@ typedef unsigned long long PY_ULONG_LONG;
 typedef long double PY_LONG_DOUBLE;
 #endif
 
+namespace InterOp {
+    struct TemplateArgInfo {
+      void* m_Type;
+      const char* m_IntegralValue;
+      TemplateArgInfo(void* type, const char* integral_value = nullptr)
+        : m_Type(type), m_IntegralValue(integral_value) {}
+    };
+} // end namespace InterOp
 
 namespace Cppyy {
 
@@ -326,7 +334,7 @@ namespace Cppyy {
     long long   GetEnumDataValue(TCppScope_t scope);
     CPPYY_IMPORT
     TCppScope_t InstantiateTemplateClass(
-        TCppScope_t tmpl, TCppType_t* types, size_t types_size);
+            TCppScope_t tmpl, InterOp::TemplateArgInfo* args, size_t args_size);
 
     CPPYY_IMPORT
     TCppScope_t DumpScope(TCppScope_t scope);

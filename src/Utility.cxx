@@ -609,7 +609,7 @@ std::string CPyCppyy::Utility::ConstructTemplateArgs(
 }
 
 //----------------------------------------------------------------------------
-static bool AddTypeName(std::vector<Cppyy::TCppType_t>& types, PyObject* tn, 
+static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* tn, 
     PyObject* arg, CPyCppyy::Utility::ArgPreference pref, int* pcnt = nullptr)
 {
 // Determine the appropriate C++ type for a given Python type; this is a helper because
@@ -789,7 +789,7 @@ static bool AddTypeName(std::vector<Cppyy::TCppType_t>& types, PyObject* tn,
     // source of errors otherwise, it is limited to specific types and not
     // generally used (str(obj) can print anything ...)
         PyObject* pystr = PyObject_Str(tn);
-        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(pystr)));
+        types.push_back({Cppyy::GetType("int"), CPyCppyy_PyText_AsString(pystr)});
         Py_DECREF(pystr);
         return true;
     }
@@ -797,7 +797,7 @@ static bool AddTypeName(std::vector<Cppyy::TCppType_t>& types, PyObject* tn,
     return false;
 }
 
-std::vector<Cppyy::TCppType_t> CPyCppyy::Utility::GetTemplateArgsTypes(
+std::vector<InterOp::TemplateArgInfo> CPyCppyy::Utility::GetTemplateArgsTypes(
     PyObject* /*scope*/, PyObject* tpArgs, PyObject* args, ArgPreference pref, int argoff, int* pcnt)
 {
 // Helper to construct the "<type, type, ...>" part of a templated name (either
@@ -805,7 +805,7 @@ std::vector<Cppyy::TCppType_t> CPyCppyy::Utility::GetTemplateArgsTypes(
     bool justOne = !PyTuple_CheckExact(tpArgs);
 
 // Note: directly appending to string is a lot faster than stringstream
-    std::vector<Cppyy::TCppType_t> types;
+    std::vector<InterOp::TemplateArgInfo> types;
     types.reserve(8);
 
     if (pcnt) *pcnt = 0;     // count number of times 'pref' is used
