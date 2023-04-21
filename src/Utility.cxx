@@ -675,7 +675,7 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
 #else
     if (tn == (PyObject*)&PyUnicode_Type) {
 #endif
-        types.push_back(Cppyy::GetType("std::string", /* enable_slow_lookup */ true));
+        types.push_back(Cppyy::GetType("std::string"));
         return true;
     }
 
@@ -726,7 +726,7 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
         PyObject* tpName =  arg ? \
             PyObject_GetAttr(arg, PyStrings::gCppName) : \
             CPyCppyy_PyText_FromString("void* (*)(...)");
-        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName)));
         Py_DECREF(tpName);
 
         return true;
@@ -754,7 +754,6 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
                     tpn << ')';
                     // tmpl_name.append(tpn.str());
                     // FIXME: find a way to add it to types
-                    throw std::runtime_error("This path is not yet implemented (AddTypeName) \n");
                     types;
 
                     return true;
@@ -768,7 +767,7 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
 
         PyObject* tpName = PyObject_GetAttr(arg, PyStrings::gCppName);
         if (tpName) {
-            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName)));
             Py_DECREF(tpName);
             return true;
         }
@@ -778,7 +777,7 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
     for (auto nn : {PyStrings::gCppName, PyStrings::gName}) {
         PyObject* tpName = PyObject_GetAttr(tn, nn);
         if (tpName) {
-            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName)));
             Py_DECREF(tpName);
             return true;
         }
@@ -790,7 +789,7 @@ static bool AddTypeName(std::vector<InterOp::TemplateArgInfo>& types, PyObject* 
     // source of errors otherwise, it is limited to specific types and not
     // generally used (str(obj) can print anything ...)
         PyObject* pystr = PyObject_Str(tn);
-        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(pystr), /* enable_slow_lookup */ true));
+        types.push_back({Cppyy::GetType("int"), CPyCppyy_PyText_AsString(pystr)});
         Py_DECREF(pystr);
         return true;
     }
@@ -817,7 +816,7 @@ std::vector<InterOp::TemplateArgInfo> CPyCppyy::Utility::GetTemplateArgsTypes(
         PyObject* tn = justOne ? tpArgs : PyTuple_GET_ITEM(tpArgs, i);
         if (CPyCppyy_PyText_Check(tn)) {
             const char * tn_string = CPyCppyy_PyText_AsString(tn);
-            Cppyy::TCppType_t tn_type = Cppyy::GetType(tn_string, /* enable_slow_lookup */ true);
+            Cppyy::TCppType_t tn_type = Cppyy::GetType(tn_string);
             if (!tn_type) {
                 PyErr_Format(PyExc_SyntaxError,
                              "Cannot find arg: %s", tn_string);

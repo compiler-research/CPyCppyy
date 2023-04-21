@@ -301,7 +301,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsClassType(TCppType_t type);
     CPPYY_IMPORT
-    TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false);
+    TCppType_t  GetType(const std::string& name);
     CPPYY_IMPORT
     TCppType_t  GetComplexType(const std::string& element_type);
     CPPYY_IMPORT
