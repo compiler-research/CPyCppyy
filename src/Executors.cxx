@@ -794,13 +794,18 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(const std::string& fullType, cdims_
 //
 // If all fails, void is used, which will cause the return type to be ignored on use
 
+  // FIXME:
+  //assert(!fullType.empty() && "This routine assumes non-empty fullType");
+  if (fullType.empty())
+    return nullptr;
+
 // an exactly matching executor is best
     ExecFactories_t::iterator h = gExecFactories.find(fullType);
     if (h != gExecFactories.end())
         return (h->second)(dims);
 
 // resolve typedefs etc.
-    const std::string& resolvedType = Cppyy::ResolveName(fullType);
+    const std::string resolvedType = Cppyy::ResolveName(fullType);
 
 // a full, qualified matching executor is preferred
     if (resolvedType != fullType) {
