@@ -279,6 +279,8 @@ namespace Cppyy {
 
 // method properties ---------------------------------------------------------
     CPPYY_IMPORT
+    bool IsDeletedMethod(TCppMethod_t method);
+    CPPYY_IMPORT
     bool IsPublicMethod(TCppMethod_t method);
     CPPYY_IMPORT
     bool IsProtectedMethod(TCppMethod_t method);

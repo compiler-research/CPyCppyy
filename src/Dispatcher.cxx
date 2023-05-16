@@ -258,7 +258,8 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
         for (auto &method : methods) {
             if (Cppyy::IsConstructor(method)) {
                 any_ctor_found = true;
-                if (Cppyy::IsPublicMethod(method) || Cppyy::IsProtectedMethod(method)) {
+                if ((Cppyy::IsPublicMethod(method) || Cppyy::IsProtectedMethod(method)) &&
+                    !Cppyy::IsDeletedMethod(method)) {
                     Cppyy::TCppIndex_t nreq = Cppyy::GetMethodReqArgs(method);
                     if (nreq == 0) default_found = true;
                     else if (!cctor_found && nreq == 1) {
