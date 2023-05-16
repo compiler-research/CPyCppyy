@@ -1089,7 +1089,7 @@ bool CPyCppyy::DoubleRefConverter::SetArg(
 
 // alternate, pass pointer from buffer
     Py_ssize_t buflen = Utility::GetBuffer(pyobject, 'd', sizeof(double), para.fValue.fVoidp);
-    if (para.fValue.fVoidp && buflen) {
+    if (buflen && para.fValue.fVoidp) {
         para.fTypeCode = 'V';
         return true;
     }
