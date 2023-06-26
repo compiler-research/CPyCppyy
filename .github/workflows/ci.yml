@@ -304,7 +304,6 @@ jobs:
         echo "Return Code: ${RETCODE}"
         exit $RETCODE
     - name: Setup tmate session
-      if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
       # When debugging increase to a suitable value!
-      timeout-minutes: ${{ github.event.pull_request && 1 || 20 }}
+      timeout-minutes: 60
