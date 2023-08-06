@@ -39,7 +39,7 @@ PyCallable* FindBinaryOperator(const std::string& lcname, const std::string& rcn
 enum ArgPreference { kNone, kPointer, kReference, kValue };
 std::string ConstructTemplateArgs(
     PyObject* pyname, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
-std::vector<InterOp::TemplateArgInfo> GetTemplateArgsTypes(
+std::vector<Cpp::TemplateArgInfo> GetTemplateArgsTypes(
     PyObject* scope, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
 
 // helper for generating callbacks
