@@ -2355,8 +2355,8 @@ bool CPyCppyy::VoidPtrRefConverter::SetArg(
 }
 
 //----------------------------------------------------------------------------
-CPyCppyy::VoidPtrPtrConverter::VoidPtrPtrConverter(cdims_t dims) :
-        fShape(dims) {
+CPyCppyy::VoidPtrPtrConverter::VoidPtrPtrConverter(cdims_t dims, const std::string &failureMsg) :
+        fShape(dims), fFailureMsg (failureMsg) {
     fIsFixed = dims ? fShape[0] != UNKNOWN_SIZE : false;
 }
 
@@ -3144,6 +3144,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
                 resolvedType.substr(0, pos1), resolvedType.substr(pos1+sm.length(), pos2-1));
         }
     }
+    const std::string failure_msg("Failed to convert type: " + fullType + "; resolved: " + resolvedType + "; real: " + realType + "; cpd: " + cpd);
 
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
@@ -3151,7 +3152,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
-        result = new NotImplementedConverter();
+        result = new NotImplementedConverter(failure_msg);
     }
 
     if (!result && h != gConvFactories.end())
@@ -3160,11 +3161,11 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
     else if (!result) {
     // default to something reasonable, assuming "user knows best"
         if (cpd.size() == 2 && cpd != "&&") // "**", "*[]", "*&"
-            result = new VoidPtrPtrConverter(dims.ndim());
+            result = new VoidPtrPtrConverter(dims.ndim(), failure_msg);
         else if (!cpd.empty())
-            result = new VoidArrayConverter();        // "user knows best"
+            result = new VoidArrayConverter(/* keepControl= */ true, failure_msg);        // "user knows best"
         else
-            result = new NotImplementedConverter();   // fails on use
+            result = new NotImplementedConverter(failure_msg);   // fails on use
     }
 
     return result;
@@ -3346,6 +3347,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         result = new FunctionPointerConverter(
             resolvedTypeStr.substr(0, pos1), resolvedTypeStr.substr(pos2+2, pos3-pos2-1));
     }
+    const std::string failure_msg("Failed to convert type: " + fullType + "; resolved: " + resolvedTypeStr + "; real: " + realTypeStr + "; realUnresolvedType: " + realUnresolvedTypeStr + "; cpd: " + cpd);
 
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
@@ -3357,7 +3359,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
-        result = new NotImplementedConverter();
+        result = new NotImplementedConverter(failure_msg);
     }
 
     if (!result && h != gConvFactories.end()) {
@@ -3366,11 +3368,11 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
     } else if (!result) {
     // default to something reasonable, assuming "user knows best"
         if (cpd.size() == 2 && cpd != "&&") {// "**", "*[]", "*&"
-            result = new VoidPtrPtrConverter(dims.ndim());
+            result = new VoidPtrPtrConverter(dims.ndim(), failure_msg);
         } else if (!cpd.empty()) {
-            result = new VoidArrayConverter();        // "user knows best"
+            result = new VoidArrayConverter(/* keepControl= */ true, failure_msg);        // "user knows best"
         } else {
-            result = new NotImplementedConverter();   // fails on use
+            result = new NotImplementedConverter(failure_msg);   // fails on use
         }
     }
 
