@@ -30,5 +30,5 @@ add_library(cppyy SHARED ${cppyy_src})
 
 if(APPLE)
   set_target_properties(cppyy PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-  set_target_properties(cppyy PROPERTIES SUFFIX ".so")
+  set_target_properties(cppyy PROPERTIES SUFFIX ".dylib")
 endif()
