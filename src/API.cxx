@@ -132,6 +132,23 @@ PyObject* CPyCppyy::Instance_FromVoidPtr(
     return pyobject;
 }
 
+//-----------------------------------------------------------------------------
+PyObject* CPyCppyy::Instance_FromVoidPtr(
+    void* addr, Cppyy::TCppScope_t klass_scope, bool python_owns)
+{
+// Bind the addr to a python object of class defined by classname.
+    if (!Initialize())
+        return nullptr;
+
+// perform cast (the call will check TClass and addr, and set python errors)
+    PyObject* pyobject = BindCppObjectNoCast(addr, klass_scope, false);
+
+// give ownership, for ref-counting, to the python side, if so requested
+    if (python_owns && CPPInstance_Check(pyobject))
+        ((CPPInstance*)pyobject)->PythonOwns();
+
+    return pyobject;
+}
 namespace CPyCppyy {
 // version with C type arguments only for use with Numba
 PyObject* Instance_FromVoidPtr(void* addr, const char* classname, int python_owns) {

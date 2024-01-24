@@ -176,7 +176,8 @@ CPYCPPYY_EXTERN void* Instance_AsVoidPtr(PyObject* pyobject);
 // void* to C++ Instance (python object proxy) conversion, returns a new reference
 CPYCPPYY_EXTERN PyObject* Instance_FromVoidPtr(
     void* addr, const std::string& classname, bool python_owns = false);
-
+CPYCPPYY_EXTERN PyObject* Instance_FromVoidPtr(
+    void* addr, Cppyy::TCppScope_t klass_scope, bool python_owns = false);
 // type verifiers for C++ Scope
 CPYCPPYY_EXTERN bool Scope_Check(PyObject* pyobject);
 CPYCPPYY_EXTERN bool Scope_CheckExact(PyObject* pyobject);
