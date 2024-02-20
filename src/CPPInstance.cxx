@@ -838,32 +838,6 @@ static PyObject* op_str(CPPInstance* self)
     return op_repr(self);
 }
 
-//----------------------------------------------------------------------------
-static PyObject* op_getattro(PyObject* pyobj, PyObject* pyname)
-{
-// Check if we can access the attribute at the object level
-    PyObject* attr = PyObject_GenericGetAttr(pyobj, pyname);
-    if (attr)
-        return attr;
-
-// If it's not AttributeError the attribute was found and something else failed
-    if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-        return nullptr;
-
-// Keep the error aside to be used in case lookup on class level fails
-    PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
-    PyErr_Fetch(&pytype, &pyvalue, &pytrace);
-    
-// Perform a class level lookup for statics, enums etc.
-    CPPClass* klass = (CPPClass*)Py_TYPE(pyobj);
-    attr = PyObject_GetAttr((PyObject*)klass, pyname);
-    if (attr)
-        return attr;
-    
-    PyErr_Restore(pytype, pyvalue, pytrace);
-    return nullptr;
-}
-
 //-----------------------------------------------------------------------------
 static PyObject* op_getownership(CPPInstance* pyobj, void*)
 {
@@ -1056,7 +1030,7 @@ PyTypeObject CPPInstance_Type = {
     (hashfunc)op_hash,             // tp_hash
     0,                             // tp_call
     (reprfunc)op_str,              // tp_str
-    (getattrofunc)op_getattro,     // tp_getattro
+    0,                             // tp_getattro
     0,                             // tp_setattro
     0,                             // tp_as_buffer
     Py_TPFLAGS_DEFAULT |
