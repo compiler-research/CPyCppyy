@@ -311,6 +311,9 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false);
     CPPYY_IMPORT
+    bool AppendTypesSlow(const std::string &name,
+                         std::vector<Cpp::TemplateArgInfo>& types);
+    CPPYY_IMPORT
     TCppType_t  GetComplexType(const std::string& element_type);
     CPPYY_IMPORT
     std::string GetDatamemberTypeAsString(TCppScope_t var);

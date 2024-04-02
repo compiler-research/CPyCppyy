@@ -493,7 +493,7 @@ static inline PyObject* SelectAndForward(TemplateProxy* pytmpl, CPPOverload* pym
 static inline PyObject* CallMethodImp(TemplateProxy* pytmpl, PyObject*& pymeth,
     CPyCppyy_PyArgs_t args, size_t nargsf, PyObject* kwds, bool impOK, uint64_t sighash)
 {
-// Actual call of a given overload: takes care of handlign of "self" and
+// Actual call of a given overload: takes care of handling of "self" and
 // dereferences the overloaded method after use.
 
     PyObject* result;
