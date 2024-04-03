@@ -253,7 +253,8 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
     for (BaseInfos_t::size_type ibase = 0; ibase < base_infos.size(); ++ibase) {
         const auto& binfo = base_infos[ibase];
 
-        std::vector<Cppyy::TCppMethod_t> methods = Cppyy::GetClassMethods(binfo.btype);
+        std::vector<Cppyy::TCppMethod_t> methods;
+        Cppyy::GetClassMethods(binfo.btype, methods);
         bool cctor_found = false, default_found = false, any_ctor_found = false;
         for (auto &method : methods) {
             if (Cppyy::IsConstructor(method)) {
