@@ -229,7 +229,7 @@ namespace Cppyy {
 
 // method/function reflection information ------------------------------------
     CPPYY_IMPORT
-    std::vector<TCppMethod_t> GetClassMethods(TCppScope_t scope);
+    void GetClassMethods(TCppScope_t scope, std::vector<TCppMethod_t> &methods);
     CPPYY_IMPORT
     std::vector<TCppScope_t> GetMethodsFromName(TCppScope_t scope, const std::string& name);
 
