@@ -345,7 +345,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     long long   GetEnumDataValue(TCppScope_t scope);
     CPPYY_IMPORT
-    TCppScope_t InstantiateTemplateClass(
+    TCppScope_t InstantiateTemplate(
             TCppScope_t tmpl, Cpp::TemplateArgInfo* args, size_t args_size);
 
     CPPYY_IMPORT
