@@ -437,7 +437,7 @@ static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
       return nullptr;
 
     Cppyy::TCppScope_t scope = 
-        Cppyy::InstantiateTemplateClass(tmpl, types.data(), types.size());
+        Cppyy::InstantiateTemplate(tmpl, types.data(), types.size());
 
     if (!scope) {
       PyErr_Format(PyExc_SyntaxError,
