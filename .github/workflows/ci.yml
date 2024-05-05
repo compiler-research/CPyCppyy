@@ -46,80 +46,19 @@ jobs:
             cling: On
             cling-version: '1.0'
             cppyy: On
-          #Commented out until Ubuntu on arm Github runner becomes 
-          #available os key to be replaced once known
-          #- name: ubu22-arm-gcc12-clang-repl-17
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-12
-          #  clang-runtime: '17'
-          #  cling: Off
-          #  cppyy: Off
-          #- name: ubu22-arm-gcc12-clang-repl-17-cppyy
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-12
-          #  clang-runtime: '17'
-          #  cling: Off
-          #  cppyy: On
-          #- name: ubu22-arm-gcc9-clang-repl-16
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-9
-          #  clang-runtime: '16'
-          #  cling: Off
-          #  cppyy: Off
-          #- name: ubu22-arm-gcc9-clang-repl-16-cppyy
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-9
-          #  clang-runtime: '16'
-          #  cling: Off
-          #  cppyy: On
-          #- name: ubu22-arm-gcc9-clang13-cling
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-9
-          #  clang-runtime: '13'
-          #  cling: On
-          #  cling-version: '1.0'
-          #  cppyy: Off
-          #- name: ubu22-arm-gcc9-clang13-cling-cppyy
-          #  os: ubuntu-22.04-arm
-          #  compiler: gcc-9
-          #  clang-runtime: '13'
-          #  cling: On
-          #  cling-version: '1.0'
-          #  cppyy: On 
-          # - name: win2022-msvc-clang-repl-17
-          #   os: windows-2022
-          #   compiler: msvc
-          #   clang-runtime: '17'
-          #   cling: Off
-          #   cppyy: Off
-          #Commented out until rest of ci for Windows tested
+          #Commented out until CppInterOp passes all tests on Windows
           #- name: win2022-msvc-clang-repl-17-cppyy
           #  os: windows-2022
           #  compiler: msvc
           #  clang-runtime: '17'
           #  cling: Off
           #  cppyy: On
-          # - name: win2022-msvc-clang-repl-16
-          #   os: windows-2022
-          #   compiler: msvc
-          #   clang-runtime: '16'
-          #   cling: Off
-          #   cppyy: Off
-          #Commented out until rest of ci for Windows tested
           #- name: win2022-msvc-clang-repl-16-cppyy
           #  os: windows-2022
           #  compiler: msvc
           #  clang-runtime: '16'
           #  cling: Off
           #  cppyy: On
-          # - name: win2022-msvc-cling
-          #   os: windows-2022
-          #   compiler: msvc
-          #   clang-runtime: '13'
-          #   cling: On
-          #   cling-version: '1.0'
-          #   cppyy: Off
-          #Commented out until rest of ci for Windows tested
           #- name: win2022-msvc-cling-cppyy
           #  os: windows-2022
           #  compiler: msvc
@@ -179,13 +118,13 @@ jobs:
             cppyy: On
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Save PR Info on Unix systems
       if: ${{ runner.os != 'windows' }}
@@ -234,8 +173,6 @@ jobs:
         
         echo "CLING_HASH=$env:CLING_HASH" >> $GITHUB_ENV
         echo "LLVM_HASH=$env:LLVM_HASH" >> $GITHUB_ENV
-        
-    - uses: nelonoel/branch-name@v1.0.1
 
     - name: Setup default Build Type on *nux
       if: runner.os != 'windows'
@@ -346,6 +283,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew update
+        brew remove ruby@3.0
         # workaround for https://github.com/actions/setup-python/issues/577
         for pkg in $(brew list | grep '^python@'); do
           brew unlink "$pkg"
@@ -355,7 +293,7 @@ jobs:
         pip install distro pytest
 
     - name: Restore Cache LLVM/Clang runtime build directory
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@v4
       id: cache
       with:
         path: |
@@ -436,7 +374,7 @@ jobs:
         cd ../
         mkdir ./CPyCppyy/llvm-project/
         #FIXME: Avoid copy command by caching based on absolute path
-        cp -r -v ./llvm-project/* ./CPyCppyy/llvm-project/
+        cp -r ./llvm-project/* ./CPyCppyy/llvm-project/
         echo "Copy llvm-project folder to CPyCppyy for caching"
 
     - name: Build LLVM/Cling on Windows systems if the cache is invalid
@@ -514,11 +452,11 @@ jobs:
         rm -r -force $(find.exe . -maxdepth 1 ! -name "build" ! -name "llvm" ! -name "clang" ! -name ".")
         cd ..\
         mkdir .\CPyCppyy\llvm-project\
-        cp -r -v .\llvm-project\ .\CPyCppyy\
+        cp -r .\llvm-project\ .\CPyCppyy\
         echo "Copy llvm-project folder to CPyCppyy for caching"
 
     - name: Save Cache LLVM/Clang runtime build directory
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v4
       if: ${{ steps.cache.outputs.cache-hit != 'true' }}
       with:
         path: |
