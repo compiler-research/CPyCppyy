@@ -257,6 +257,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetMethodArgTypeAsString(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
+    std::string GetMethodArgCanonTypeAsString(TCppMethod_t, TCppIndex_t iarg);
+    CPPYY_IMPORT
     std::string GetMethodArgDefault(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodSignature(TCppMethod_t, bool show_formal_args, TCppIndex_t max_args = (TCppIndex_t)-1);

@@ -26,7 +26,7 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
     Cppyy::TCppIndex_t nArgs = Cppyy::GetMethodNumArgs(method);
     std::vector<std::string> argtypes; argtypes.reserve(nArgs);
     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
-        argtypes.push_back(Cppyy::GetMethodArgTypeAsString(method, i));
+        argtypes.push_back(Cppyy::GetMethodArgCanonTypeAsString(method, i));
         if (i != 0) code << ", ";
         code << argtypes.back() << " arg" << i;
     }
@@ -98,7 +98,7 @@ static void build_constructors(
             size_t offset = (i != 0 ? arg_tots[i-1] : 0);
             for (size_t j = 0; j < nArgs; ++j) {
                 if (i != 0 || j != 0) code << ", ";
-                code << Cppyy::GetMethodArgTypeAsString(cinfo.first, j) << " a" << (j+offset);
+                code << Cppyy::GetMethodArgCanonTypeAsString(cinfo.first, j) << " a" << (j+offset);
             }
         }
         code << ") : ";
@@ -111,7 +111,7 @@ static void build_constructors(
             for (size_t j = first; j < arg_tots[i]; ++j) {
                 if (j != first) code << ", ";
                 bool isRValue = CPyCppyy::TypeManip::compound(\
-                    Cppyy::GetMethodArgTypeAsString(methods[i].first, j-first)) == "&&";
+                    Cppyy::GetMethodArgCanonTypeAsString(methods[i].first, j-first)) == "&&";
                 if (isRValue) code << "std::move(";
                 code << "a" << j;
                 if (isRValue) code << ")";
@@ -264,7 +264,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                     Cppyy::TCppIndex_t nreq = Cppyy::GetMethodReqArgs(method);
                     if (nreq == 0) default_found = true;
                     else if (!cctor_found && nreq == 1) {
-                        const std::string& argtype = Cppyy::GetMethodArgTypeAsString(method, 0);
+                        const std::string& argtype = Cppyy::GetMethodArgCanonTypeAsString(method, 0);
                         if (TypeManip::compound(argtype) == "&" && TypeManip::clean_type(argtype, false) == binfo.bname_scoped)
                             cctor_found = true;
                     }
@@ -289,7 +289,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                     Cppyy::TCppIndex_t nArgs = Cppyy::GetMethodNumArgs(method);
                     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
                         if (i != 0) code << ", ";
-                        code << Cppyy::GetMethodArgTypeAsString(method, i) << " arg" << i;
+                        code << Cppyy::GetMethodArgCanonTypeAsString(method, i) << " arg" << i;
                     }
                     code << ") ";
                     if (Cppyy::IsConstMethod(method)) code << "const ";
