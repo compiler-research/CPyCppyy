@@ -875,7 +875,7 @@ bool CPyCppyy::CPPMethod::ConvertAndSetArgs(CPyCppyy_PyArgs_t args, size_t nargs
     Parameter* cppArgs = ctxt->GetArgs(argc);
     for (int i = 0; i < (int)argc; ++i) {
         if (!fConverters[i]->SetArg(CPyCppyy_PyArgs_GET_ITEM(args, i), cppArgs[i], ctxt)) {
-            SetPyError_(CPyCppyy_PyText_FromFormat("could not convert argument %d", i+1));
+            SetPyError_(CPyCppyy_PyText_FromFormat("could not convert argument %d: %s", i+1, fConverters[i]->GetFailureMsg().c_str()));
             isOK = false;
             break;
         }
