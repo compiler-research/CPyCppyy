@@ -3447,11 +3447,11 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
-        h = gConvFactories.find("const " + realTypeStr + " &");
+        h = gConvFactories.find("const " + realTypeStr + "&");
         if (h != gConvFactories.end())
             return (h->second)(dims);
-        std::string temp ="const " + realUnresolvedTypeStr + " &";
-        h = gConvFactories.find("const " + realUnresolvedTypeStr + " &");
+        std::string temp ="const " + realUnresolvedTypeStr + "&";
+        h = gConvFactories.find("const " + realUnresolvedTypeStr + "&");
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
@@ -3707,6 +3707,11 @@ public:
         gf["std::basic_string<char>&&"] =               (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
         gf["const std::basic_string<char> &"] =         gf["std::basic_string<char>"];
         gf["std::basic_string<char> &&"] =              (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
+        
+        gf["basic_string<char>"] = gf["std::basic_string<char>"];
+        gf["const basic_string<char>&"] = gf["const std::basic_string<char>&"];
+        gf["basic_string<char>&&"] =  gf["std::basic_string<char>&&"];
+        gf["basic_string<char> &&"] = gf["std::basic_string<char> &&"];
 #if __cplusplus > 201402L
         gf["std::basic_string_view<char>"] =            (cf_t)+[](cdims_t) { return new STLStringViewConverter{}; };
         gf[STRINGVIEW] =                    gf["std::basic_string_view<char>"];

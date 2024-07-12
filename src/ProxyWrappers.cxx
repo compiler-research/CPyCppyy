@@ -383,7 +383,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         // two options: this is a static variable, or it is the enum value, the latter
         // already exists, so check for it and move on if set
             PyObject* eset = PyObject_GetAttrString(pyclass,
-                const_cast<char*>(Cppyy::GetFinalName(datamember).c_str()));
+                const_cast<char*>(Cppyy::GetScopedFinalName(datamember).c_str()));
             if (eset) {
                 Py_DECREF(eset);
                 continue;
