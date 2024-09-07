@@ -14,7 +14,8 @@ class CPPInstance;
 
 class CPPDataMember {
 public:
-    void Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t var);
+    void Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t var,
+        intptr_t additional_offset=0);
     void Set(Cppyy::TCppScope_t scope, const std::string& name, void* address);
 
     std::string GetName();
@@ -56,12 +57,12 @@ inline bool CPPDataMember_CheckExact(T* object)
 
 //- creation -----------------------------------------------------------------
 inline CPPDataMember* CPPDataMember_New(
-    Cppyy::TCppScope_t scope, Cppyy::TCppScope_t var)
+    Cppyy::TCppScope_t scope, Cppyy::TCppScope_t var, intptr_t additional_offset=0)
 {
 // Create an initialize a new property descriptor, given the C++ datum.
     CPPDataMember* pyprop =
         (CPPDataMember*)CPPDataMember_Type.tp_new(&CPPDataMember_Type, nullptr, nullptr);
-    pyprop->Set(scope, var);
+    pyprop->Set(scope, var, additional_offset);
     return pyprop;
 }
 

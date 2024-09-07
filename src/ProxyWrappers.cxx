@@ -89,10 +89,42 @@ static PyObject* CreateNewCppProxyClass(Cppyy::TCppScope_t klass, PyObject* pyba
 }
 
 static inline
-void AddPropertyToClass(PyObject* pyclass,
-    Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data)
+void AddPropertyToClass(PyObject* pyclass, Cppyy::TCppScope_t scope,
+    Cppyy::TCppScope_t data, intptr_t additional_offset=0)
 {
-    CPyCppyy::CPPDataMember* property = CPyCppyy::CPPDataMember_New(scope, data);
+    if (!Cppyy::IsPublicData(data))
+        return;
+
+    // enum datamembers (this in conjunction with previously collected enums above)
+    if (Cppyy::IsEnumType(Cppyy::GetDatamemberType(data)) &&
+        Cppyy::IsStaticDatamember(data)) {
+        // some implementation-specific data members have no address: ignore them
+        if (!Cppyy::GetDatamemberOffset(data))
+            return;
+
+        // two options: this is a static variable, or it is the enum value, the latter
+        // already exists, so check for it and move on if set
+        PyObject* eset = PyObject_GetAttrString(pyclass,
+            const_cast<char*>(Cppyy::GetFinalName(data).c_str()));
+        if (eset) {
+            Py_DECREF(eset);
+            return;
+        }
+
+        PyErr_Clear();
+    }
+
+    if (strstr(Cppyy::GetDatamemberTypeAsString(data).c_str(), "anonymous struct at") ||
+        strstr(Cppyy::GetDatamemberTypeAsString(data).c_str(), "anonymous union at")) {
+        std::vector<Cppyy::TCppScope_t> datamembers = Cppyy::GetDatamembers(Cppyy::GetTypeScope(data));
+        for (auto &datamember: datamembers) {
+            // properties (aka public (static) data members)
+            AddPropertyToClass(pyclass, scope, datamember,
+                                additional_offset + Cppyy::GetDatamemberOffset(data));
+        }
+    }
+
+    CPyCppyy::CPPDataMember* property = CPyCppyy::CPPDataMember_New(scope, data, additional_offset);
     PyObject* pname = CPyCppyy_PyText_InternFromString(const_cast<char*>(property->GetName().c_str()));
 
 // allow access at the instance level
@@ -371,37 +403,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
  // collect data members (including enums)
     std::vector<Cppyy::TCppScope_t> datamembers = Cppyy::GetDatamembers(scope);
     for (auto &datamember : datamembers) {
-    // allow only public members
-        if (!Cppyy::IsPublicData(datamember))
-            continue;
-
-    // enum datamembers (this in conjunction with previously collected enums above)
-        if (Cppyy::IsEnumType(Cppyy::GetDatamemberType(datamember)) && Cppyy::IsStaticDatamember(datamember)) {
-        // some implementation-specific data members have no address: ignore them
-            if (!Cppyy::GetDatamemberOffset(datamember))
-                continue;
-
-        // two options: this is a static variable, or it is the enum value, the latter
-        // already exists, so check for it and move on if set
-            PyObject* eset = PyObject_GetAttrString(pyclass,
-                const_cast<char*>(Cppyy::GetFinalName(datamember).c_str()));
-            if (eset) {
-                Py_DECREF(eset);
-                continue;
-            }
-
-            PyErr_Clear();
-
-        // it could still be that this is an anonymous enum, which is not in the list
-        // provided by the class
-            if (strstr(Cppyy::GetDatamemberTypeAsString(datamember).c_str(), "(anonymous)") != 0 ||
-                strstr(Cppyy::GetDatamemberTypeAsString(datamember).c_str(), "(unnamed)")   != 0) {
-                AddPropertyToClass(pyclass, scope, datamember);
-                continue;
-            }
-        }
-
-    // properties (aka public (static) data members)
+        // properties (aka public (static) data members)
         AddPropertyToClass(pyclass, scope, datamember);
     }
 

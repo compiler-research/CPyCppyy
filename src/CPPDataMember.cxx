@@ -307,11 +307,13 @@ PyTypeObject CPPDataMember_Type = {
 } // namespace CPyCppyy
 
 //- public members -----------------------------------------------------------
-void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data)
+void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data,
+    intptr_t additional_offset)
 {
     fEnclosingScope = scope;
     fScope          = data;
-    fOffset         = Cppyy::GetDatamemberOffset(data); // XXX: Check back here // TODO: make lazy
+    fOffset         = Cppyy::GetDatamemberOffset(data) +
+                        additional_offset; // XXX: Check back here // TODO: make lazy
     fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
 
     const std::string name = Cppyy::GetFinalName(data);
