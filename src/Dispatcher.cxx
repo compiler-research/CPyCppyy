@@ -386,7 +386,8 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 // pull in data members that are protected
     bool setPublic = false;
     for (const auto& binfo : base_infos) {
-        std::vector<Cppyy::TCppScope_t> datamems = Cppyy::GetDatamembers(binfo.btype);
+        std::vector<Cppyy::TCppScope_t> datamems;
+        Cppyy::GetDatamembers(binfo.btype, datamems);
         for (auto data : datamems) {
             if (Cppyy::IsProtectedData(data)) {
                 const std::string dm_name = Cppyy::GetFinalName(data);

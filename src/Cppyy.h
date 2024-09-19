@@ -301,7 +301,7 @@ namespace Cppyy {
 
 // data member reflection information ----------------------------------------
     CPPYY_IMPORT
-    std::vector<TCppScope_t> GetDatamembers(TCppScope_t scope);
+    void GetDatamembers(TCppScope_t scope, std::vector<TCppScope_t>& datamembers);
     CPPYY_IMPORT
     std::string GetDatamemberName(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT

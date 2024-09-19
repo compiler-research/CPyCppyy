@@ -369,7 +369,8 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     Py_DECREF(dct);
 
  // collect data members (including enums)
-    std::vector<Cppyy::TCppScope_t> datamembers = Cppyy::GetDatamembers(scope);
+    std::vector<Cppyy::TCppScope_t> datamembers;
+    Cppyy::GetDatamembers(scope, datamembers);
     for (auto &datamember : datamembers) {
     // allow only public members
         if (!Cppyy::IsPublicData(datamember))

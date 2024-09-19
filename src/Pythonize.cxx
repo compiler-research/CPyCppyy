@@ -1688,7 +1688,8 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     if (Cppyy::IsAggregate(((CPPClass*)pyclass)->fCppType) && name.compare(0, 5, "std::", 5) != 0) {
     // create a pseudo-constructor to allow initializer-style object creation
         Cppyy::TCppType_t kls = ((CPPClass*)pyclass)->fCppType;
-        std::vector<Cppyy::TCppScope_t> datamems = Cppyy::GetDatamembers(kls);
+        std::vector<Cppyy::TCppScope_t> datamems;
+        Cppyy::GetDatamembers(kls, datamems);
         if (!datamems.empty()) {
             std::string rname = name;
             TypeManip::cppscope_to_legalname(rname);
