@@ -535,7 +535,7 @@ static int meta_setattro(PyObject* pyclass, PyObject* pyname, PyObject* pyval)
     // skip if the given pyval is a descriptor already, or an unassignable class
         if (!CPyCppyy::CPPDataMember_Check(pyval) && !CPyCppyy::CPPScope_Check(pyval)) {
             std::string name = CPyCppyy_PyText_AsString(pyname);
-            if (Cppyy::CheckDatamember(((CPPScope*)pyclass)->fCppType, name))
+            if (Cppyy::GetNamed(name, ((CPPScope*)pyclass)->fCppType))
                 meta_getattro(pyclass, pyname);       // triggers creation
         }
     }
