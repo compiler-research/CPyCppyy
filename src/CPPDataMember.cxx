@@ -4,6 +4,7 @@
 #include "PyStrings.h"
 #include "CPPDataMember.h"
 #include "CPPInstance.h"
+#include "CPPEnum.h"
 #include "Dimensions.h"
 #include "LowLevelViews.h"
 #include "ProxyWrappers.h"
@@ -84,22 +85,7 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
 
         if (Cppyy::IsEnumConstant(dm->fScope)) {
             // anonymous enum
-            long long llval = Cppyy::GetEnumDataValue(dm->fScope);
-            const std::string& enum_type = Cppyy::ResolveEnum(dm->fScope);
-            
-            PyObject* bval;
-            if (enum_type == "bool") {
-                bval = (bool)llval ? Py_True : Py_False;
-                Py_INCREF(bval);
-            } else if (enum_type == "char") {
-                char val = (char)llval;
-                bval = CPyCppyy_PyText_FromStringAndSize(&val, 1);
-            } else if (enum_type == "int" || enum_type == "unsigned int")
-                bval = PyInt_FromLong((long)llval);
-            else
-                bval = PyLong_FromLongLong(llval);
-
-            return bval;
+            return pyval_from_enum(Cppyy::ResolveEnum(dm->fScope), nullptr, nullptr, dm->fScope);
         }
     }
 

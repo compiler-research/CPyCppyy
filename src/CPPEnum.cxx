@@ -18,7 +18,7 @@ static PyObject* pytype_from_enum_type(const std::string& enum_type)
 }
 
 //----------------------------------------------------------------------------
-static PyObject* pyval_from_enum(const std::string& enum_type, PyObject* pytype,
+PyObject* CPyCppyy::pyval_from_enum(const std::string& enum_type, PyObject* pytype,
         PyObject* btype, Cppyy::TCppScope_t enum_constant) {
     long long llval = Cppyy::GetEnumDataValue(enum_constant);
 
@@ -37,11 +37,13 @@ static PyObject* pyval_from_enum(const std::string& enum_type, PyObject* pytype,
     else
         bval = PyLong_FromLongLong(llval);
 
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SET_ITEM(args, 0, bval);
-    PyObject* result = ((PyTypeObject*)btype)->tp_new((PyTypeObject*)pytype, args, nullptr);
-    Py_DECREF(args);
-    return result;
+    if (pytype && btype) {
+        PyObject* args = PyTuple_New(1);
+        PyTuple_SET_ITEM(args, 0, bval);
+        bval = ((PyTypeObject*)btype)->tp_new((PyTypeObject*)pytype, args, nullptr);
+        Py_DECREF(args);
+    }
+    return bval;
 }
 
 
