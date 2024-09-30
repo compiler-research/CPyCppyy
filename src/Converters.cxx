@@ -3707,11 +3707,6 @@ public:
         gf["std::basic_string<char>&&"] =               (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
         gf["const std::basic_string<char> &"] =         gf["std::basic_string<char>"];
         gf["std::basic_string<char> &&"] =              (cf_t)+[](cdims_t) { return new STLStringMoveConverter{}; };
-        
-        gf["basic_string<char>"] = gf["std::basic_string<char>"];
-        gf["const basic_string<char>&"] = gf["const std::basic_string<char>&"];
-        gf["basic_string<char>&&"] =  gf["std::basic_string<char>&&"];
-        gf["basic_string<char> &&"] = gf["std::basic_string<char> &&"];
 #if __cplusplus > 201402L
         gf["std::basic_string_view<char>"] =            (cf_t)+[](cdims_t) { return new STLStringViewConverter{}; };
         gf[STRINGVIEW] =                    gf["std::basic_string_view<char>"];
