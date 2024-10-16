@@ -162,7 +162,7 @@ std::string CPyCppyy::TypeManip::compound(const std::string& name)
     std::string cleanName = remove_const(name);
     auto idx = find_qualifier_index(cleanName);
 
-    const std::string& cpd = cleanName.substr(idx, std::string::npos);
+    std::string cpd = cleanName.substr(idx, std::string::npos);
 
 // for easy identification of fixed size arrays
     if (!cpd.empty() && cpd.back() == ']') {
@@ -171,7 +171,7 @@ std::string CPyCppyy::TypeManip::compound(const std::string& name)
 
         std::ostringstream scpd;
         scpd << cpd.substr(0, cpd.find('[')) << "[]";
-        return scpd.str();
+        cpd = scpd.str();
     }
 
     // XXX: remove this hack
