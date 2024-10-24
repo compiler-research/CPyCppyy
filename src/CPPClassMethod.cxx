@@ -24,7 +24,7 @@ PyObject* CPyCppyy::CPPClassMethod::Call(CPPInstance*&
 
 // translate the arguments
 #if PY_VERSION_HEX >= 0x03080000
-// TODO: The following is not robust and should be revisited e.g. by makeing CPPOverloads
+// TODO: The following is not robust and should be revisited e.g. by making CPPOverloads
 // that have only CPPClassMethods be true Python classmethods? Note that the original
 // implementation wasn't 100% correct either (e.g. static size() mapped to len()).
 //
@@ -35,7 +35,7 @@ PyObject* CPyCppyy::CPPClassMethod::Call(CPPInstance*&
     if ((!self || (PyObject*)self == Py_None) && nargs) {
         PyObject* arg0 = CPyCppyy_PyArgs_GET_ITEM(args, 0);
         if ((CPPInstance_Check(arg0) && ((CPPInstance*)arg0)->ObjectIsA() == GetScope()) && \
-                (fArgsRequired <= nargs-1) && (GetMaxArgs() < nargs)) {
+                (fArgsRequired <= nargs-1)) {
             args   += 1;     // drops first argument
             nargsf -= 1;
         }
