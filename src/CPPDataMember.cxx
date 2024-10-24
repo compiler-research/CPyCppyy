@@ -18,7 +18,6 @@
 #include <limits.h>
 #include <structmember.h>
 
-
 namespace CPyCppyy {
 
 enum ETypeDetails {
@@ -35,7 +34,7 @@ enum ETypeDetails {
 static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls */)
 {
 // cache lookup for low level views
-    if (dm->fFlags & kIsCachable) {
+    if (pyobj && dm->fFlags & kIsCachable) {
         CPyCppyy::CI_DatamemberCache_t& cache = pyobj->GetDatamemberCache();
         for (auto it = cache.begin(); it != cache.end(); ++it) {
             if (it->first == dm->fOffset) {
@@ -48,6 +47,11 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
             }
         }
     }
+
+// non-initialized or public data accesses through class (e.g. by help())
+    void* address = dm->GetAddress(pyobj);
+    if (!address || (intptr_t)address == -1 /* Cling error */)
+        return nullptr;
 
     if (dm->fFlags & (kIsEnumPrep | kIsEnumType)) {
         if (dm->fFlags & kIsEnumPrep) {
@@ -220,7 +224,7 @@ static void dm_dealloc(CPPDataMember* dm)
 static PyMemberDef dm_members[] = {
         {(char*)"__doc__", T_OBJECT, offsetof(CPPDataMember, fDoc), 0,
                 (char*)"writable documentation"},
-        {NULL}  /* Sentinel */
+        {NULL, 0, 0, 0, nullptr}  /* Sentinel */
 };
 
 //= CPyCppyy datamember proxy access to internals ============================
@@ -308,9 +312,16 @@ PyTypeObject CPPDataMember_Type = {
 #if PY_VERSION_HEX >= 0x03040000
     , 0                            // tp_finalize
 #endif
+#if PY_VERSION_HEX >= 0x03080000
+    , 0                           // tp_vectorcall
+#endif
+#if PY_VERSION_HEX >= 0x030c0000
+    , 0                           // tp_watched
+#endif
 };
 
 } // namespace CPyCppyy
+
 
 //- public members -----------------------------------------------------------
 void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data)
