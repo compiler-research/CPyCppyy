@@ -17,6 +17,13 @@ class CPYCPPYY_CLASS_EXPORT Converter {
 public:
     virtual ~Converter();
 
+    Converter() = default;
+
+    Converter(Converter const& other) = delete;
+    Converter(Converter && other) = delete;
+    Converter& operator=(Converter const& other) = delete;
+    Converter& operator=(Converter && other) = delete;
+
 public:
     virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) = 0;
     virtual PyObject* FromMemory(void* address);
@@ -31,6 +38,7 @@ CPYCPPYY_EXPORT Converter* CreateConverter(Cppyy::TCppType_t type, cdims_t dims 
 CPYCPPYY_EXPORT void DestroyConverter(Converter* p);
 typedef Converter* (*cf_t)(cdims_t d);
 CPYCPPYY_EXPORT bool RegisterConverter(const std::string& name, cf_t fac);
+CPYCPPYY_EXPORT bool RegisterConverterAlias(const std::string& name, const std::string& target);
 CPYCPPYY_EXPORT bool UnregisterConverter(const std::string& name);
 
 
