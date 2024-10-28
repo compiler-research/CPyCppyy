@@ -31,9 +31,14 @@ public:
     Converter*  fConverter;
     Converter*  fElemCnv;
 
+    typedef LowLevelView* (*Creator_t)(void*, cdims_t);
+    Creator_t   fCreator;    // for slicing, which requires copying
+
 public:
     void* get_buf() { return fBuf ? *fBuf : fBufInfo.buf; }
     void  set_buf(void** buf) { fBuf = buf; fBufInfo.buf = get_buf(); }
+
+    bool resize(size_t sz);
 };
 
 #define CPPYY_DECL_VIEW_CREATOR(type)                                        \
@@ -47,8 +52,10 @@ CPPYY_DECL_VIEW_CREATOR(unsigned char);
 #if __cplusplus > 201402L
 CPPYY_DECL_VIEW_CREATOR(std::byte);
 #endif
-CPPYY_DECL_VIEW_CREATOR(int8_t);
-CPPYY_DECL_VIEW_CREATOR(uint8_t);
+PyObject* CreateLowLevelView_i8(int8_t*,  cdims_t shape);
+PyObject* CreateLowLevelView_i8(int8_t**, cdims_t shape);
+PyObject* CreateLowLevelView_i8(uint8_t*,  cdims_t shape);
+PyObject* CreateLowLevelView_i8(uint8_t**, cdims_t shape);
 CPPYY_DECL_VIEW_CREATOR(short);
 CPPYY_DECL_VIEW_CREATOR(unsigned short);
 CPPYY_DECL_VIEW_CREATOR(int);
@@ -65,8 +72,8 @@ CPPYY_DECL_VIEW_CREATOR(std::complex<double>);
 CPPYY_DECL_VIEW_CREATOR(std::complex<int>);
 CPPYY_DECL_VIEW_CREATOR(std::complex<long>);
 
-PyObject* CreateLowLevelView(char**, cdims_t shape = 0);
-PyObject* CreateLowLevelView(const char**, cdims_t shape = 0);
+PyObject* CreateLowLevelViewString(char**, cdims_t shape);
+PyObject* CreateLowLevelViewString(const char**, cdims_t shape);
 
 inline PyObject* CreatePointerView(void* ptr, cdims_t shape = 0) {
     return CreateLowLevelView((uintptr_t*)ptr, shape);
