@@ -230,6 +230,13 @@ void CPyCppyy::op_dealloc_nofree(CPPInstance* pyobj) {
 
 namespace CPyCppyy {
 
+//----------------------------------------------------------------------------
+static int op_traverse(CPPInstance* /*pyobj*/, visitproc /*visit*/, void* /*arg*/)
+{
+    return 0;
+}
+
+
 //= CPyCppyy object proxy null-ness checking =================================
 static int op_nonzero(CPPInstance* self)
 {
@@ -314,6 +321,12 @@ void CPyCppyy::CPPInstance::CastToArray(Py_ssize_t sz)
     ARRAY_SIZE(this) = sz;
 }
 
+Py_ssize_t CPyCppyy::CPPInstance::ArrayLength() {
+    if (!(fFlags & kIsArray))
+        return -1;
+    return (Py_ssize_t)ARRAY_SIZE(this);
+}
+
 static PyObject* op_reshape(CPPInstance* self, PyObject* shape)
 {
 // Allow the user to fix up the actual (type-strided) size of the buffer.
@@ -323,14 +336,17 @@ static PyObject* op_reshape(CPPInstance* self, PyObject* shape)
     }
 
     long sz = PyLong_AsLong(PyTuple_GET_ITEM(shape, 0));
-    if (sz == -1) return nullptr;
+    if (sz <= 0) {
+        PyErr_SetString(PyExc_ValueError, "array length must be positive");
+        return nullptr;
+    }
 
     self->CastToArray(sz);
 
     Py_RETURN_NONE;
 }
 
-static PyObject* op_getitem(CPPInstance* self, PyObject* pyidx)
+static PyObject* op_item(CPPInstance* self, Py_ssize_t idx)
 {
 // In C, it is common to represent an array of structs as a pointer to the first
 // object in the array. If the caller indexes a pointer to an object that does not
@@ -373,6 +389,21 @@ static PyObject* op_getitem(CPPInstance* self, PyObject* pyidx)
 
     return BindCppObjectNoCast(indexed_obj, ((CPPClass*)Py_TYPE(self))->fCppType, flags);
 }
+
+//- sequence methods --------------------------------------------------------
+static PySequenceMethods op_as_sequence = {
+    0,                             // sq_length
+    0,                             // sq_concat
+    0,                             // sq_repeat
+    (ssizeargfunc)op_item,         // sq_item
+    0,                             // sq_slice
+    0,                             // sq_ass_item
+    0,                             // sq_ass_slice
+    0,                             // sq_contains
+    0,                             // sq_inplace_concat
+    0,                             // sq_inplace_repeat
+};
+
 
 //----------------------------------------------------------------------------
 static PyMethodDef op_methods[] = {
@@ -1025,7 +1056,7 @@ PyTypeObject CPPInstance_Type = {
     0,                             // tp_as_async / tp_compare
     (reprfunc)op_repr,             // tp_repr
     &op_as_number,                 // tp_as_number
-    0,                             // tp_as_sequence
+    &op_as_sequence,               // tp_as_sequence
     0,                             // tp_as_mapping
     (hashfunc)op_hash,             // tp_hash
     0,                             // tp_call
@@ -1035,9 +1066,10 @@ PyTypeObject CPPInstance_Type = {
     0,                             // tp_as_buffer
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE |
-        Py_TPFLAGS_CHECKTYPES,     // tp_flags
+        Py_TPFLAGS_CHECKTYPES |
+        Py_TPFLAGS_HAVE_GC,        // tp_flags
     (char*)"cppyy object proxy (internal)", // tp_doc
-    0,                             // tp_traverse
+    (traverseproc)op_traverse,     // tp_traverse
     (inquiry)op_clear,             // tp_clear
     (richcmpfunc)op_richcompare,   // tp_richcompare
     0,                             // tp_weaklistoffset
@@ -1069,6 +1101,12 @@ PyTypeObject CPPInstance_Type = {
 #endif
 #if PY_VERSION_HEX >= 0x03040000
     , 0                            // tp_finalize
+#endif
+#if PY_VERSION_HEX >= 0x03080000
+    , 0                           // tp_vectorcall
+#endif
+#if PY_VERSION_HEX >= 0x030c0000
+    , 0                           // tp_watched
 #endif
 };
 
