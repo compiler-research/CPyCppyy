@@ -493,7 +493,7 @@ static inline PyObject* SelectAndForward(TemplateProxy* pytmpl, CPPOverload* pym
 static inline PyObject* CallMethodImp(TemplateProxy* pytmpl, PyObject*& pymeth,
     CPyCppyy_PyArgs_t args, size_t nargsf, PyObject* kwds, bool impOK, uint64_t sighash)
 {
-// Actual call of a given overload: takes care of handling of "self" and
+// Actual call of a given overload: takes care of handlign of "self" and
 // dereferences the overloaded method after use.
 
     PyObject* result;
@@ -654,13 +654,13 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
     result = SelectAndForward(pytmpl, pytmpl->fTI->fNonTemplated, args, nargsf, kwds,
         true /* implicitOkay */, false /* use_targs */, sighash, errors);
     if (result)
-        return result;
+        TPPCALL_RETURN;
 
 // case 3: select known template overload
     result = SelectAndForward(pytmpl, pytmpl->fTI->fTemplated, args, nargsf, kwds,
         false /* implicitOkay */, true /* use_targs */, sighash, errors);
     if (result)
-        return result;
+        TPPCALL_RETURN;
 
 // case 4: auto-instantiation from types of arguments
     for (auto pref : {Utility::kReference, Utility::kPointer, Utility::kValue}) {
@@ -681,7 +681,7 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
     result = SelectAndForward(pytmpl, pytmpl->fTI->fLowPriority, args, nargsf, kwds,
         false /* implicitOkay */, false /* use_targs */, sighash, errors);
     if (result)
-        return result;
+        TPPCALL_RETURN;
 
 // error reporting is fraud, given the numerous steps taken, but more details seems better
     if (!errors.empty()) {
@@ -790,20 +790,67 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
 {
 // Select and call a specific C++ overload, based on its signature.
     const char* sigarg = nullptr;
+    PyObject* sigarg_tuple = nullptr;
     int want_const = -1;
-    if (!PyArg_ParseTuple(args, const_cast<char*>("s|i:__overload__"), &sigarg, &want_const))
-        return nullptr;
-    want_const = PyTuple_GET_SIZE(args) == 1 ? -1 : want_const;
 
-// check existing overloads in order
-    PyObject* ol = pytmpl->fTI->fNonTemplated->FindOverload(sigarg, want_const);
-    if (ol) return ol;
-    PyErr_Clear();
-    ol = pytmpl->fTI->fTemplated->FindOverload(sigarg, want_const);
-    if (ol) return ol;
-    PyErr_Clear();
-    ol = pytmpl->fTI->fLowPriority->FindOverload(sigarg, want_const);
-    if (ol) return ol;
+    Cppyy::TCppScope_t scope = (Cppyy::TCppScope_t) 0;
+    Cppyy::TCppMethod_t cppmeth = (Cppyy::TCppMethod_t) 0;
+    std::string proto;
+
+    if (PyArg_ParseTuple(args, const_cast<char*>("s|i:__overload__"), &sigarg, &want_const)) {
+        want_const = PyTuple_GET_SIZE(args) == 1 ? -1 : want_const;
+
+    // check existing overloads in order
+        PyObject* ol = pytmpl->fTI->fNonTemplated->FindOverload(sigarg, want_const);
+        if (ol) return ol;
+        PyErr_Clear();
+        ol = pytmpl->fTI->fTemplated->FindOverload(sigarg, want_const);
+        if (ol) return ol;
+        PyErr_Clear();
+        ol = pytmpl->fTI->fLowPriority->FindOverload(sigarg, want_const);
+        if (ol) return ol;
+
+        proto = Utility::ConstructTemplateArgs(nullptr, args);
+
+        scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
+        cppmeth = Cppyy::GetMethodTemplate(
+            scope, pytmpl->fTI->fCppName, proto.substr(1, proto.size()-2));
+    } else if (PyArg_ParseTuple(args, const_cast<char*>("O|i:__overload__"), &sigarg_tuple, &want_const)) {
+        PyErr_Clear();
+        want_const = PyTuple_GET_SIZE(args) == 1 ? -1 : want_const;
+
+    // check existing overloads in order
+        PyObject* ol = pytmpl->fTI->fNonTemplated->FindOverload(sigarg_tuple, want_const);
+        if (ol) return ol;
+        PyErr_Clear();
+        ol = pytmpl->fTI->fTemplated->FindOverload(sigarg_tuple, want_const);
+        if (ol) return ol;
+        PyErr_Clear();
+        ol = pytmpl->fTI->fLowPriority->FindOverload(sigarg_tuple, want_const);
+        if (ol) return ol;
+
+        proto.reserve(128);
+        proto.push_back('<');
+        Py_ssize_t n = PyTuple_Size(sigarg_tuple);
+        for (int i = 0; i < n; i++) {
+            PyObject *pItem = PyTuple_GetItem(sigarg_tuple, i);
+            if(!CPyCppyy_PyText_Check(pItem)) {
+                PyErr_Format(PyExc_LookupError, "argument types should be in string format");
+                return (PyObject*) nullptr;
+            }
+            proto.append(CPyCppyy_PyText_AsString(pItem));
+            if (i < n - 1)
+                proto.push_back(',');
+        }
+        proto.push_back('>');
+
+        scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
+        cppmeth = Cppyy::GetMethodTemplate(
+            scope, pytmpl->fTI->fCppName, proto.substr(1, proto.size()-2));
+    } else {
+        PyErr_Format(PyExc_TypeError, "Unexpected arguments to __overload__");
+        return nullptr;
+    }
 
 // else attempt instantiation
     PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
@@ -877,7 +924,7 @@ PyTypeObject TemplateProxy_Type = {
 #if PY_VERSION_HEX >= 0x03080000
         | Py_TPFLAGS_HAVE_VECTORCALL | Py_TPFLAGS_METHOD_DESCRIPTOR
 #endif
-    ,                                  // tp_flags
+        ,                              // tp_flags
     (char*)"cppyy template proxy (internal)",     // tp_doc
     (traverseproc)tpp_traverse,        // tp_traverse
     (inquiry)tpp_clear,                // tp_clear
@@ -911,6 +958,12 @@ PyTypeObject TemplateProxy_Type = {
 #endif
 #if PY_VERSION_HEX >= 0x03040000
     , 0                                // tp_finalize
+#endif
+#if PY_VERSION_HEX >= 0x03080000
+    , 0                                // tp_vectorcall
+#endif
+#if PY_VERSION_HEX >= 0x030c0000
+    , 0                                // tp_watched
 #endif
 };
 
