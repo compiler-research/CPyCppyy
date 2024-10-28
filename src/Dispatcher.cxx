@@ -34,7 +34,26 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
     if (Cppyy::IsConstMethod(method)) code << "const ";
     code << "{\n";
 
-// start function body
+// on destruction, the Python object may go first, in which case provide a diagnostic
+// warning (raising a PyException may not be possible as this could happen during
+// program shutdown); note that this means that the actual result will be the default
+// and the caller may need to act on that, but that's still an improvement over a
+// possible crash
+    code << "    PyObject* iself = (PyObject*)_internal_self;\n"
+            "    if (!iself || iself == Py_None) {\n"
+            "      PyErr_Warn(PyExc_RuntimeWarning, (char*)\"Call attempted on deleted python-side proxy\");\n"
+            "      return";
+    if (retType != "void") {
+        if (retType.back() != '*')
+            code << " " << CPyCppyy::TypeManip::remove_const(retType) << "{}";
+        else
+            code << " nullptr";
+    }
+    code << ";\n"
+            "    }\n"
+            "    Py_INCREF(iself);\n";
+
+// start actual function body
     Utility::ConstructCallbackPreamble(retType, argtypes, code);
 
 // perform actual method call
@@ -43,13 +62,13 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
 #else
     code << "    PyObject* mtPyName = PyUnicode_FromString(\"" << mtCppName << "\");\n"
 #endif
-            "    PyObject* pyresult = PyObject_CallMethodObjArgs((PyObject*)_internal_self, mtPyName";
+            "    PyObject* pyresult = PyObject_CallMethodObjArgs(iself, mtPyName";
     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i)
         code << ", pyargs[" << i << "]";
-    code << ", NULL);\n    Py_DECREF(mtPyName);\n";
+    code << ", NULL);\n    Py_DECREF(mtPyName);\n    Py_DECREF(iself);\n";
 
 // close
-    Utility::ConstructCallbackReturn(retType, nArgs, code);
+    Utility::ConstructCallbackReturn(retType, (int)nArgs, code);
 }
 
 //----------------------------------------------------------------------------
@@ -127,11 +146,11 @@ namespace {
 using namespace Cppyy;
 
 static inline
-std::vector<TCppMethod_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
+std::vector<TCppIndex_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
 {
 // Recursively walk the inheritance tree to find the overloads of the named method
-    std::vector<TCppMethod_t> result;
-    result = GetMethodsFromName(tbase, mtCppName);
+    std::vector<TCppIndex_t> result;
+    result = GetMethodIndicesFromName(tbase, mtCppName);
     if (result.empty()) {
         for (TCppIndex_t ibase = 0; ibase < GetNumBases(tbase); ++ibase) {
             TCppScope_t b = GetScope(GetBaseName(tbase, ibase));
@@ -215,17 +234,22 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
 // add a virtual destructor for good measure, which is allowed to be "overridden" by
 // the conventional __destruct__ method (note that __del__ is always called, too, if
-// provided, but only when the Python object goes away)
+// provided, but only when the Python object goes away; furthermore, if the Python
+// object goes before the C++ one, only __del__ is called)
     if (PyMapping_HasKeyString(dct, (char*)"__destruct__")) {
         code << "  virtual ~" << derivedName << "() {\n"
+                "    PyObject* iself = (PyObject*)_internal_self;\n"
+                "    if (!iself || iself == Py_None)\n"
+                "      return;\n"      // safe, as destructor always returns void
+                "    Py_INCREF(iself);\n"
                 "    PyObject* mtPyName = PyUnicode_FromString(\"__destruct__\");\n"
-                "    PyObject* pyresult = PyObject_CallMethodObjArgs((PyObject*)_internal_self, mtPyName, NULL);\n"
-                "    Py_DECREF(mtPyName);\n";
+                "    PyObject* pyresult = PyObject_CallMethodObjArgs(iself, mtPyName, NULL);\n"
+                "    Py_DECREF(mtPyName);\n    Py_DECREF(iself);\n";
 
     // this being a destructor, print on exception rather than propagate using the
     // magic C++ exception ...
-        code << "    if (!pyresult) PyErr_Print();\n"
-                "    else { Py_DECREF(pyresult); }\n"
+        code << "      if (!pyresult) PyErr_Print();\n"
+                "      else { Py_DECREF(pyresult); }\n"
                 "  }\n";
     } else
         code << "  virtual ~" << derivedName << "() {}\n";
@@ -342,10 +366,10 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                 // TODO: should probably invert this looping; but that makes handling overloads clunky
                     PyObject* key = PyList_GET_ITEM(keys, i);
                     std::string mtCppName = CPyCppyy_PyText_AsString(key);
-                    const auto& methods = FindBaseMethod(tbase, mtCppName);
-                    for (auto method : methods)
-                        InjectMethod(method, mtCppName, code);
-                    if (!methods.empty()) {
+                    const auto& v = FindBaseMethod(tbase, mtCppName);
+                    for (auto idx : v)
+                        InjectMethod(Cppyy::GetMethod(tbase, idx), mtCppName, code);
+                    if (!v.empty()) {
                         if (PyDict_DelItem(clbs, key) != 0) PyErr_Clear();
                     }
                 }
