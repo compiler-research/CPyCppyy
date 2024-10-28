@@ -370,12 +370,40 @@ CPyCppyy::CPPMethod::~CPPMethod()
 
 
 //- public members -----------------------------------------------------------
+/**
+ * @brief Construct a Python string from the method's prototype
+ * 
+ * @param fa Show formal arguments of the method
+ * @return PyObject* A Python string with the full method prototype, namespaces included.
+ * 
+ * For example, given:
+ * 
+ * int foo(int x);
+ * 
+ * namespace a {
+ * namespace b {
+ * namespace c {
+ * int foo(int x);
+ * }}}
+ *
+ * This function returns:
+ * 
+ * 'int foo(int x)'
+ * 'int a::b::c::foo(int x)'
+ */
 PyObject* CPyCppyy::CPPMethod::GetPrototype(bool fa)
 {
-// construct python string from the method's prototype
-    return CPyCppyy_PyText_FromFormat("%s%s %s%s",
+    // Gather the fully qualified final scope of the method. This includes
+    // all namespaces up to the one where the method is declared, for example:
+    // namespace a { namespace b { void foo(); }}
+    // gives
+    // a::b
+    std::string finalscope = Cppyy::GetScopedFinalName(fScope);
+    return CPyCppyy_PyText_FromFormat("%s%s %s%s%s%s",
         (Cppyy::IsStaticMethod(fMethod) ? "static " : ""),
         Cppyy::GetMethodReturnTypeAsString(fMethod).c_str(),
+        finalscope.c_str(),
+        (finalscope.empty() ? "" : "::"), // Add final set of '::' if the method is scoped in namespace(s)
         Cppyy::GetScopedFinalName(fMethod).c_str(),
         GetSignatureString(fa).c_str());
 }
@@ -488,7 +516,7 @@ int CPyCppyy::CPPMethod::GetPriority()
             const std::string& clean_name = TypeManip::clean_type(aname, false);
             Cppyy::TCppScope_t scope = Cppyy::GetScope(clean_name);
             if (scope)
-                priority += (int)Cppyy::GetNumBases(scope);
+                priority += static_cast<int>(Cppyy::GetNumBasesLongestBranch(scope));
 
             if (Cppyy::IsEnumScope(scope))
                 priority -= 100;
@@ -656,6 +684,39 @@ Cppyy::TCppFuncAddr_t CPyCppyy::CPPMethod::GetFunctionAddress()
     return Cppyy::GetFunctionAddress(fMethod, false /* don't check fast path envar */);
 }
 
+//----------------------------------------------------------------------------
+int CPyCppyy::CPPMethod::GetArgMatchScore(PyObject* args_tuple)
+{
+    Py_ssize_t n = PyTuple_Size(args_tuple);
+
+    int req_args = Cppyy::GetMethodReqArgs(fMethod);
+    
+    // Not enough arguments supplied: no match
+    if (req_args > n)
+        return INT_MAX;
+    
+    size_t score = 0;
+    for (int i = 0; i < n; i++) {
+        PyObject *pItem = PyTuple_GetItem(args_tuple, i);
+        if(!CPyCppyy_PyText_Check(pItem)) {
+            PyErr_SetString(PyExc_TypeError, "argument types should be in string format");
+            return INT_MAX;
+        }
+        std::string req_type(CPyCppyy_PyText_AsString(pItem));
+
+        size_t arg_score = Cppyy::CompareMethodArgType(fMethod, i, req_type);
+
+        // Method is not compatible if even one argument does not match
+        if (arg_score >= 10) {
+            score = INT_MAX;
+            break;
+        }
+
+        score += arg_score;
+    }
+
+    return score;
+}
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::CPPMethod::Initialize(CallContext* ctxt)
