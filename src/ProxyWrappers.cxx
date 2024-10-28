@@ -163,7 +163,6 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     bool hasConstructor = false;
     Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
 
-
 // load all public methods and data members
     typedef std::vector<PyCallable*> Callables_t;
     typedef std::map<std::string, Callables_t> CallableCache_t;
@@ -176,7 +175,6 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
 // functions in namespaces are properly found through lazy lookup, so do not
 // create them until needed (the same is not true for data members)
     std::vector<Cppyy::TCppMethod_t> methods;
-
     if (isComplete) Cppyy::GetClassMethods(scope, methods);
 
     for (auto &method : methods) {
