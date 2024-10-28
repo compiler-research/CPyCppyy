@@ -216,6 +216,8 @@ CPPYY_DECLARE_ARRAY_CONVERTER(UChar);
 #if __cplusplus > 201402L
 CPPYY_DECLARE_ARRAY_CONVERTER(Byte);
 #endif
+CPPYY_DECLARE_ARRAY_CONVERTER(Int8);
+CPPYY_DECLARE_ARRAY_CONVERTER(UInt8);
 CPPYY_DECLARE_ARRAY_CONVERTER(Short);
 CPPYY_DECLARE_ARRAY_CONVERTER(UShort);
 CPPYY_DECLARE_ARRAY_CONVERTER(Int);
@@ -232,6 +234,9 @@ CPPYY_DECLARE_ARRAY_CONVERTER(ComplexD);
 
 class CStringArrayConverter : public SCharArrayConverter {
 public:
+    CStringArrayConverter(cdims_t dims, bool fixed) : SCharArrayConverter(dims) {
+        fIsFixed = fixed;    // overrides SCharArrayConverter decision
+    }
     using SCharArrayConverter::SCharArrayConverter;
     virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr);
     virtual PyObject* FromMemory(void* address);
@@ -369,6 +374,7 @@ CPPYY_DECLARE_BASIC_CONVERTER(PyObject);
 class name##Converter : public InstanceConverter {                           \
 public:                                                                      \
     name##Converter(bool keepControl = true);                                \
+                                                                             \
 public:                                                                      \
     virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr);      \
     virtual PyObject* FromMemory(void* address);                             \
@@ -380,14 +386,10 @@ protected:                                                                   \
 }
 
 CPPYY_DECLARE_STRING_CONVERTER(STLString, std::string);
-#if __cplusplus > 201402L
-CPPYY_DECLARE_STRING_CONVERTER(STLStringViewBase, std::string_view);
-class STLStringViewConverter : public STLStringViewBaseConverter {
-public:
-    virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr);
-};
-#endif
 CPPYY_DECLARE_STRING_CONVERTER(STLWString, std::wstring);
+#if __cplusplus > 201402L
+CPPYY_DECLARE_STRING_CONVERTER(STLStringView, std::string_view);
+#endif
 
 class STLStringMoveConverter : public STLStringConverter {
 public:
@@ -467,9 +469,7 @@ protected:
 // initializer lists
 class InitializerListConverter : public InstanceConverter {
 public:
-    InitializerListConverter(Cppyy::TCppType_t klass,
-            Converter* cnv, Cppyy::TCppType_t valuetype, size_t sz) : InstanceConverter(klass),
-        fBuffer(nullptr), fConverter(cnv), fValueType(valuetype), fValueSize(sz) {}
+    InitializerListConverter(Cppyy::TCppType_t klass, std::string const& value_type);
     InitializerListConverter(const InitializerListConverter&) = delete;
     InitializerListConverter& operator=(const InitializerListConverter&) = delete;
     virtual ~InitializerListConverter();
@@ -483,8 +483,9 @@ protected:
     void Clear();
 
 protected:
-    void*             fBuffer;
-    Converter*        fConverter;
+    void*             fBuffer = nullptr;
+    std::vector<Converter*> fConverters;
+    std::string       fValueTypeName;
     Cppyy::TCppType_t fValueType;
     size_t            fValueSize;
 };
