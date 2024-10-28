@@ -158,6 +158,12 @@ static PyTypeObject PyNullPtr_t_Type = {
 #if PY_VERSION_HEX >= 0x03040000
     , 0                  // tp_finalize
 #endif
+#if PY_VERSION_HEX >= 0x03080000
+    , 0                  // tp_vectorcall
+#endif
+#if PY_VERSION_HEX >= 0x030c0000
+    , 0                  // tp_watched
+#endif
 };
 
 
@@ -192,6 +198,12 @@ static PyTypeObject PyDefault_t_Type = {
 #if PY_VERSION_HEX >= 0x03040000
     , 0                  // tp_finalize
 #endif
+#if PY_VERSION_HEX >= 0x03080000
+    , 0                 // tp_vectorcall
+#endif
+#if PY_VERSION_HEX >= 0x030c0000
+    , 0                 // tp_watched
+#endif
 };
 
 namespace {
@@ -206,7 +218,7 @@ PyObject _CPyCppyy_DefaultStruct = {
     1, &PyDefault_t_Type
 };
 
-// TOOD: refactor with Converters.cxx
+// TODO: refactor with Converters.cxx
 struct CPyCppyy_tagCDataObject {       // non-public (but stable)
     PyObject_HEAD
     char* b_ptr;
@@ -409,8 +421,9 @@ static PyObject* SetCppLazyLookup(PyObject*, PyObject* args)
     CPYCPPYY_GET_DICT_LOOKUP(dict) = CPyCppyyLookDictString;
 #else
 // As of py3.11, there is no longer a lookup function pointer in the dict object
-// to replace. Since this feature is not widely advertised, it's simply droped
+// to replace. Since this feature is not widely advertised, it's simply dropped
     PyErr_Warn(PyExc_RuntimeWarning, (char*)"lazy lookup is no longer supported");
+    (void)args; // avoid warning about unused parameter
 #endif
 
     Py_RETURN_NONE;
@@ -489,7 +502,7 @@ static void* GetCPPInstanceAddress(const char* fname, PyObject* args, PyObject* 
             return &((CPPInstance*)pyobj)->GetObjectRaw();
 
         } else if (CPyCppyy_PyText_Check(pyobj)) {
-        // special cases for acces to the CPyCppyy API
+        // special cases for access to the CPyCppyy API
             std::string req = CPyCppyy_PyText_AsString((PyObject*)pyobj);
             if (req == "Instance_AsVoidPtr")
                 return (void*)&Instance_AsVoidPtr;
@@ -528,8 +541,8 @@ static PyObject* addressof(PyObject* /* dummy */, PyObject* args, PyObject* kwds
                 return nullptr;
             }
 
-            Cppyy::TCppFuncAddr_t addr = methods[0]->GetFunctionAddress();
-            return PyLong_FromLongLong((intptr_t)addr);
+            Cppyy::TCppFuncAddr_t caddr = methods[0]->GetFunctionAddress();
+            return PyLong_FromLongLong((intptr_t)caddr);
         }
 
     // C functions (incl. ourselves)
@@ -568,7 +581,7 @@ static PyObject* AsCObject(PyObject* /* unused */, PyObject* args, PyObject* kwd
 }
 
 //----------------------------------------------------------------------------
-static PyObject* AsCapsule(PyObject* /* dummy */, PyObject* args, PyObject* kwds)
+static PyObject* AsCapsule(PyObject* /* unused */, PyObject* args, PyObject* kwds)
 {
 // Return object proxy as an opaque PyCapsule.
     void* addr = GetCPPInstanceAddress("as_capsule", args, kwds);
@@ -582,7 +595,7 @@ static PyObject* AsCapsule(PyObject* /* dummy */, PyObject* args, PyObject* kwds
 }
 
 //----------------------------------------------------------------------------
-static PyObject* AsCTypes(PyObject* /* dummy */, PyObject* args, PyObject* kwds)
+static PyObject* AsCTypes(PyObject* /* unused */, PyObject* args, PyObject* kwds)
 {
 // Return object proxy as a ctypes c_void_p
     void* addr = GetCPPInstanceAddress("as_ctypes", args, kwds);
@@ -605,6 +618,43 @@ static PyObject* AsCTypes(PyObject* /* dummy */, PyObject* args, PyObject* kwds)
     *(void**)((CPyCppyy_tagCDataObject*)ref)->b_ptr = addr;
     ((CPyCppyy_tagCDataObject*)ref)->b_needsfree = 0;
     return ref;
+}
+
+//----------------------------------------------------------------------------
+static PyObject* AsMemoryView(PyObject* /* unused */, PyObject* pyobject)
+{
+// Return a raw memory view on arrays of PODs.
+    if (!CPPInstance_Check(pyobject)) {
+        PyErr_SetString(PyExc_TypeError, "C++ object proxy expected");
+        return nullptr;
+    }
+
+    CPPInstance* pyobj = (CPPInstance*)pyobject;
+    Cppyy::TCppType_t klass = ((CPPClass*)Py_TYPE(pyobject))->fCppType;
+
+    Py_ssize_t array_len = pyobj->ArrayLength();
+
+    if (array_len < 0 || !Cppyy::IsAggregate(klass)) {
+        PyErr_SetString(
+            PyExc_TypeError, "object is not a proxy to an array of PODs of known size");
+        return nullptr;
+    }
+
+    Py_buffer view;
+
+    view.obj            = pyobject;
+    view.buf            = pyobj->GetObject();
+    view.itemsize       = Cppyy::SizeOf(klass);
+    view.len            = view.itemsize * array_len;
+    view.readonly       = 0;
+    view.format         = NULL;   // i.e. "B" assumed
+    view.ndim           = 1;
+    view.shape          = NULL;
+    view.strides        = NULL;
+    view.suboffsets     = NULL;
+    view.internal       = NULL;
+
+    return PyMemoryView_FromBuffer(&view);
 }
 
 //----------------------------------------------------------------------------
@@ -850,9 +900,11 @@ static PyObject* SetMemoryPolicy(PyObject*, PyObject* args)
     if (!PyArg_ParseTuple(args, const_cast<char*>("O!"), &PyInt_Type, &policy))
         return nullptr;
 
+    long old = (long)CallContext::sMemoryPolicy;
+
     long l = PyInt_AS_LONG(policy);
     if (CallContext::SetMemoryPolicy((CallContext::ECallFlags)l)) {
-        Py_RETURN_NONE;
+        return PyInt_FromLong(old);
     }
 
     PyErr_Format(PyExc_ValueError, "Unknown policy %ld", l);
@@ -946,6 +998,8 @@ static PyMethodDef gCPyCppyyMethods[] = {
       METH_VARARGS | METH_KEYWORDS, (char*)"Retrieve address of proxied object or field in a PyCapsule."},
     {(char*) "as_ctypes", (PyCFunction)AsCTypes,
       METH_VARARGS | METH_KEYWORDS, (char*)"Retrieve address of proxied object or field in a ctypes c_void_p."},
+    {(char*) "as_memoryview", (PyCFunction)AsMemoryView,
+      METH_O, (char*)"Represent an array of objects as raw memory."},
     {(char*)"bind_object", (PyCFunction)BindObject,
       METH_VARARGS | METH_KEYWORDS, (char*) "Create an object of given type, from given address."},
     {(char*) "move", (PyCFunction)Move,
@@ -1027,7 +1081,7 @@ extern "C" void initlibcppyy()
 #endif
 
 #if PY_VERSION_HEX < 0x030b0000
-// prepare for lazyness (the insert is needed to capture the most generic lookup
+// prepare for laziness (the insert is needed to capture the most generic lookup
 // function, just in case ...)
     PyObject* dict = PyDict_New();
     PyObject* notstring = PyInt_FromLong(5);

@@ -207,6 +207,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppIndex_t GetNumBases(TCppType_t type);
     CPPYY_IMPORT
+    TCppIndex_t GetNumBasesLongestBranch(TCppType_t type);
+    CPPYY_IMPORT
     std::string GetBaseName(TCppType_t type, TCppIndex_t ibase);
     CPPYY_IMPORT
     TCppScope_t GetBaseScope(TCppType_t type, TCppIndex_t ibase);
@@ -258,6 +260,8 @@ namespace Cppyy {
     std::string GetMethodArgTypeAsString(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodArgCanonTypeAsString(TCppMethod_t, TCppIndex_t iarg);
+    CPPYY_IMPORT
+    TCppIndex_t CompareMethodArgType(TCppMethod_t, TCppIndex_t iarg, const std::string &req_type);
     CPPYY_IMPORT
     std::string GetMethodArgDefault(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
