@@ -202,6 +202,19 @@ PyObject* FollowGetAttr(PyObject* self, PyObject* name)
     return result;
 }
 
+//- pointer checking bool converter -------------------------------------------
+PyObject* NullCheckBool(PyObject* self)
+{
+    if (!CPPInstance_Check(self)) {
+        PyErr_SetString(PyExc_TypeError, "C++ object proxy expected");
+        return nullptr;
+    }
+
+    if (!((CPPInstance*)self)->GetObject())
+        Py_RETURN_FALSE;
+
+    return PyObject_CallMethodNoArgs(self, PyStrings::gCppBool);
+}
 
 //- vector behavior as primitives ----------------------------------------------
 #if PY_VERSION_HEX < 0x03040000
@@ -345,7 +358,7 @@ static bool FillVector(PyObject* vecin, PyObject* args, ItemGetter* getter)
                         eb_args = PyTuple_New(1);
                         PyTuple_SET_ITEM(eb_args, 0, item);
                     } else if (PyTuple_CheckExact(item)) {
-                            eb_args = item;
+                        eb_args = item;
                     } else if (PyList_CheckExact(item)) {
                         Py_ssize_t isz = PyList_GET_SIZE(item);
                         eb_args = PyTuple_New(isz);
@@ -492,7 +505,8 @@ PyObject* VectorInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
 PyObject* VectorData(PyObject* self, PyObject*)
 {
     PyObject* pydata = CallPyObjMethod(self, "__real_data");
-    if (!LowLevelView_Check(pydata)) return pydata;
+    if (!LowLevelView_Check(pydata) && !CPPInstance_Check(pydata))
+        return pydata;
 
     PyObject* pylen = PyObject_CallMethodNoArgs(self, PyStrings::gSize);
     if (!pylen) {
@@ -503,12 +517,12 @@ PyObject* VectorData(PyObject* self, PyObject*)
     long clen = PyInt_AsLong(pylen);
     Py_DECREF(pylen);
 
-// TODO: should be a LowLevelView helper
-    Py_buffer& bi = ((LowLevelView*)pydata)->fBufInfo;
-    bi.len = clen * bi.itemsize;
-    if (bi.ndim == 1 && bi.shape)
-        bi.shape[0] = clen;
+    if (CPPInstance_Check(pydata)) {
+        ((CPPInstance*)pydata)->CastToArray(clen);
+        return pydata;
+    }
 
+    ((LowLevelView*)pydata)->resize((size_t)clen);
     return pydata;
 }
 
@@ -549,7 +563,18 @@ static PyObject* vector_iter(PyObject* v) {
 
         if (PyLong_Check(pyvalue_type)) {
             Cppyy::TCppType_t value_type = PyLong_AsVoidPtr(pyvalue_type);
+            value_type = Cppyy::ResolveType(value_type);
             vi->vi_klass = Cppyy::GetScopeFromType(value_type);
+            if (!vi->vi_klass) {
+            // look for a special case of pointer to a class type (which is a builtin, but it
+            // is more useful to treat it polymorphically by allowing auto-downcasts)
+                const std::string& clean_type = TypeManip::clean_type(value_type, false, false);
+                Cppyy::TCppScope_t c = Cppyy::GetScope(clean_type);
+                if (c && TypeManip::compound(value_type) == "*") {
+                    vi->vi_klass = c;
+                    vi->vi_flags = vectoriterobject::kIsPolymorphic;
+                }
+            }
             if (vi->vi_klass) {
                 vi->vi_converter = nullptr;
                 if (!vi->vi_flags) {
@@ -810,7 +835,7 @@ static PyObject* MapFromPairs(PyObject* self, PyObject* pairs)
 PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
 {
 // Specialized map constructor to allow construction from mapping containers and
-// from tuples of pairs ("intializer_list style").
+// from tuples of pairs ("initializer_list style").
 
 // PyMapping_Check is not very discriminatory, as it basically only checks for the
 // existence of  __getitem__, hence the most common cases of tuple and list are
@@ -1012,7 +1037,7 @@ PyObject* CheckedGetItem(PyObject* self, PyObject* obj)
 {
 // Implement a generic python __getitem__ for STL-like classes that are missing the
 // reflection info for their iterators. This is then used for iteration by means of
-// consecutive indeces, it such index is of integer type.
+// consecutive indices, it such index is of integer type.
     Py_ssize_t size = PySequence_Size(self);
     Py_ssize_t idx  = PyInt_AsSsize_t(obj);
     if ((size == (Py_ssize_t)-1 || idx == (Py_ssize_t)-1) && PyErr_Occurred()) {
@@ -1236,7 +1261,7 @@ PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
     Py_RETURN_FALSE;
 }
 
-PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* kwds)
+PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* /*kwds*/)
 {
     std::string* obj = GetSTLString(self);
     if (!obj)
@@ -1267,7 +1292,7 @@ PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* kwds)
 }
 
 #define CPYCPPYY_STRING_FINDMETHOD(name, cppname, pyname)                    \
-PyObject* STLString##name(CPPInstance* self, PyObject* args, PyObject* kwds) \
+PyObject* STLString##name(CPPInstance* self, PyObject* args, PyObject* /*kwds*/) \
 {                                                                            \
     std::string* obj = GetSTLString(self);                                   \
     if (!obj)                                                                \
@@ -1385,7 +1410,6 @@ PyObject* StringViewInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     }
     return nullptr;
 }
-
 
 
 //- STL iterator behavior ----------------------------------------------------
@@ -1590,6 +1614,16 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     else if (HasAttrDirect(pyclass, PyStrings::gFollow) && !Cppyy::IsSmartPtr(klass->fCppType))
         Utility::AddToClass(pyclass, "__getattr__", (PyCFunction)FollowGetAttr, METH_O);
 
+// for pre-check of nullptr for boolean types
+    if (HasAttrDirect(pyclass, PyStrings::gCppBool)) {
+#if PY_VERSION_HEX >= 0x03000000
+        const char* pybool_name = "__bool__";
+#else
+        const char* pybool_name = "__nonzero__";
+#endif
+        Utility::AddToClass(pyclass, pybool_name, (PyCFunction)NullCheckBool, METH_NOARGS);
+    }
+
 // for STL containers, and user classes modeled after them
     if (HasAttrDirect(pyclass, PyStrings::gSize))
         Utility::AddToClass(pyclass, "__len__", "size");
@@ -1631,7 +1665,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
         // Python will iterate over __getitem__ using integers, but C++ operator[] will never raise
         // a StopIteration. A checked getitem (raising IndexError if beyond size()) works in some
         // cases but would mess up if operator[] is meant to implement an associative container. So,
-        // this has to be implemented as an interator protocol.
+        // this has to be implemented as an iterator protocol.
             ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)index_iter;
             Utility::AddToClass(pyclass, "__iter__", (PyCFunction)index_iter, METH_NOARGS);
         }
