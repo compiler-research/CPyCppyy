@@ -99,7 +99,7 @@ CPyCppyy::MemoryRegulator::MemoryRegulator()
 bool CPyCppyy::MemoryRegulator::RecursiveRemove(
     Cppyy::TCppObject_t cppobj, Cppyy::TCppType_t klass)
 {
-// if registerd by the framework, called whenever a cppobj gets destroyed
+// if registered by the framework, called whenever a cppobj gets destroyed
     if (!cppobj)
         return false;
 
@@ -135,6 +135,7 @@ bool CPyCppyy::MemoryRegulator::RecursiveRemove(
             CPyCppyy_NoneType.tp_traverse   = Py_TYPE(pyobj)->tp_traverse;
             CPyCppyy_NoneType.tp_clear      = Py_TYPE(pyobj)->tp_clear;
             CPyCppyy_NoneType.tp_free       = Py_TYPE(pyobj)->tp_free;
+            CPyCppyy_NoneType.tp_flags     |= Py_TYPE(pyobj)->tp_flags;
         } else if (CPyCppyy_NoneType.tp_traverse != Py_TYPE(pyobj)->tp_traverse) {
         // TODO: SystemError?
             std::cerr << "in CPyCppyy::MemoryRegulater, unexpected object of type: "
