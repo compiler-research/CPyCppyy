@@ -509,34 +509,34 @@ PyObject* CPyCppyy::VoidArrayExecutor::Execute(
 }
 
 //----------------------------------------------------------------------------
-#define CPPYY_IMPL_ARRAY_EXEC(name, type)                                    \
+#define CPPYY_IMPL_ARRAY_EXEC(name, type, suffix)                            \
 PyObject* CPyCppyy::name##ArrayExecutor::Execute(                            \
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt) \
 {                                                                            \
-    return CreateLowLevelView((type*)GILCallR(method, self, ctxt), fShape);  \
+    return CreateLowLevelView##suffix((type*)GILCallR(method, self, ctxt), fShape);  \
 }
 
-CPPYY_IMPL_ARRAY_EXEC(Bool,     bool)
-CPPYY_IMPL_ARRAY_EXEC(UChar,    unsigned char)
+CPPYY_IMPL_ARRAY_EXEC(Bool,     bool,                    )
+CPPYY_IMPL_ARRAY_EXEC(UChar,    unsigned char,           )
 #if __cplusplus > 201402L
-CPPYY_IMPL_ARRAY_EXEC(Byte,     std::byte)
+CPPYY_IMPL_ARRAY_EXEC(Byte,     std::byte,               )
 #endif
-CPPYY_IMPL_ARRAY_EXEC(Int8,     int8_t)
-CPPYY_IMPL_ARRAY_EXEC(UInt8,    uint8_t)
-CPPYY_IMPL_ARRAY_EXEC(Short,    short)
-CPPYY_IMPL_ARRAY_EXEC(UShort,   unsigned short)
-CPPYY_IMPL_ARRAY_EXEC(Int,      int)
-CPPYY_IMPL_ARRAY_EXEC(UInt,     unsigned int)
-CPPYY_IMPL_ARRAY_EXEC(Long,     long)
-CPPYY_IMPL_ARRAY_EXEC(ULong,    unsigned long)
-CPPYY_IMPL_ARRAY_EXEC(LLong,    long long)
-CPPYY_IMPL_ARRAY_EXEC(ULLong,   unsigned long long)
-CPPYY_IMPL_ARRAY_EXEC(Float,    float)
-CPPYY_IMPL_ARRAY_EXEC(Double,   double)
-CPPYY_IMPL_ARRAY_EXEC(ComplexF, std::complex<float>)
-CPPYY_IMPL_ARRAY_EXEC(ComplexD, std::complex<double>)
-CPPYY_IMPL_ARRAY_EXEC(ComplexI, std::complex<int>)
-CPPYY_IMPL_ARRAY_EXEC(ComplexL, std::complex<long>)
+CPPYY_IMPL_ARRAY_EXEC(Int8,     int8_t,               _i8)
+CPPYY_IMPL_ARRAY_EXEC(UInt8,    uint8_t,              _i8)
+CPPYY_IMPL_ARRAY_EXEC(Short,    short,                   )
+CPPYY_IMPL_ARRAY_EXEC(UShort,   unsigned short,          )
+CPPYY_IMPL_ARRAY_EXEC(Int,      int,                     )
+CPPYY_IMPL_ARRAY_EXEC(UInt,     unsigned int,            )
+CPPYY_IMPL_ARRAY_EXEC(Long,     long,                    )
+CPPYY_IMPL_ARRAY_EXEC(ULong,    unsigned long,           )
+CPPYY_IMPL_ARRAY_EXEC(LLong,    long long,               )
+CPPYY_IMPL_ARRAY_EXEC(ULLong,   unsigned long long,      )
+CPPYY_IMPL_ARRAY_EXEC(Float,    float,                   )
+CPPYY_IMPL_ARRAY_EXEC(Double,   double,                  )
+CPPYY_IMPL_ARRAY_EXEC(ComplexF, std::complex<float>,     )
+CPPYY_IMPL_ARRAY_EXEC(ComplexD, std::complex<double>,    )
+CPPYY_IMPL_ARRAY_EXEC(ComplexI, std::complex<int>,       )
+CPPYY_IMPL_ARRAY_EXEC(ComplexL, std::complex<long>,      )
 
 
 //- special cases ------------------------------------------------------------
@@ -591,7 +591,7 @@ PyObject* CPyCppyy::STLWStringExecutor::Execute(
     }
 
     PyObject* pyresult = PyUnicode_FromWideChar(result->c_str(), result->size());
-    ::operator delete(result); // calls Cppyy::CallO which calls ::operator new
+    delete result; // Cppyy::CallO allocates and constructs a string, so it must be properly destroyed
 
     return pyresult;
 }
@@ -642,6 +642,21 @@ CPyCppyy::IteratorExecutor::IteratorExecutor(Cppyy::TCppScope_t klass) :
     fFlags |= CPPInstance::kNoWrapConv;     // adds to flags from base class
 }
 
+//----------------------------------------------------------------------------
+PyObject* CPyCppyy::IteratorExecutor::Execute(
+    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
+{
+    PyObject* iter = this->InstanceExecutor::Execute(method, self, ctxt);
+    if (iter && ctxt->fPyContext) {
+    // set life line to tie iterator life time to the container (which may
+    // be a temporary)
+        std::ostringstream attr_name;
+        attr_name << "__" << (intptr_t)iter;
+        if (PyObject_SetAttrString(ctxt->fPyContext, (char*)attr_name.str().c_str(), iter))
+            PyErr_Clear();
+    }
+    return iter;
+}
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::InstanceRefExecutor::Execute(
@@ -850,7 +865,7 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(const std::string& fullType, cdims_
 // C++ classes and special cases
     Executor* result = 0;
     if (Cppyy::TCppType_t klass = Cppyy::GetFullScope(realType)) {
-        if (resolvedType.find("iterator") != std::string::npos || gIteratorTypes.find(fullType) != gIteratorTypes.end()) {
+        if (Utility::IsSTLIterator(realType) || gIteratorTypes.find(fullType) != gIteratorTypes.end()) {
             if (cpd == "")
                 return new IteratorExecutor(klass);
         }
@@ -1014,6 +1029,23 @@ bool CPyCppyy::RegisterExecutor(const std::string& name, ef_t fac)
 
 //----------------------------------------------------------------------------
 CPYCPPYY_EXPORT
+bool CPyCppyy::RegisterExecutorAlias(const std::string& name, const std::string& target)
+{
+// register a custom executor that is a reference to an existing converter
+    auto f = gExecFactories.find(name);
+    if (f != gExecFactories.end())
+        return false;
+
+    auto t = gExecFactories.find(target);
+    if (t == gExecFactories.end())
+        return false;
+
+    gExecFactories[name] = t->second;
+    return true;
+}
+
+//----------------------------------------------------------------------------
+CPYCPPYY_EXPORT
 bool CPyCppyy::UnregisterExecutor(const std::string& name)
 {
 // remove a custom executor
@@ -1164,9 +1196,9 @@ public:
         gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
 
     // factories for special cases
-        gf["const char*"] =                 (ef_t)+[]() { static CStringExecutor e{};     return &e; };
+        gf["const char*"] =                 (ef_t)+[](cdims_t) { static CStringExecutor e{};     return &e; };
         gf["char*"] =                       gf["const char*"];
-        gf["const char*&"] =                (ef_t)+[]() { static CStringRefExecutor e{};     return &e; };
+        gf["const char*&"] =                (ef_t)+[](cdims_t) { static CStringRefExecutor e{};     return &e; };
         gf["char*&"] =                      gf["const char*&"];
         gf["const signed char*"] =          gf["const char*"];
         gf["signed char*"] =                gf["char*"];
