@@ -2055,7 +2055,10 @@ bool CPyCppyy::InstanceConverter::SetArg(
     CPPInstance* pyobj = GetCppInstance(pyobject);
     if (pyobj) {
         auto oisa = pyobj->ObjectIsA();
-        if (oisa && (oisa == fClass || Cppyy::IsSubclass(oisa, fClass))) {
+        if (oisa && ((oisa == (Cppyy::IsTypedefed(fClass)
+                                   ? Cppyy::GetUnderlyingScope(fClass)
+                                   : fClass)) ||
+                     Cppyy::IsSubclass(oisa, fClass))) {
         // calculate offset between formal and actual arguments
             para.fValue.fVoidp = pyobj->GetObject();
             if (!para.fValue.fVoidp)
