@@ -48,10 +48,6 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
         }
     }
 
-// non-initialized or public data accesses through class (e.g. by help())
-    void* address = dm->GetAddress(pyobj);
-    if (!address || (intptr_t)address == -1 /* Cling error */)
-        return nullptr;
 
     if (dm->fFlags & (kIsEnumPrep | kIsEnumType)) {
         if (dm->fFlags & kIsEnumPrep) {
@@ -92,7 +88,6 @@ static PyObject* dm_get(CPPDataMember* dm, CPPInstance* pyobj, PyObject* /* kls 
             return pyval_from_enum(Cppyy::ResolveEnum(dm->fScope), nullptr, nullptr, dm->fScope);
         }
     }
-
 // non-initialized or public data accesses through class (e.g. by help())
     void* address = dm->GetAddress(pyobj);
     if (!address || (intptr_t)address == -1 /* Cling error */)

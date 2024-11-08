@@ -568,9 +568,9 @@ static PyObject* vector_iter(PyObject* v) {
             if (!vi->vi_klass) {
             // look for a special case of pointer to a class type (which is a builtin, but it
             // is more useful to treat it polymorphically by allowing auto-downcasts)
-                const std::string& clean_type = TypeManip::clean_type(value_type, false, false);
+                const std::string& clean_type = TypeManip::clean_type(Cppyy::GetTypeAsString(value_type), false, false);
                 Cppyy::TCppScope_t c = Cppyy::GetScope(clean_type);
-                if (c && TypeManip::compound(value_type) == "*") {
+                if (c && TypeManip::compound(Cppyy::GetTypeAsString(value_type)) == "*") {
                     vi->vi_klass = c;
                     vi->vi_flags = vectoriterobject::kIsPolymorphic;
                 }

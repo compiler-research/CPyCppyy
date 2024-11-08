@@ -856,11 +856,6 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
     PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
     PyErr_Fetch(&pytype, &pyvalue, &pytrace);
 
-    std::string proto = Utility::ConstructTemplateArgs(nullptr, args);
-    Cppyy::TCppScope_t scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
-    Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(
-        scope, pytmpl->fTI->fCppName, proto.substr(1, proto.size()-2));
-
     if (!cppmeth) {
         PyErr_Restore(pytype, pyvalue, pytrace);
         return nullptr;
