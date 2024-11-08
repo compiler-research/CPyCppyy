@@ -146,11 +146,11 @@ namespace {
 using namespace Cppyy;
 
 static inline
-std::vector<TCppIndex_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
+std::vector<TCppMethod_t> FindBaseMethod(TCppScope_t tbase, const std::string mtCppName)
 {
 // Recursively walk the inheritance tree to find the overloads of the named method
-    std::vector<TCppIndex_t> result;
-    result = GetMethodIndicesFromName(tbase, mtCppName);
+    std::vector<TCppMethod_t> result;
+    result = GetMethodsFromName(tbase, mtCppName);
     if (result.empty()) {
         for (TCppIndex_t ibase = 0; ibase < GetNumBases(tbase); ++ibase) {
             TCppScope_t b = GetScope(GetBaseName(tbase, ibase));
@@ -366,10 +366,10 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                 // TODO: should probably invert this looping; but that makes handling overloads clunky
                     PyObject* key = PyList_GET_ITEM(keys, i);
                     std::string mtCppName = CPyCppyy_PyText_AsString(key);
-                    const auto& v = FindBaseMethod(tbase, mtCppName);
-                    for (auto idx : v)
-                        InjectMethod(Cppyy::GetMethod(tbase, idx), mtCppName, code);
-                    if (!v.empty()) {
+                    const auto& methods = FindBaseMethod(tbase, mtCppName);
+                    for (auto method : methods)
+                        InjectMethod(method, mtCppName, code);
+                    if (!methods.empty()) {
                         if (PyDict_DelItem(clbs, key) != 0) PyErr_Clear();
                     }
                 }

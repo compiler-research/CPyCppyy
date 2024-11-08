@@ -358,10 +358,6 @@ static PyObject* op_item(CPPInstance* self, Py_ssize_t idx)
         return nullptr;
     }
 
-    Py_ssize_t idx = PyInt_AsSsize_t(pyidx);
-    if (idx == (Py_ssize_t)-1 && PyErr_Occurred())
-        return nullptr;
-
     if (idx < 0) {
     // this is debatable, and probably should not care, but the use case is pretty
     // circumscribed anyway, so might as well keep the functionality simple
@@ -413,8 +409,6 @@ static PyMethodDef op_methods[] = {
       (char*)"dispatch to selected overload"},
     {(char*)"__smartptr__", (PyCFunction)op_get_smartptr, METH_NOARGS,
       (char*)"get associated smart pointer, if any"},
-    {(char*)"__getitem__",  (PyCFunction)op_getitem, METH_O,
-      (char*)"pointer dereferencing"},
     {(char*)"__reshape__",  (PyCFunction)op_reshape, METH_O,
         (char*)"cast pointer to 1D array type"},
     {(char*)nullptr, nullptr, 0, nullptr}
