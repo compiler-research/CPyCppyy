@@ -3447,11 +3447,11 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 
     if (!result && cpd == "&&") {
     // for builtin, can use const-ref for r-ref
-        h = gConvFactories.find("const " + realTypeStr + " &");
+        h = gConvFactories.find("const " + realTypeStr + "&");
         if (h != gConvFactories.end())
             return (h->second)(dims);
-        std::string temp ="const " + realUnresolvedTypeStr + " &";
-        h = gConvFactories.find("const " + realUnresolvedTypeStr + " &");
+        std::string temp ="const " + realUnresolvedTypeStr + "&";
+        h = gConvFactories.find("const " + realUnresolvedTypeStr + "&");
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
