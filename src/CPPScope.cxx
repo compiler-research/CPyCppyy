@@ -431,10 +431,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if (attr) {
         // cache the result
             if (CPPDataMember_Check(attr)) {
-                if (Cppyy::IsClass(scope))
-                    PyType_Type.tp_setattro(pyclass, pyname, attr);
-                else
-                  PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
+                PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pyname, attr);
 
                 Py_DECREF(attr);
                 // The call below goes through "dm_get"
@@ -531,13 +528,11 @@ static int meta_setattro(PyObject* pyclass, PyObject* pyname, PyObject* pyval)
 // the C++ side, b/c there is no descriptor yet. This triggers the creation for
 // for such data as necessary. The many checks to narrow down the specific case
 // are needed to prevent unnecessary lookups and recursion.
-    if (((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace) {
     // skip if the given pyval is a descriptor already, or an unassignable class
-        if (!CPyCppyy::CPPDataMember_Check(pyval) && !CPyCppyy::CPPScope_Check(pyval)) {
-            std::string name = CPyCppyy_PyText_AsString(pyname);
-            if (Cppyy::GetNamed(name, ((CPPScope*)pyclass)->fCppType))
-                meta_getattro(pyclass, pyname);       // triggers creation
-        }
+    if (!CPyCppyy::CPPDataMember_Check(pyval) && !CPyCppyy::CPPScope_Check(pyval)) {
+        std::string name = CPyCppyy_PyText_AsString(pyname);
+        if (Cppyy::GetNamed(name, ((CPPScope*)pyclass)->fCppType))
+            meta_getattro(pyclass, pyname);       // triggers creation
     }
 
     return PyType_Type.tp_setattro(pyclass, pyname, pyval);
