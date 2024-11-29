@@ -640,7 +640,7 @@ PyObject* CPyCppyy::InstanceExecutor::Execute(
 CPyCppyy::IteratorExecutor::IteratorExecutor(Cppyy::TCppScope_t klass) :
     InstanceExecutor(klass)
 {
-    fFlags |= CPPInstance::kNoWrapConv;     // adds to flags from base class
+    fFlags |= CPPInstance::kNoMemReg | CPPInstance::kNoWrapConv;     // adds to flags from base class
 }
 
 
