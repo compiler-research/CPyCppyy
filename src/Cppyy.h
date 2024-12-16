@@ -286,8 +286,9 @@ namespace Cppyy {
         TCppScope_t scope, const std::string& name, const std::string& proto);
 
     CPPYY_IMPORT
-    TCppIndex_t  GetGlobalOperator(
-        TCppType_t scope, const std::string& lc, const std::string& rc, const std::string& op);
+    TCppMethod_t GetGlobalOperator(TCppType_t scope, const std::string &lc,
+                                   const std::string &rc,
+                                   const std::string &op);
 
 // method properties ---------------------------------------------------------
     CPPYY_IMPORT
