@@ -265,14 +265,11 @@ CPyCppyy::PyCallable* BuildOperator(const std::string& lcname, const std::string
     const char* op, Cppyy::TCppScope_t scope, bool reverse=false)
 {
 // Helper to find a function with matching signature in 'funcs'.
-    std::string opname = "operator";
-    opname += op;
 
-    Cppyy::TCppIndex_t idx = Cppyy::GetGlobalOperator(scope, lcname, rcname, opname);
-    if (idx == (Cppyy::TCppIndex_t)-1)
+    Cppyy::TCppMethod_t meth = Cppyy::GetGlobalOperator(scope, lcname, rcname, op);
+    if (!meth)
         return nullptr;
 
-    Cppyy::TCppMethod_t meth = Cppyy::GetMethod(scope, idx);
     if (!reverse)
         return new CPyCppyy::CPPFunction(scope, meth);
     return new CPyCppyy::CPPReverseBinary(scope, meth);
@@ -331,7 +328,7 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
     if (!scope) {
         // TODO: the following should remain sync with what clingwrapper does in its
         // type remapper; there must be a better way?
-        if (lcname == "str" || lcname == "unicode" || lcname == "complex")
+        if (lcname == "str" || lcname == "unicode" || lcname == "complex" || lcname.find("std::") == 0)
             scope = Cppyy::GetScope("std");
         else scope = Cppyy::GetScope(TypeManip::extract_namespace(lcname));
     }
