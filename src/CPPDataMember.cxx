@@ -323,7 +323,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
 {
     fEnclosingScope = scope;
     fScope          = data;
-    fOffset         = Cppyy::GetDatamemberOffset(data); // XXX: Check back here // TODO: make lazy
+    fOffset         = Cppyy::GetDatamemberOffset(data, scope); // XXX: Check back here // TODO: make lazy
     fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
 
     const std::string name = Cppyy::GetFinalName(data);

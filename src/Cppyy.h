@@ -324,7 +324,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetDatamemberTypeAsString(TCppScope_t var);
     CPPYY_IMPORT
-    intptr_t    GetDatamemberOffset(TCppScope_t var);
+    intptr_t    GetDatamemberOffset(TCppScope_t var, TCppScope_t klass = nullptr);
     CPPYY_IMPORT
     bool        CheckDatamember(TCppScope_t scope, const std::string& name);
 
