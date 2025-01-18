@@ -91,7 +91,7 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t GetGlobalScope();
     CPPYY_IMPORT
-    TCppType_t  GetActualClass(TCppType_t klass, TCppObject_t obj);
+    TCppScope_t GetActualClass(TCppScope_t klass, TCppObject_t obj);
     CPPYY_IMPORT
     size_t      SizeOf(TCppScope_t klass);
     CPPYY_IMPORT
