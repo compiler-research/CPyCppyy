@@ -39,12 +39,6 @@ jobs:
             clang-runtime: '17'
             cling: Off
             cppyy: On
-          - name: ubu22-x86-gcc9-clang-repl-16-cppyy
-            os: ubuntu-22.04
-            compiler: gcc-9
-            clang-runtime: '16'
-            cling: Off
-            cppyy: On
           - name: ubu22-x86-gcc9-clang13-cling-cppyy
             os: ubuntu-22.04
             compiler: gcc-9
@@ -57,12 +51,6 @@ jobs:
           #  os: windows-2022
           #  compiler: msvc
           #  clang-runtime: '17'
-          #  cling: Off
-          #  cppyy: On
-          #- name: win2022-msvc-clang-repl-16-cppyy
-          #  os: windows-2022
-          #  compiler: msvc
-          #  clang-runtime: '16'
           #  cling: Off
           #  cppyy: On
           #- name: win2022-msvc-cling-cppyy
@@ -90,12 +78,6 @@ jobs:
             clang-runtime: '17'
             cling: Off
             cppyy: On
-          - name: osx13-x86-clang-clang-repl-16-cppyy
-            os: macos-13
-            compiler: clang
-            clang-runtime: '16'
-            cling: Off
-            cppyy: On
           - name: osx13-x86-clang-clang13-cling-cppyy
             os: macos-13
             compiler: clang
@@ -119,12 +101,6 @@ jobs:
             os: macos-14
             compiler: clang
             clang-runtime: '17'
-            cling: Off
-            cppyy: On
-          - name: osx14-arm-clang-clang-repl-16-cppyy
-            os: macos-14
-            compiler: clang
-            clang-runtime: '16'
             cling: Off
             cppyy: On
           - name: osx14-arm-clang-clang13-cling-cppyy
