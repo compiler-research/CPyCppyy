@@ -122,6 +122,10 @@ namespace {
         }
     } initOperatorMapping_;
 
+    inline std::string full_scope(const std::string& tpname) {
+        return tpname[0] == ':' ? tpname : "::"+tpname;
+    }
+
 } // unnamed namespace
 
 
@@ -485,7 +489,7 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
 
     if (CPPScope_Check(tn)) {
         auto cpp_type = Cppyy::GetScopedFinalName(((CPPClass*)tn)->fCppType);
-        tmpl_name.append(cpp_type);
+        tmpl_name.append(full_scope(cpp_type));
         if (arg) {
         // try to specialize the type match for the given object
             CPPInstance* pyobj = (CPPInstance*)arg;
@@ -506,7 +510,7 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
     }
 
     if (tn == (PyObject*)&CPPOverload_Type) {
-        PyObject* tpName =  arg ? \
+        PyObject* tpName = arg ? \
             PyObject_GetAttr(arg, PyStrings::gCppName) : \
             CPyCppyy_PyText_FromString("void* (*)(...)");
         tmpl_name.append(CPyCppyy_PyText_AsString(tpName));
@@ -530,7 +534,7 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
                     for (Py_ssize_t i = 0; i < (PyList_GET_SIZE(values)-1); ++i) {
                         if (i) tpn << ", ";
                         PyObject* item = PyList_GET_ITEM(values, i);
-                        tpn << (CPPScope_Check(item) ?  ClassName(item) : AnnotationAsText(item));
+                        tpn << (CPPScope_Check(item) ? full_scope(ClassName(item)) : AnnotationAsText(item));
                     }
                     Py_DECREF(values);
 
@@ -548,7 +552,8 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
 
         PyObject* tpName = PyObject_GetAttr(arg, PyStrings::gCppName);
         if (tpName) {
-            tmpl_name.append(CPyCppyy_PyText_AsString(tpName));
+            const char* cname = CPyCppyy_PyText_AsString(tpName);
+            tmpl_name.append(CPPScope_Check(arg) ? full_scope(cname) : cname);
             Py_DECREF(tpName);
             return true;
         }
