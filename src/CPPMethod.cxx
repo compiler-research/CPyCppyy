@@ -135,7 +135,7 @@ inline PyObject* CPyCppyy::CPPMethod::ExecuteFast(
 
     // TODO: factor this code with the same in ProxyWrappers (and cache it there to be able to
     // look up based on TCppType_t):
-        Cppyy::TCppType_t actual = exc_type /* XXX: Cppyy::GetActualClass(exc_type, &e) */;
+        Cppyy::TCppType_t actual = Cppyy::GetActualClass(exc_type, &e);
         const std::string& finalname = Cppyy::GetScopedFinalName(actual);
         const std::string& parentname = TypeManip::extract_namespace(finalname);
         PyObject* parent = CreateScopeProxy(parentname);
