@@ -517,7 +517,6 @@ jobs:
       run: |
         python3 -m venv ${{ github.workspace }}/CppInterOp/.venv
         source ${{ github.workspace }}/CppInterOp/.venv/bin/activate
-        cd ${{ github.workspace }}/CPyCppyy/
         mkdir build
         cd build
         cmake ..
@@ -533,7 +532,7 @@ jobs:
       run: |
         # source virtual environment
         source ${{ github.workspace }}/CppInterOp/.venv/bin/activate
-        cd ${{ github.workspace }}
+        cd ${{ github.workspace }}/cppyy/
         python -m pip install --upgrade . --no-deps
         cd ..
 
@@ -552,7 +551,7 @@ jobs:
       run: |
         # Run the tests
         source ${{ github.workspace }}/CppInterOp/.venv/bin/activate
-        cd ${{ github.workspace }}/test
+        cd ${{ github.workspace }}/cppyy/test
         echo ::group::Prepare For Testing
         make all
         python -m pip install --upgrade pip
