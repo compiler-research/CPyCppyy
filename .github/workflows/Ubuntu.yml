@@ -323,8 +323,8 @@ jobs:
   
     - uses: actions/checkout@v4
       with:
-        repository: compiler-research/CPyCppyy
-        path: ${{ github.workspace }}/CPyCppyy
+        repository: compiler-research/cppyy/
+        path: ${{ github.workspace }}/cppyy/
         fetch-depth: 0
 
     - uses: actions/checkout@v4
