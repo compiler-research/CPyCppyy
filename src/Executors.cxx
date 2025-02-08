@@ -903,6 +903,9 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 
 // an exactly matching executor is best
     std::string fullType = Cppyy::GetTypeAsString(type);
+    if (fullType.ends_with(" &"))
+        fullType = fullType.substr(0, fullType.size() - 2) + "&";
+
     ExecFactories_t::iterator h = gExecFactories.find(fullType);
     if (h != gExecFactories.end())
         return (h->second)(dims);
