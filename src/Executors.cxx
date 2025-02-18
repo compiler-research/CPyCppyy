@@ -912,7 +912,13 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 
 // resolve typedefs etc.
     Cppyy::TCppType_t resolvedType = Cppyy::ResolveType(type);
-    const std::string& resolvedTypeStr = Cppyy::GetTypeAsString(resolvedType);
+    // FIXME: avoid string comparisons and parsing
+    std::string resolvedTypeStr = Cppyy::GetTypeAsString(resolvedType);
+    if (Cppyy::IsFunctionPointerType(resolvedType)) {
+        resolvedTypeStr.erase(std::remove(resolvedTypeStr.begin(), resolvedTypeStr.end(), ' '), resolvedTypeStr.end());
+        if (resolvedTypeStr.rfind("(void)") != std::string::npos)
+            resolvedTypeStr = resolvedTypeStr.substr(0, resolvedTypeStr.size() - 6) + "()";
+    }
 
 // a full, qualified matching executor is preferred
     if (resolvedTypeStr != fullType) {
@@ -924,8 +930,8 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 //-- nothing? ok, collect information about the type and possible qualifiers/decorators
     bool isConst = strncmp(resolvedTypeStr.c_str(), "const", 5)  == 0;
     const std::string& cpd = TypeManip::compound(resolvedTypeStr);
-    Cppyy::TCppType_t realType = Cppyy::GetRealType(resolvedType);
-    std::string realTypeStr = Cppyy::GetTypeAsString(realType);
+    Cppyy::TCppType_t realType = Cppyy::IsFunctionPointerType(resolvedType) ? resolvedType : Cppyy::GetRealType(resolvedType);
+    std::string realTypeStr = Cppyy::IsFunctionPointerType(resolvedType) ? resolvedTypeStr : Cppyy::GetTypeAsString(realType);
     const std::string compounded = cpd.empty() ? realTypeStr : realTypeStr + cpd;
 
 // accept unqualified type (as python does not know about qualifiers)
@@ -981,6 +987,15 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
                 result = new InstancePtrRefExecutor(klass);
         } else
             result = new InstancePtrExecutor(klass);
+    } else if (realTypeStr.find("(*)") != std::string::npos ||
+            (realTypeStr.find("::*)") != std::string::npos)) {
+        // this is a function pointer
+        // TODO: find better way of finding the type
+        auto pos1 = realTypeStr.find('(');
+        auto pos2 = realTypeStr.find("*)");
+        auto pos3 = realTypeStr.rfind(')');
+        result = new FunctionPointerExecutor(
+        realTypeStr.substr(0, pos1), realTypeStr.substr(pos2+2, pos3-pos2-1));
     } else {
     // unknown: void* may work ("user knows best"), void will fail on use of return value
         h = (cpd == "") ? gExecFactories.find("void") : gExecFactories.find("void ptr");

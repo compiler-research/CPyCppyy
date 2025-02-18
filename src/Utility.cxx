@@ -869,7 +869,7 @@ void CPyCppyy::Utility::ConstructCallbackPreamble(const std::string& retType,
     int nArgs = (int)argtypes.size();
 
 // return value and argument type converters
-    bool isVoid = retType == "void";
+    bool isVoid = retType.find("void") == 0; // might contain trailing space
     if (!isVoid)
         code << "    CPYCPPYY_STATIC std::unique_ptr<CPyCppyy::Converter, std::function<void(CPyCppyy::Converter*)>> "
                      "retconv{CPyCppyy::CreateConverter(\""
@@ -931,7 +931,7 @@ void CPyCppyy::Utility::ConstructCallbackPreamble(const std::string& retType,
 void CPyCppyy::Utility::ConstructCallbackReturn(const std::string& retType, int nArgs, std::ostringstream& code)
 {
 // Generate code for return value conversion and error handling.
-    bool isVoid = retType == "void";
+    bool isVoid = retType.find("void") == 0; // might contain trailing space
     bool isPtr  = Cppyy::ResolveName(retType).back() == '*';
 
     if (nArgs)
