@@ -2610,6 +2610,12 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
 // function pointer. The former is direct, the latter involves a JIT-ed wrapper.
     static PyObject* sWrapperCacheEraser = PyCFunction_New(&gWrapperCacheEraserMethodDef, nullptr);
 
+    // FIXME: avoid string comparisons and parsing
+    std::string true_signature = signature;
+    true_signature.erase(std::remove(true_signature.begin(), true_signature.end(), ' '), true_signature.end());
+    if (true_signature.rfind("(void)") != std::string::npos)
+        true_signature = true_signature.substr(0, true_signature.size() - 6) + "()";
+
     using namespace CPyCppyy;
 
     if (CPPOverload_Check(pyobject)) {
@@ -2637,7 +2643,7 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
         if (pytmpl->fTemplateArgs)
             fullname += CPyCppyy_PyText_AsString(pytmpl->fTemplateArgs);
         Cppyy::TCppScope_t scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
-        Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(scope, fullname, signature);
+        Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(scope, fullname, true_signature);
         if (cppmeth) {
             void* fptr = (void*)Cppyy::GetFunctionAddress(cppmeth, false);
             if (fptr) return fptr;
@@ -2650,7 +2656,7 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
         void* wpraddress = nullptr;
 
     // re-use existing wrapper if possible
-        auto key = rettype+signature;
+        auto key = rettype+true_signature;
         const auto& lookup = sWrapperLookup.find(key);
         if (lookup != sWrapperLookup.end()) {
             const auto& existing = lookup->second.find(pyobject);
@@ -2678,7 +2684,7 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
                 return nullptr;
 
         // extract argument types
-            const std::vector<std::string>& argtypes = TypeManip::extract_arg_types(signature);
+            const std::vector<std::string>& argtypes = TypeManip::extract_arg_types(true_signature);
             int nArgs = (int)argtypes.size();
 
         // wrapper name

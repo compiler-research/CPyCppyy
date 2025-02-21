@@ -316,6 +316,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsClassType(TCppType_t type);
     CPPYY_IMPORT
+    bool IsFunctionPointerType(TCppType_t type);
+    CPPYY_IMPORT
     TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false);
     CPPYY_IMPORT
     bool AppendTypesSlow(const std::string &name,
