@@ -289,6 +289,10 @@ namespace Cppyy {
     TCppMethod_t GetGlobalOperator(TCppType_t scope, const std::string &lc,
                                    const std::string &rc,
                                    const std::string &op);
+    CPPYY_IMPORT
+    void GetClassOperators(Cppyy::TCppScope_t klass,
+                            const std::string& opname,
+                            std::vector<TCppScope_t> &operators);
 
 // method properties ---------------------------------------------------------
     CPPYY_IMPORT
@@ -321,7 +325,8 @@ namespace Cppyy {
     TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false);
     CPPYY_IMPORT
     bool AppendTypesSlow(const std::string &name,
-                         std::vector<Cpp::TemplateArgInfo>& types);
+                         std::vector<Cpp::TemplateArgInfo>& types,
+                         bool no_reference=false);
     CPPYY_IMPORT
     TCppType_t  GetComplexType(const std::string& element_type);
     CPPYY_IMPORT
