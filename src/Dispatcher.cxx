@@ -337,9 +337,10 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
     // support for templated ctors in single inheritance (TODO: also multi possible?)
         if (base_infos.size() == 1) {
-            const Cppyy::TCppIndex_t nTemplMethods = Cppyy::GetNumTemplatedMethods(binfo.btype);
-            for (Cppyy::TCppIndex_t imeth = 0; imeth < nTemplMethods; ++imeth) {
-                if (Cppyy::IsTemplatedConstructor(binfo.btype, imeth)) {
+                std::vector<Cppyy::TCppMethod_t> templ_methods;
+                Cppyy::GetTemplatedMethods(binfo.btype, templ_methods);
+                for (auto &method : templ_methods) {
+                if (Cppyy::IsConstructor(method)) {
                     any_ctor_found = true;
                     has_tmpl_ctors += 1;
                     break;        // one suffices to map as argument packs are used
