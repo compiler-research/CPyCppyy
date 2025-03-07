@@ -270,13 +270,12 @@ namespace Cppyy {
     std::string GetMethodPrototype(TCppMethod_t, bool show_formal_args);
     CPPYY_IMPORT
     bool        IsConstMethod(TCppMethod_t);
-
+    CPPYY_IMPORT
+    void GetTemplatedMethods(TCppScope_t scope, std::vector<TCppMethod_t> &methods);
     CPPYY_IMPORT
     TCppIndex_t GetNumTemplatedMethods(TCppScope_t scope, bool accept_namespace = false);
     CPPYY_IMPORT
     std::string GetTemplatedMethodName(TCppScope_t scope, TCppIndex_t imeth);
-    CPPYY_IMPORT
-    bool        IsTemplatedConstructor(TCppScope_t scope, TCppIndex_t imeth);
     CPPYY_IMPORT
     bool        ExistsMethodTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
