@@ -290,6 +290,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool        IsTemplatedMethod(TCppMethod_t method);
     CPPYY_IMPORT
+    bool        IsStaticTemplate(TCppScope_t scope, const std::string& name);
+    CPPYY_IMPORT
     TCppMethod_t GetMethodTemplate(
         TCppScope_t scope, const std::string& name, const std::string& proto);
 
