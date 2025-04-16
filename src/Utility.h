@@ -42,6 +42,17 @@ std::string ConstructTemplateArgs(
 std::vector<Cpp::TemplateArgInfo> GetTemplateArgsTypes(
     PyObject* scope, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
 
+std::string CT2CppNameS(PyObject* pytc, bool allow_voidp);
+inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
+{
+    const std::string& name = CT2CppNameS(pytc, allow_voidp);
+    if (!name.empty()) {
+        if (name == "const char*") cpd = "";
+        return CPyCppyy_PyText_FromString((std::string{name}+cpd).c_str());
+    }
+    return nullptr;
+}
+
 // helper for generating callbacks
 void ConstructCallbackPreamble(const std::string& retType,
     const std::vector<std::string>& argtypes, std::ostringstream& code);
