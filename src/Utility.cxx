@@ -334,10 +334,12 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
         // type remapper; there must be a better way?
         if (lcname == "str" || lcname == "unicode" || lcname == "complex" || lcname.find("std::") == 0)
             scope = Cppyy::GetScope("std");
-        else scope = Cppyy::GetScope(TypeManip::extract_namespace(lcname));
     }
     if (scope)
         pyfunc = BuildOperator(lcname, rcname, op, scope, reverse);
+    if (!pyfunc)
+        if ((scope = Cppyy::GetScope(TypeManip::extract_namespace(lcname))))
+            pyfunc = BuildOperator(lcname, rcname, op, scope, reverse);
 
     if (!pyfunc && scope != Cppyy::GetGlobalScope())// search in global scope anyway
         pyfunc = BuildOperator(lcname, rcname, op, Cppyy::GetGlobalScope(), reverse);
