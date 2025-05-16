@@ -2987,7 +2987,7 @@ CPyCppyy::InitializerListConverter::InitializerListConverter(Cppyy::TCppType_t k
     : InstanceConverter{klass},
       fValueTypeName{value_type},
       fValueType{Cppyy::GetScope(value_type)},
-      fValueSize{Cppyy::SizeOf(value_type)}
+      fValueSize{Cppyy::SizeOfType(Cppyy::GetType(value_type, true))}
 {
 }
 
