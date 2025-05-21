@@ -69,7 +69,7 @@ typedef CPPScope CPPClass;
 
 class CPPSmartClass : public CPPClass {
 public:
-    Cppyy::TCppType_t   fUnderlyingType;
+    Cppyy::TCppScope_t  fUnderlyingType;
     Cppyy::TCppMethod_t fDereferencer;
 };
 
