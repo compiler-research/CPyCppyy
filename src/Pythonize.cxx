@@ -1741,13 +1741,19 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
                 if (Cppyy::IsStaticDatamember(data) || !Cppyy::IsPublicData(data))
                     continue;
 
-                std::string txt = Cppyy::GetDatamemberTypeAsString(data);
-                const std::string& res = Cppyy::IsEnumType(Cppyy::GetDatamemberType(data)) ? txt : Cppyy::ResolveName(txt);
+                Cppyy::TCppType_t datammember_type =
+                    Cppyy::GetDatamemberType(data);
+                const std::string &res =
+                    Cppyy::IsEnumType(datammember_type)
+                        ? Cppyy::GetScopedFinalName(
+                              Cppyy::GetScopeFromType(datammember_type))
+                        : Cppyy::GetTypeAsString(
+                              Cppyy::ResolveType(datammember_type));
                 const std::string& cpd = TypeManip::compound(res);
                 std::string res_clean = TypeManip::clean_type(res, false, true);
 
                 if (res_clean == "internal_enum_type_t")
-                    res_clean = txt;        // restore (properly scoped name)
+                  res_clean = res; // restore (properly scoped name)
 
                 if (res.rfind(']') == std::string::npos && res.rfind(')') == std::string::npos) {
                     if (!cpd.empty()) arg_types.push_back(res_clean+cpd);
