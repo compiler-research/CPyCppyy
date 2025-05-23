@@ -2011,7 +2011,7 @@ bool CPyCppyy::STLStringViewConverter::SetArg(
 // special case of a C++ std::string object; life-time management is left to
 // the caller to ensure any external changes propagate correctly
     if (CPPInstance_Check(pyobject)) {
-        static Cppyy::TCppScope_t sStringID = Cppyy::GetFullScope("std::string");
+        static Cppyy::TCppScope_t sStringID = Cppyy::GetUnderlyingScope(Cppyy::GetFullScope("std::string"));
         CPPInstance* pyobj = (CPPInstance*)pyobject;
         if (pyobj->ObjectIsA() == sStringID) {
             void* ptr = pyobj->GetObject();
