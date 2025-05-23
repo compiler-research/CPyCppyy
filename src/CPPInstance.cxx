@@ -472,6 +472,10 @@ static inline PyObject* eqneq_binop(CPPClass* klass, PyObject* self, PyObject* o
     bool flipit = false;
     PyObject* binop = op == Py_EQ ? klass->fOperators->fEq : klass->fOperators->fNe;
     if (!binop) {
+        binop = op == Py_EQ ? klass->fOperators->fNe : klass->fOperators->fEq;
+        if (binop) flipit = true;
+    }
+    if (!binop) {
         const char* cppop = op == Py_EQ ? "==" : "!=";
         PyCallable* pyfunc = FindBinaryOperator(self, obj, cppop);
         if (pyfunc) binop = (PyObject*)CPPOverload_New(cppop, pyfunc);
@@ -482,11 +486,6 @@ static inline PyObject* eqneq_binop(CPPClass* klass, PyObject* self, PyObject* o
     // sets the operator to Py_None if not found, indicating that search was done
         if (op == Py_EQ) klass->fOperators->fEq = binop;
         else klass->fOperators->fNe = binop;
-    }
-
-    if (binop == Py_None) {  // can try !== or !!= as alternatives
-        binop = op == Py_EQ ? klass->fOperators->fNe : klass->fOperators->fEq;
-        if (binop && binop != Py_None) flipit = true;
     }
 
     if (!binop || binop == Py_None) return nullptr;
