@@ -67,8 +67,8 @@ private:
 template <bool ISCONST>
 class InstancePtrConverter : public VoidArrayConverter {
 public:
-    InstancePtrConverter(Cppyy::TCppType_t klass, bool keepControl = false, const std::string &failureMsg = std::string()) :
-        VoidArrayConverter(keepControl, failureMsg), fClass(klass) {}
+    InstancePtrConverter(Cppyy::TCppScope_t klass, bool keepControl = false, const std::string &failureMsg = std::string()) :
+        VoidArrayConverter(keepControl, failureMsg), fClass(Cppyy::GetUnderlyingScope(klass)) {}
 
 public:
     virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr);
