@@ -1,5 +1,6 @@
 // Bindings
 #include "CPyCppyy.h"
+#include "Cppyy.h"
 #include "DeclareExecutors.h"
 #include "CPPInstance.h"
 #include "LowLevelViews.h"
@@ -912,6 +913,12 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
 
 // resolve typedefs etc.
     Cppyy::TCppType_t resolvedType = Cppyy::ResolveType(type);
+    {
+        // if resolvedType is a reference to enum
+        // then it should be reduced to reference
+        // to the underlying interger
+        resolvedType = Cppyy::ResolveEnumReferenceType(resolvedType);
+    }
     // FIXME: avoid string comparisons and parsing
     std::string resolvedTypeStr = Cppyy::GetTypeAsString(resolvedType);
     if (Cppyy::IsFunctionPointerType(resolvedType)) {
