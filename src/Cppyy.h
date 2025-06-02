@@ -109,6 +109,9 @@ namespace Cppyy {
     bool        IsComplete(TCppScope_t scope);
 
     CPPYY_IMPORT
+    bool IsPointerType(TCppType_t type);
+
+    CPPYY_IMPORT
     TCppScope_t gGlobalScope;      // for fast access
 
 // memory management ---------------------------------------------------------
