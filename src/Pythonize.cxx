@@ -5,6 +5,7 @@
 #include "CPPInstance.h"
 #include "CPPFunction.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "CustomPyTypes.h"
 #include "LowLevelViews.h"
 #include "ProxyWrappers.h"
@@ -577,6 +578,8 @@ static PyObject* vector_iter(PyObject* v) {
                     vi->vi_flags = vectoriterobject::kIsPolymorphic;
                 }
             }
+            if (Cppyy::IsPointerType(value_type))
+                vi->vi_flags = vectoriterobject::kIsPolymorphic;
             if (vi->vi_klass) {
                 vi->vi_converter = nullptr;
                 if (!vi->vi_flags) {
