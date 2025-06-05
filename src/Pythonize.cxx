@@ -340,7 +340,7 @@ static bool FillVector(PyObject* vecin, PyObject* args, ItemGetter* getter)
     if (fi && (PyTuple_CheckExact(fi) || PyList_CheckExact(fi))) {
     // use emplace_back to construct the vector entries one by one
         PyObject* eb_call = PyObject_GetAttrString(vecin, (char*)"emplace_back");
-        PyObject* vtype = GetAttrDirect((PyObject*)Py_TYPE(vecin), PyStrings::gValueType);
+        PyObject* vtype = GetAttrDirect((PyObject*)Py_TYPE(vecin), PyStrings::gValueTypePtr);
         bool value_is_vector = false;
         if (vtype && PyLong_Check(vtype)) {
         // if the value_type is a vector, then allow for initialization from sequences
@@ -553,7 +553,7 @@ static PyObject* vector_iter(PyObject* v) {
     if (v->ob_refcnt <= 2 || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
         vi->vi_flags = vectoriterobject::kNeedLifeLine;
 
-    PyObject* pyvalue_type = PyObject_GetAttr((PyObject*)Py_TYPE(v), PyStrings::gValueType);
+    PyObject* pyvalue_type = PyObject_GetAttr((PyObject*)Py_TYPE(v), PyStrings::gValueTypePtr);
     if (pyvalue_type) {
         PyObject* pyvalue_size = GetAttrDirect((PyObject*)Py_TYPE(v), PyStrings::gValueSize);
         if (pyvalue_size) {
@@ -1839,6 +1839,9 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
             Cppyy::TCppType_t vtype = Cppyy::ResolveType(value_type);
             if (vtype) {    // actually resolved?
                 PyObject* pyvalue_type = PyLong_FromVoidPtr(vtype);
+                PyObject_SetAttr(pyclass, PyStrings::gValueTypePtr, pyvalue_type);
+                Py_DECREF(pyvalue_type);
+                pyvalue_type = PyUnicode_FromString(Cppyy::GetTypeAsString(vtype).c_str());
                 PyObject_SetAttr(pyclass, PyStrings::gValueType, pyvalue_type);
                 Py_DECREF(pyvalue_type);
             }
