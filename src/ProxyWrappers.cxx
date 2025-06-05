@@ -588,8 +588,11 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     }
 
     std::string name = Cppyy::GetFinalName(scope);
-
+    bool is_typedef = false;
+    std::string typedefed_name = "";
     if (Cppyy::IsTypedefed(scope)) {
+        is_typedef = true;
+        typedefed_name = Cppyy::GetMethodFullName(scope);
         Cppyy::TCppScope_t underlying_scope = Cppyy::GetUnderlyingScope(scope);
         if (underlying_scope) {
             scope = underlying_scope;
@@ -697,6 +700,8 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         // FIXME: This is to mimic original behaviour. Still required?
         if (Cppyy::IsTemplateInstantiation(scope))
             name = Cppyy::GetScopedFinalName(scope);
+        if (is_typedef && !typedefed_name.empty())
+            AddScopeToParent(parent, typedefed_name, pyscope);
         AddScopeToParent(parent, name, pyscope);
     }
     Py_DECREF(parent);
