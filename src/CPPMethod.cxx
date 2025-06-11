@@ -561,7 +561,7 @@ bool CPyCppyy::CPPMethod::IsGreedy()
 
     for (int iarg = 0; iarg < (int)nArgs; ++iarg) {
         const std::string aname = Cppyy::GetMethodArgTypeAsString(fMethod, iarg);
-        if (aname.find("void*") != 0)
+        if (aname.find("void *") != 0)
             return false;
     }
     return true;
