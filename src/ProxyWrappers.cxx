@@ -594,7 +594,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         is_typedef = true;
         typedefed_name = Cppyy::GetMethodFullName(scope);
         Cppyy::TCppScope_t underlying_scope = Cppyy::GetUnderlyingScope(scope);
-        if (underlying_scope) {
+        if ((underlying_scope) && (underlying_scope != scope)) {
             scope = underlying_scope;
         } else {
             Cppyy::TCppType_t resolved_type = Cppyy::ResolveType(Cppyy::GetTypeFromScope(scope));
@@ -603,7 +603,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
                 PyObject* tc = PyDict_GetItemString(gPyTypeMap, resolved.c_str()); // borrowed
                 if (tc && PyCallable_Check(tc)) {
                     const std::string& scName = Cppyy::GetScopedFinalName(parent_scope);
-                    PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName.c_str());
+                    PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName != "<unnamed>" ? scName.c_str() : "");
                     if (nt) {
                         if (parent) {
                             AddScopeToParent(parent, name, nt);
