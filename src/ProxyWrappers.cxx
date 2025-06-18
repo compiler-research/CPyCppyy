@@ -510,6 +510,28 @@ PyObject* CPyCppyy::GetScopeProxy(Cppyy::TCppScope_t scope)
 
     return nullptr;
 }
+namespace CPyCppyy {
+PyObject *CppType_To_PyObject(Cppyy::TCppType_t type, std::string name, Cppyy::TCppScope_t parent_scope, PyObject *parent) {
+    Cppyy::TCppType_t resolved_type = Cppyy::ResolveType(type);
+    if (gPyTypeMap) {
+        const std::string& resolved = Cppyy::GetTypeAsString(resolved_type);
+        PyObject* tc = PyDict_GetItemString(gPyTypeMap, resolved.c_str()); // borrowed
+        if (tc && PyCallable_Check(tc)) {
+            const std::string& scName = Cppyy::GetScopedFinalName(parent_scope);
+            PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName != "<unnamed>" ? scName.c_str() : "");
+            if (nt) {
+                if (parent) {
+                    AddScopeToParent(parent, name, nt);
+                    Py_DECREF(parent);
+                }
+                return nt;
+            }
+            PyErr_Clear();
+        }
+    }
+    return nullptr;
+}
+}
 
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::CreateScopeProxy(PyObject*, PyObject* args)
@@ -551,22 +573,25 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
     }
 
 // retrieve C++ class (this verifies name, and is therefore done first)
-    Cppyy::TCppScope_t klass = Cppyy::GetScope(name, parent_scope);
-
-    if (!(bool)klass) {
-        if (name == "") {
-            klass = Cppyy::GetGlobalScope();
-            Py_INCREF(gThisModule);
-            parent = gThisModule;
-        } else {
-            // all options have been exhausted: it doesn't exist as such
-            PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ class", name.c_str());
-            Py_XDECREF(parent);
-            return nullptr;
-        }
+    if (name == "") {
+        Cppyy::TCppScope_t klass = Cppyy::GetGlobalScope();
+        Py_INCREF(gThisModule);
+        parent = gThisModule;
+        return CreateScopeProxy(klass, parent, flags);
+    } else if (Cppyy::TCppScope_t klass = Cppyy::GetScope(name, parent_scope)) {
+        return CreateScopeProxy(klass, parent, flags);
+    } else if (Cppyy::IsBuiltin(name)) {
+        Cppyy::TCppType_t type = Cppyy::GetType(name);
+        PyObject *result = nullptr;
+        if (type)
+            result = CppType_To_PyObject(type, name, parent_scope, parent);
+        if (result)
+            return result;
     }
-
-    return CreateScopeProxy(klass, parent, flags);
+    // all options have been exhausted: it doesn't exist as such
+    PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ class", name.c_str());
+    Py_XDECREF(parent);
+    return nullptr;
 }
 
 //----------------------------------------------------------------------------
@@ -597,23 +622,8 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
         if ((underlying_scope) && (underlying_scope != scope)) {
             scope = underlying_scope;
         } else {
-            Cppyy::TCppType_t resolved_type = Cppyy::ResolveType(Cppyy::GetTypeFromScope(scope));
-            if (gPyTypeMap) {
-                const std::string& resolved = Cppyy::GetTypeAsString(resolved_type);
-                PyObject* tc = PyDict_GetItemString(gPyTypeMap, resolved.c_str()); // borrowed
-                if (tc && PyCallable_Check(tc)) {
-                    const std::string& scName = Cppyy::GetScopedFinalName(parent_scope);
-                    PyObject* nt = PyObject_CallFunction(tc, (char*)"ss", name.c_str(), scName != "<unnamed>" ? scName.c_str() : "");
-                    if (nt) {
-                        if (parent) {
-                            AddScopeToParent(parent, name, nt);
-                            Py_DECREF(parent);
-                        }
-                        return nt;
-                    }
-                    PyErr_Clear();
-                }
-            }
+            if (PyObject *result = CppType_To_PyObject(Cppyy::GetTypeFromScope(scope), name, parent_scope, parent))
+                return result;
     
             PyErr_Format(PyExc_TypeError, "\'%s\' is not a known C++ class", Cppyy::GetScopedFinalName(scope).c_str());
             Py_XDECREF(parent);
