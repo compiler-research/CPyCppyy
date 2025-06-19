@@ -2616,7 +2616,7 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
 
     // FIXME: avoid string comparisons and parsing
     std::string true_signature = signature;
-    true_signature.erase(std::remove(true_signature.begin(), true_signature.end(), ' '), true_signature.end());
+
     if (true_signature.rfind("(void)") != std::string::npos)
         true_signature = true_signature.substr(0, true_signature.size() - 6) + "()";
 
