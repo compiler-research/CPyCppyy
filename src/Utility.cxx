@@ -839,7 +839,7 @@ std::vector<Cpp::TemplateArgInfo> CPyCppyy::Utility::GetTemplateArgsTypes(
             const char * tn_string = CPyCppyy_PyText_AsString(tn);
 
             if (Cppyy::AppendTypesSlow(tn_string, types)) {
-                PyErr_Format(PyExc_SyntaxError,
+                PyErr_Format(PyExc_TypeError,
                              "Cannot find Templated Arg: %s", tn_string);
                 return {};
             }
@@ -848,7 +848,7 @@ std::vector<Cpp::TemplateArgInfo> CPyCppyy::Utility::GetTemplateArgsTypes(
     // __cpp_name__ and/or __name__ is rather expensive)
         } else {
             if (!AddTypeName(types, tn, (args ? PyTuple_GET_ITEM(args, i) : nullptr), pref, pcnt)) {
-                PyErr_SetString(PyExc_SyntaxError,
+                PyErr_SetString(PyExc_TypeError,
                     "could not construct C++ name from provided template argument.");
                 return {};
             }
