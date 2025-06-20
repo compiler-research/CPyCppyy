@@ -3514,8 +3514,9 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         auto pos1 = resolvedTypeStr.find('(');
         auto pos2 = resolvedTypeStr.find("*)");
         auto pos3 = resolvedTypeStr.rfind(')');
+        std::string return_type = resolvedTypeStr.substr(0, pos1);
         result = new FunctionPointerConverter(
-            resolvedTypeStr.substr(0, pos1), resolvedTypeStr.substr(pos2+2, pos3-pos2-1));
+            return_type.erase(return_type.find_last_not_of(" ") + 1), resolvedTypeStr.substr(pos2+2, pos3-pos2-1));
     }
     const std::string failure_msg("Failed to convert type: " + fullType + "; resolved: " + resolvedTypeStr + "; real: " + realTypeStr + "; realUnresolvedType: " + realUnresolvedTypeStr + "; cpd: " + cpd);
 
