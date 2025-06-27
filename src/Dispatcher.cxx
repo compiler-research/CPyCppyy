@@ -153,7 +153,7 @@ std::vector<TCppMethod_t> FindBaseMethod(TCppScope_t tbase, const std::string mt
     result = GetMethodsFromName(tbase, mtCppName);
     if (result.empty()) {
         for (TCppIndex_t ibase = 0; ibase < GetNumBases(tbase); ++ibase) {
-            TCppScope_t b = GetScope(GetBaseName(tbase, ibase));
+            TCppScope_t b = Cppyy::GetBaseScope(tbase, ibase);
             result = FindBaseMethod(b, mtCppName);
             if (!result.empty())
                 break;
