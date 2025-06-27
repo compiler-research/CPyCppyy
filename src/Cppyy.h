@@ -68,6 +68,8 @@ namespace Cppyy {
 
     CPPYY_IMPORT
     TCppType_t ResolveEnumReferenceType(TCppType_t type);
+    CPPYY_IMPORT
+    TCppType_t ResolveEnumPointerType(TCppType_t type);
 
     CPPYY_IMPORT
     TCppType_t ResolveType(TCppType_t type);

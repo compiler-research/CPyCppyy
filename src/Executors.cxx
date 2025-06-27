@@ -918,6 +918,8 @@ CPyCppyy::Executor* CPyCppyy::CreateExecutor(Cppyy::TCppType_t type, cdims_t dim
         // then it should be reduced to reference
         // to the underlying interger
         resolvedType = Cppyy::ResolveEnumReferenceType(resolvedType);
+        // similarly for pointers
+        resolvedType = Cppyy::ResolveEnumPointerType(resolvedType);
     }
     // FIXME: avoid string comparisons and parsing
     std::string resolvedTypeStr = Cppyy::GetTypeAsString(resolvedType);
