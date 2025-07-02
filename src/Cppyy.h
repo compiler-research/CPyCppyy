@@ -76,6 +76,10 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppType_t GetRealType(TCppType_t type);
     CPPYY_IMPORT
+    TCppType_t GetReferencedType(TCppType_t type, bool rvalue);
+    CPPYY_IMPORT
+    TCppType_t GetPointerType(TCppType_t type);
+    CPPYY_IMPORT
     std::string ResolveEnum(TCppScope_t enum_type);
     CPPYY_IMPORT
     TCppScope_t GetScope(const std::string& name, TCppScope_t parent_scope = 0);

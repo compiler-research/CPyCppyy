@@ -751,31 +751,26 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
     }
 
     if (CPPScope_Check(tn)) {
-        auto cpp_type = Cppyy::GetTypeFromScope(((CPPClass*)tn)->fCppType);
-        types.push_back(cpp_type);
-        if (arg) {
+      auto cpp_type = Cppyy::GetTypeFromScope(((CPPClass*)tn)->fCppType);
+      if (arg) {
         // try to specialize the type match for the given object
             CPPInstance* pyobj = (CPPInstance*)arg;
             if (CPPInstance_Check(pyobj)) {
                 if (pyobj->fFlags & CPPInstance::kIsRValue)
-                    // tmpl_name.append("&&");
-                    // FIXME: add r-value reference to the last added type
-                    types;
+                  cpp_type =
+                      Cppyy::GetReferencedType(cpp_type, /*rvalue=*/true);
                 else {
                     if (pcnt) *pcnt += 1;
                     if ((pyobj->fFlags & CPPInstance::kIsReference) || pref == kPointer)
-                        // tmpl_name.push_back('*');
-                        // FIXME: wrap the last added type in a pointer
-                        types;
+                      cpp_type = Cppyy::GetPointerType(cpp_type);
                     else if (pref != kValue)
-                        // tmpl_name.push_back('&');
-                        // FIXME: add l-value reference to the last added type
-                        types;
+                      cpp_type =
+                          Cppyy::GetReferencedType(cpp_type, /*rvalue=*/false);
                 }
             }
-        }
-
-        return true;
+      }
+      types.push_back(cpp_type);
+      return true;
     }
 
     if (tn == (PyObject*)&CPPOverload_Type) {
@@ -810,8 +805,8 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
                     tpn << ')';
                     // tmpl_name.append(tpn.str());
                     // FIXME: find a way to add it to types
-                    throw std::runtime_error("This path is not yet implemented (AddTypeName) \n");
-                    types;
+                    throw std::runtime_error(
+                        "This path is not yet implemented (AddTypeName) \n");
 
                     return true;
 
