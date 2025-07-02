@@ -3488,7 +3488,8 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 // converters for known C++ classes and default (void*)
     Converter* result = nullptr;
     Cppyy::TCppScope_t klass = Cppyy::GetScopeFromType(realType);
-    if (klass || (klass = Cppyy::GetFullScope(realTypeStr))) {
+    // std::byte is a special enum class used to access raw memory
+    if ((realTypeStr != "std::byte") && (klass || (klass = Cppyy::GetFullScope(realTypeStr)))) {
         Cppyy::TCppType_t raw{0};
         if (Cppyy::GetSmartPtrInfo(realTypeStr, &raw, nullptr)) {
             if (cpd == "") {
