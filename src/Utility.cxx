@@ -1244,13 +1244,7 @@ std::string CPyCppyy::Utility::MapOperatorName(const std::string& name, bool bTa
         if (gOpRemove.find(op) != gOpRemove.end())
             return "";
 
-    // check first if none, to prevent spurious deserializing downstream
         TC2POperatorMapping_t::iterator pop = gC2POperatorMapping.find(op);
-        if (pop == gC2POperatorMapping.end() && gOpSkip.find(op) == gOpSkip.end()) {
-            op = Cppyy::ResolveName(op);
-            pop = gC2POperatorMapping.find(op);
-        }
-
     // map C++ operator to python equivalent, or made up name if no equivalent exists
         if (pop != gC2POperatorMapping.end()) {
             return pop->second;
