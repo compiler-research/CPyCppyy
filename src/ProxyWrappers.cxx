@@ -99,7 +99,7 @@ void AddPropertyToClass(PyObject* pyclass,
     PyType_Type.tp_setattro(pyclass, pname, (PyObject*)property);
 
 // allow access at the class level (always add after setting instance level)
-    if (Cppyy::IsStaticDatamember(data))
+    if (Cppyy::IsStaticDatamember(data) || Cppyy::IsEnumConstant(data))
         PyType_Type.tp_setattro((PyObject*)Py_TYPE(pyclass), pname, (PyObject*)property);
 
 // cleanup
@@ -378,11 +378,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
             continue;
 
     // enum datamembers (this in conjunction with previously collected enums above)
-        if (Cppyy::IsEnumType(Cppyy::GetDatamemberType(datamember)) && Cppyy::IsStaticDatamember(datamember)) {
-        // some implementation-specific data members have no address: ignore them
-            if (!Cppyy::GetDatamemberOffset(datamember))
-                continue;
-
+        if (Cppyy::IsEnumType(Cppyy::GetDatamemberType(datamember)) && Cppyy::IsEnumConstant(datamember)) {
         // two options: this is a static variable, or it is the enum value, the latter
         // already exists, so check for it and move on if set
             PyObject* eset = PyObject_GetAttrString(pyclass,
