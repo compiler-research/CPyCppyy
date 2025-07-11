@@ -36,13 +36,6 @@ jobs:
             cling: Off
             llvm_enable_projects: "clang"
             llvm_targets_to_build: "host;NVPTX"
-          - name: ubu22-x86-gcc12-clang-repl-17
-            os: ubuntu-22.04
-            compiler: gcc-12
-            clang-runtime: '17'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host;NVPTX"
           - name: ubu22-x86-gcc9-clang18-cling
             os: ubuntu-22.04
             compiler: gcc-9
@@ -62,13 +55,6 @@ jobs:
             os: ubuntu-22.04-arm
             compiler: gcc-12
             clang-runtime: '18'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host;NVPTX"
-          - name: ubu22-arm-gcc12-clang-repl-17
-            os: ubuntu-22.04-arm
-            compiler: gcc-12
-            clang-runtime: '17'
             cling: Off
             llvm_enable_projects: "clang"
             llvm_targets_to_build: "host;NVPTX"
@@ -271,12 +257,6 @@ jobs:
             clang-runtime: '18'
             cling: Off
             cppyy: On
-          - name: ubu22-x86-gcc12-clang-repl-17-cppyy
-            os: ubuntu-22.04
-            compiler: gcc-12
-            clang-runtime: '17'
-            cling: Off
-            cppyy: On
           - name: ubu22-x86-gcc9-clang18-cling-cppyy
             os: ubuntu-22.04
             compiler: gcc-9
@@ -294,12 +274,6 @@ jobs:
             os: ubuntu-22.04-arm
             compiler: gcc-12
             clang-runtime: '18'
-            cling: Off
-            cppyy: Off
-          - name: ubu22-arm-gcc12-clang-repl-17
-            os: ubuntu-22.04-arm
-            compiler: gcc-12
-            clang-runtime: '17'
             cling: Off
             cppyy: Off
           - name: ubu22-arm-gcc9-clang18-cling-cppyy
