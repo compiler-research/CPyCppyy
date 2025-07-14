@@ -399,11 +399,9 @@ PyObject* CPyCppyy::CPPMethod::GetPrototype(bool fa)
     // gives
     // a::b
     std::string finalscope = Cppyy::GetScopedFinalName(fScope);
-    return CPyCppyy_PyText_FromFormat("%s%s %s%s%s%s",
+    return CPyCppyy_PyText_FromFormat("%s%s %s%s",
         (Cppyy::IsStaticMethod(fMethod) ? "static " : ""),
         Cppyy::GetMethodReturnTypeAsString(fMethod).c_str(),
-        finalscope.c_str(),
-        (finalscope.empty() ? "" : "::"), // Add final set of '::' if the method is scoped in namespace(s)
         Cppyy::GetScopedFinalName(fMethod).c_str(),
         GetSignatureString(fa).c_str());
 }
