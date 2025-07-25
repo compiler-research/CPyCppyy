@@ -329,6 +329,8 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                 attr = nullptr;
             }
             PyErr_Clear();
+        } else if (CPPScope_Check(attr) && CPPScope_Check(pyclass) && ((CPPScope*)attr)->fFlags & CPPScope::kIsException) {
+            return CreateExcScopeProxy(attr, pyname, pyclass);
         } else
             return attr;
     }
