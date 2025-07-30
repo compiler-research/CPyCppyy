@@ -841,7 +841,12 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
     // source of errors otherwise, it is limited to specific types and not
     // generally used (str(obj) can print anything ...)
         PyObject* pystr = PyObject_Str(tn);
-        types.push_back({Cppyy::GetType("int"), strdup(CPyCppyy_PyText_AsString(pystr))});
+        std::string num = CPyCppyy_PyText_AsString(pystr);
+        if (num == "True")
+            num = "1";
+        else if (num == "False")
+            num = "0";
+        types.push_back({Cppyy::GetType("int"), strdup(num.c_str())});
         Py_DECREF(pystr);
         return true;
     }
