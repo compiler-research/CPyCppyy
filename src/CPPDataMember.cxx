@@ -345,6 +345,7 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
         fFlags |= kIsConstData;
     } else {
         type = Cppyy::GetDatamemberType(data);
+        fFullType = Cppyy::GetTypeAsString(type);
 
         // Get the integer type if it's an enum
         if (Cppyy::IsEnumType(type))
