@@ -325,6 +325,11 @@ namespace Cppyy {
     std::string GetDatamemberName(TCppScope_t scope, TCppIndex_t idata);
     CPPYY_IMPORT
     TCppScope_t ReduceReturnType(TCppScope_t fn, TCppType_t reduce);
+    bool IsLambdaClass(TCppType_t type);
+    CPPYY_IMPORT
+    TCppScope_t WrapLambdaFromVariable(TCppScope_t var);
+    CPPYY_IMPORT
+    TCppScope_t AdaptFunctionForLambdaReturn(TCppScope_t fn);
     CPPYY_IMPORT
     TCppType_t  GetDatamemberType(TCppScope_t var);
     CPPYY_IMPORT

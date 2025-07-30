@@ -341,10 +341,11 @@ CPyCppyy::CPPMethod::CPPMethod(
     fMethod(method), fScope(scope), fExecutor(nullptr), fArgIndices(nullptr),
     fArgsRequired(-1)
 {
-    Cppyy::TCppType_t result = Cppyy::ResolveType(Cppyy::GetMethodReturnType(fMethod));
-    if (TypeReductionMap.contains(result)) {
+   Cppyy::TCppType_t result = Cppyy::ResolveType(Cppyy::GetMethodReturnType(fMethod));
+    if (TypeReductionMap.contains(result))
         fMethod = Cppyy::ReduceReturnType(fMethod, TypeReductionMap[result]);
-    }
+    if (result && Cppyy::IsLambdaClass(result))
+        fMethod = Cppyy::AdaptFunctionForLambdaReturn(fMethod);
 }
 
 //----------------------------------------------------------------------------
