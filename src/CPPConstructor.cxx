@@ -46,8 +46,7 @@ PyObject* CPyCppyy::CPPConstructor::Reflex(
     if (request == Cppyy::Reflex::RETURN_TYPE) {
         std::string fn = Cppyy::GetScopedFinalName(this->GetScope());
         if (format == Cppyy::Reflex::OPTIMAL || format == Cppyy::Reflex::AS_TYPE)
-            // return CreateScopeProxy(Cppyy::GetFinalName(this->GetScope()););
-            return Instance_FromVoidPtr(this->GetScope(), this->GetScope(), 0);
+            return CreateScopeProxy(this->GetScope());
         else if (format == Cppyy::Reflex::AS_STRING)
             return CPyCppyy_PyText_FromString(fn.c_str());
     }
