@@ -768,7 +768,7 @@ static PyObject* op_str(CPPInstance* self)
             // normal lookup failed; attempt lazy install of global operator<<(ostream&, type&)
                 std::string rcname = Utility::ClassName((PyObject*)self);
                 Cppyy::TCppScope_t rnsID = Cppyy::GetScope(TypeManip::extract_namespace(rcname));
-                PyCallable* pyfunc = Utility::FindBinaryOperator("std::ostream", rcname, "<<", rnsID);
+                PyCallable* pyfunc = Utility::FindBinaryOperator("std::ostream&", rcname, "<<", rnsID);
                 if (!pyfunc)
                      continue;
 
