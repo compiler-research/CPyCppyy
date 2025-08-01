@@ -333,13 +333,18 @@ void CPyCppyy::CPPMethod::SetPyError_(PyObject* msg)
     Py_XDECREF(msg);
 }
 
+extern std::map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
+
 //- constructors and destructor ----------------------------------------------
 CPyCppyy::CPPMethod::CPPMethod(
         Cppyy::TCppScope_t scope, Cppyy::TCppMethod_t method) :
     fMethod(method), fScope(scope), fExecutor(nullptr), fArgIndices(nullptr),
     fArgsRequired(-1)
 {
-   // empty
+    Cppyy::TCppType_t result = Cppyy::ResolveType(Cppyy::GetMethodReturnType(fMethod));
+    if (TypeReductionMap.contains(result)) {
+        fMethod = Cppyy::ReduceReturnType(fMethod, TypeReductionMap[result]);
+    }
 }
 
 //----------------------------------------------------------------------------

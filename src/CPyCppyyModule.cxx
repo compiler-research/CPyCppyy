@@ -36,6 +36,8 @@ PyObject* Instance_FromVoidPtr(
 #include <vector>
 
 
+std::map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
+
 // Note: as of py3.11, dictionary objects no longer carry a function pointer for
 // the lookup, so it can no longer be shimmed and "from cppyy.interactive import *"
 // thus no longer works.
@@ -910,7 +912,9 @@ static PyObject* AddTypeReducer(PyObject*, PyObject* args)
     if (!PyArg_ParseTuple(args, const_cast<char*>("ss"), &reducable, &reduced))
         return nullptr;
 
-    Cppyy::AddTypeReducer(reducable, reduced);
+    Cppyy::TCppType_t reducable_type = Cppyy::GetTypeFromScope(Cppyy::GetScope(reducable));
+    Cppyy::TCppType_t reduced_type = Cppyy::GetTypeFromScope(Cppyy::GetScope(reduced));
+    TypeReductionMap[reducable_type] = reduced_type;
 
     Py_RETURN_NONE;
 }
