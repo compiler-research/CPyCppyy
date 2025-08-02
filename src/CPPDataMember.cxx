@@ -324,16 +324,22 @@ PyTypeObject CPPDataMember_Type = {
 //- public members -----------------------------------------------------------
 void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t data)
 {
-    fEnclosingScope = scope;
-    fScope          = data;
-    fOffset         = Cppyy::GetDatamemberOffset(data, scope); // XXX: Check back here // TODO: make lazy
-    fFlags          = Cppyy::IsStaticDatamember(data) ? kIsStaticData : 0;
+    if (Cppyy::IsLambdaClass(Cppyy::GetDatamemberType(data))) {
+        fScope = Cppyy::WrapLambdaFromVariable(data);
+    } else {
+        fScope = data;
+    }
 
-    const std::string name = Cppyy::GetFinalName(data);
+    fEnclosingScope = scope;
+    fOffset         = Cppyy::GetDatamemberOffset(fScope, fScope == data ? scope : Cppyy::GetScope("__cppyy_internal_wrap_g")); // XXX: Check back here // TODO: make lazy
+    fFlags          = Cppyy::IsStaticDatamember(fScope) ? kIsStaticData : 0;
+
+    const std::string name = Cppyy::GetFinalName(fScope);
     Cppyy::TCppType_t type;
 
-    if (Cppyy::IsEnumConstant(data)) {
-        type = Cppyy::GetEnumConstantType(data);
+
+    if (Cppyy::IsEnumConstant(fScope)) {
+        type = Cppyy::GetEnumConstantType(fScope);
         fFullType = Cppyy::GetTypeAsString(type);
         if (fFullType.find("(anonymous)") == std::string::npos &&
             fFullType.find("(unnamed)")   == std::string::npos) {
@@ -344,14 +350,14 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
         type = Cppyy::ResolveType(type);
         fFlags |= kIsConstData;
     } else {
-        type = Cppyy::GetDatamemberType(data);
+        type = Cppyy::GetDatamemberType(fScope);
         fFullType = Cppyy::GetTypeAsString(type);
 
         // Get the integer type if it's an enum
         if (Cppyy::IsEnumType(type))
             type = Cppyy::ResolveType(type);
         
-        if (Cppyy::IsConstVar(data))
+        if (Cppyy::IsConstVar(fScope))
             fFlags |= kIsConstData;
     }
 
