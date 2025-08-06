@@ -79,6 +79,16 @@ PyObject* CPyCppyy::CPPConstructor::Call(CPPInstance*& self,
         return nullptr;
     }
 
+    const auto cppScopeFlags = ((CPPScope*)Py_TYPE(self))->fFlags;
+
+// Do nothing if the constructor is explicit and we are in an implicit
+// conversion context. See also the ConvertImplicit() helper in Converters.cxx.
+    if((cppScopeFlags & CPPScope::kActiveImplicitCall) && Cppyy::IsExplicit(GetMethod())) {
+        // FIXME: Cases with explicit marked std::complex constructors where we expect implicit conversionss
+        if (Cppyy::GetMethodSignature(GetMethod(), true).find("std::complex") == std::string::npos)
+            return nullptr;
+    }
+
 // self provides the python context for lifelines
     if (!ctxt->fPyContext)
         ctxt->fPyContext = (PyObject*)cargs.fSelf;    // no Py_INCREF as no ownership
@@ -127,7 +137,7 @@ PyObject* CPyCppyy::CPPConstructor::Call(CPPInstance*& self,
 
     } else {
     // translate the arguments
-        if (((CPPClass*)Py_TYPE(self))->fFlags & CPPScope::kNoImplicit)
+        if (cppScopeFlags & CPPScope::kActiveImplicitCall)
             ctxt->fFlags |= CallContext::kNoImplicit;
         if (!this->ConvertAndSetArgs(cargs.fArgs, cargs.fNArgsf, ctxt))
             return nullptr;
