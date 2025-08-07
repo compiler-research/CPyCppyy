@@ -603,7 +603,12 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     if (pyclass)
         return pyclass;
 
-    Cppyy::TCppScope_t parent_scope = Cppyy::GetParentScope(scope);
+    Cppyy::TCppScope_t parent_scope = nullptr;
+    if (CPPScope_Check(parent))
+        parent_scope = ((CPPScope*)parent)->fCppType;
+    if (!parent_scope)
+        parent_scope = Cppyy::GetParentScope(scope);
+
     if (!parent) {
         if (parent_scope)
             parent = CreateScopeProxy(parent_scope);
