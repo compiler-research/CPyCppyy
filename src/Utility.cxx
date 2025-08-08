@@ -829,7 +829,22 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
     for (auto nn : {PyStrings::gCppName, PyStrings::gName}) {
         PyObject* tpName = PyObject_GetAttr(tn, nn);
         if (tpName) {
-            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+            Cppyy::TCppType_t type = Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true);
+            if (Cppyy::IsEnumType(type)) {
+                PyObject *value_int = PyNumber_Index(tn);
+                if (!value_int) {
+                    types.push_back(type);
+                    PyErr_Clear();
+                } else {
+                    PyObject* pystr = PyObject_Str(tn);
+                    std::string num = CPyCppyy_PyText_AsString(pystr);
+                    types.push_back({type, strdup(num.c_str())});
+                    Py_DECREF(pystr);
+                    Py_DECREF(value_int);
+                }
+            } else {
+                types.push_back(type);
+            }
             Py_DECREF(tpName);
             return true;
         }
