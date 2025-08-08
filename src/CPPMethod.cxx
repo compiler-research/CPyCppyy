@@ -550,6 +550,10 @@ int CPyCppyy::CPPMethod::GetPriority()
     if (Cppyy::IsConstMethod(fMethod) && Cppyy::GetMethodName(fMethod) == "operator[]")
         priority += -10;
 
+    // constructors are prefered
+    if (Cppyy::IsConstructor(fMethod))
+        priority += 100;
+
     return priority;
 }
 
