@@ -3488,8 +3488,18 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
 // converters for known C++ classes and default (void*)
     Converter* result = nullptr;
     Cppyy::TCppScope_t klass = Cppyy::GetScopeFromType(realType);
-    // std::byte is a special enum class used to access raw memory
-    if ((realTypeStr != "std::byte") && (klass || (klass = Cppyy::GetFullScope(realTypeStr)))) {
+    if (resolvedTypeStr.find("(*)") != std::string::npos ||
+               (resolvedTypeStr.find("::*)") != std::string::npos)) {
+    // this is a function function pointer
+    // TODO: find better way of finding the type
+        auto pos1 = resolvedTypeStr.find('(');
+        auto pos2 = resolvedTypeStr.find("*)");
+        auto pos3 = resolvedTypeStr.rfind(')');
+        std::string return_type = resolvedTypeStr.substr(0, pos1);
+        result = new FunctionPointerConverter(
+            return_type.erase(return_type.find_last_not_of(" ") + 1), resolvedTypeStr.substr(pos2+2, pos3-pos2-1));
+    } else if ((realTypeStr != "std::byte") && (klass || (klass = Cppyy::GetFullScope(realTypeStr)))) {
+        // std::byte is a special enum class used to access raw memory
         Cppyy::TCppType_t raw{0};
         if (Cppyy::GetSmartPtrInfo(realTypeStr, &raw, nullptr)) {
             if (cpd == "") {
@@ -3516,16 +3526,6 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
             }
         }
-    } else if (resolvedTypeStr.find("(*)") != std::string::npos ||
-               (resolvedTypeStr.find("::*)") != std::string::npos)) {
-    // this is a function function pointer
-    // TODO: find better way of finding the type
-        auto pos1 = resolvedTypeStr.find('(');
-        auto pos2 = resolvedTypeStr.find("*)");
-        auto pos3 = resolvedTypeStr.rfind(')');
-        std::string return_type = resolvedTypeStr.substr(0, pos1);
-        result = new FunctionPointerConverter(
-            return_type.erase(return_type.find_last_not_of(" ") + 1), resolvedTypeStr.substr(pos2+2, pos3-pos2-1));
     }
     const std::string failure_msg("Failed to convert type: " + fullType + "; resolved: " + resolvedTypeStr + "; real: " + realTypeStr + "; realUnresolvedType: " + realUnresolvedTypeStr + "; cpd: " + cpd);
 
