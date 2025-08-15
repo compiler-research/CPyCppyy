@@ -577,9 +577,8 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
     } else if (Cppyy::TCppScope_t klass = Cppyy::GetScope(name, parent_scope)) {
         if (Cppyy::IsTypedefed(klass) &&
             Cppyy::IsPointerType(Cppyy::GetTypeFromScope(klass)) &&
-            Cppyy::IsClass(Cppyy::GetUnderlyingScope(klass)) &&
-            !Cppyy::IsComplete(Cppyy::GetUnderlyingScope(klass)))
-            return nullptr; // this is handled by the caller; typedef to undefined class pointer
+            Cppyy::IsClass(Cppyy::GetUnderlyingScope(klass)))
+            return nullptr; // this is handled by the caller; typedef to class pointer
         return CreateScopeProxy(klass, parent, flags);
     } else if (Cppyy::IsBuiltin(name)) {
         Cppyy::TCppType_t type = Cppyy::GetType(name);
