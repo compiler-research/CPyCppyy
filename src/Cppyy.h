@@ -187,6 +187,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsMethod(TCppScope_t handle);
     CPPYY_IMPORT
+    bool IsTemplateClass(TCppScope_t handle);
+    CPPYY_IMPORT
     bool IsTemplate(TCppScope_t handle);
     CPPYY_IMPORT
     bool IsTemplateInstantiation(TCppScope_t handle);
@@ -268,9 +270,13 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetMethodReturnTypeAsString(TCppMethod_t);
     CPPYY_IMPORT
+    TCppIndex_t GetTemplateNumArgs(TCppScope_t);;
+    CPPYY_IMPORT
     TCppIndex_t GetMethodNumArgs(TCppMethod_t);
     CPPYY_IMPORT
     TCppIndex_t GetMethodReqArgs(TCppMethod_t);
+    CPPYY_IMPORT
+    std::string GetTemplateArgName(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
     std::string GetMethodArgName(TCppMethod_t, TCppIndex_t iarg);
     CPPYY_IMPORT
@@ -297,6 +303,8 @@ namespace Cppyy {
     std::string GetTemplatedMethodName(TCppScope_t scope, TCppIndex_t imeth);
     CPPYY_IMPORT
     bool        ExistsMethodTemplate(TCppScope_t scope, const std::string& name);
+    CPPYY_IMPORT
+    bool        IsPureTemplatedMethod(TCppMethod_t method);
     CPPYY_IMPORT
     bool        IsTemplatedMethod(TCppMethod_t method);
     CPPYY_IMPORT
@@ -336,6 +344,8 @@ namespace Cppyy {
     TCppScope_t WrapLambdaFromVariable(TCppScope_t var);
     CPPYY_IMPORT
     TCppScope_t AdaptFunctionForLambdaReturn(TCppScope_t fn);
+    CPPYY_IMPORT
+    void GetMemberInNamespace(TCppScope_t ns, std::vector<TCppScope_t>& members);
     CPPYY_IMPORT
     TCppType_t  GetDatamemberType(TCppScope_t var);
     CPPYY_IMPORT
