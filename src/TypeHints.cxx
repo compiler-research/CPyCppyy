@@ -211,8 +211,7 @@ void handle_templates(Cppyy::TCppScope_t tmpl, std::ostringstream &file, int ind
         bool prepend_comma = false;
         if (is_method && !Cppyy::IsStaticMethod(tmpl)) {
             // add the implicit self argument
-            file << "self: "
-                << pythonize_type_name(class_name);
+            file << "self: Self"; // ???
             prepend_comma = true;
         }
         for (size_t i = 0, nArgs = Cppyy::GetMethodNumArgs(tmpl); i < nArgs; i++) {
