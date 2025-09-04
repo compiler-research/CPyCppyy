@@ -104,6 +104,13 @@ void handle_variable(Cppyy::TCppScope_t var, std::ostringstream &file, int inden
 void handle_variable(Cppyy::TCppScope_t var, std::ostringstream &file, int indent = 0) {
     std::string indentation_str = indentation(indent);
 
+    std::string doc = Cppyy::GetDoc(var);
+    if (!doc.empty()) {
+        file << indentation_str
+            << "# "
+            << replace_all(doc, "\n", "\n# ")
+            << "\n";
+    }
     file << indentation_str
         << Cppyy::GetFinalName(var)
         << ": "
@@ -113,6 +120,14 @@ void handle_variable(Cppyy::TCppScope_t var, std::ostringstream &file, int inden
 
 void handle_typedef(Cppyy::TCppScope_t var, std::ostringstream &file, int indent) {
     std::string indentation_str = indentation(indent);
+
+    std::string doc = Cppyy::GetDoc(var);
+    if (!doc.empty()) {
+        file << indentation_str
+            << "# "
+            << replace_all(doc, "\n", "\n# ")
+            << "\n";
+    }
 
     file << indentation_str
         << Cppyy::GetMethodName(var)
@@ -147,8 +162,7 @@ void handle_function(Cppyy::TCppScope_t fn, std::ostringstream &file, int indent
     bool prepend_comma = false;
     if (Cppyy::IsMethod(fn) && !Cppyy::IsStaticMethod(fn)) {
         // add the implicit self argument
-        file << "self: "
-            << pythonize_type_name(class_name);
+        file << "self: Self";
         prepend_comma = true;
     }
     for (size_t i = 0, nArgs = Cppyy::GetMethodNumArgs(fn); i < nArgs; i++) {
@@ -168,7 +182,16 @@ void handle_function(Cppyy::TCppScope_t fn, std::ostringstream &file, int indent
     }
     file << ") -> "
         << pythonize_type_name(Cppyy::GetMethodReturnTypeAsString(fn))
-        << ": ...\n";
+        << ":\n";
+    std::string doc = Cppyy::GetDoc(fn);
+    if (!doc.empty()) {
+        file << indentation_str
+            << "    \"\"\""
+            << replace_all(doc, "\"\"\"", "\\\"\\\"\\\"") // replace """ -> \"\"\"
+            << "\"\"\"\n";
+    }
+    file << indentation_str
+        << "    ...\n";
 }
 
 void handle_templates(Cppyy::TCppScope_t tmpl, std::ostringstream &file, int indent) { 
@@ -231,9 +254,18 @@ void handle_templates(Cppyy::TCppScope_t tmpl, std::ostringstream &file, int ind
         }
         file << ") -> "
             << pythonize_type_name(Cppyy::GetMethodReturnTypeAsString(tmpl))
-            << ": ...\n";
+            << ":\n";
+        std::string doc = Cppyy::GetDoc(tmpl);
+        if (!doc.empty()) {
+            file << indentation_str
+                << "    \"\"\""
+                << replace_all(doc, "\"\"\"", "\\\"\\\"\\\"") // replace """ -> \"\"\"
+                << "\"\"\"\n";
+        }
+        file << indentation_str
+            << "    ...\n";
     } else {
-        // is templated class
+        // is templated class ???
     }
 }
 
@@ -257,6 +289,13 @@ void handle_class(Cppyy::TCppScope_t cls, std::ostringstream &file, int indent) 
         file << "]";
     }
     file << ":\n";
+    std::string doc = Cppyy::GetDoc(cls);
+    if (!doc.empty()) {
+        file << indentation_str
+            << "    \"\"\""
+            << replace_all(doc, "\"\"\"", "\\\"\\\"\\\"") // replace """ -> \"\"\"
+            << "\"\"\"\n\n";
+    }
     
     std::vector<Cppyy::TCppScope_t> members;
     Cppyy::GetDatamembers(cls, members);
@@ -284,9 +323,17 @@ void handle_class(Cppyy::TCppScope_t cls, std::ostringstream &file, int indent) 
 }
 
 void handle_namespace(Cppyy::TCppScope_t ns, std::ostringstream &file, int indent) {
+    std::string indentation_str = indentation(indent);
     std::vector<Cppyy::TCppScope_t> members;
     Cppyy::GetMemberInNamespace(ns, members);
     file << "class " << Cppyy::GetMethodName(ns) << ":\n";
+    std::string doc = Cppyy::GetDoc(ns);
+    if (!doc.empty()) {
+        file << indentation_str
+            << "    \"\"\""
+            << replace_all(doc, "\"\"\"", "\\\"\\\"\\\"") // replace """ -> \"\"\"
+            << "\"\"\"\n\n";
+    }
     for (Cppyy::TCppScope_t s: members)
         handle_scope(s, file, indent + 1);
 }

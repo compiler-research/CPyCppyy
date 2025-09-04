@@ -90,6 +90,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppScope_t GetTypeScope(TCppScope_t klass);
     CPPYY_IMPORT
+    std::string GetDoc(TCppScope_t scope);
+    CPPYY_IMPORT
     TCppScope_t GetNamed(const std::string& scope_name,
                          TCppScope_t parent_scope = 0);
     CPPYY_IMPORT
