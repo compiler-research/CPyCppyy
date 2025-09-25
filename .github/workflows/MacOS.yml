@@ -166,8 +166,6 @@ jobs:
           brew unlink "$pkg"
           brew link --overwrite "$pkg"
         done
-        brew upgrade openssl >/dev/null 2>&1 
-        brew upgrade
         brew install ninja
 
     - name: Build LLVM/Cling if the cache is invalid
@@ -409,7 +407,6 @@ jobs:
           brew unlink "$pkg"
           brew link --overwrite "$pkg"
         done
-        brew upgrade --force 
         brew install eigen
         brew install boost
         brew install gnu-sed
@@ -538,7 +535,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install pytest
         python -m pip install pytest-xdist
-        python -m pip install numba
+        python -m pip install numba==0.61.2
         echo ::endgroup::
         echo ::group::Run complete test suite
         set -o pipefail
