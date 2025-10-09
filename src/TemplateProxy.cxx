@@ -16,6 +16,12 @@
 
 namespace CPyCppyy {
 
+static inline std::string targs2str(TemplateProxy* pytmpl)
+{
+    if (!pytmpl || !pytmpl->fTemplateArgs) return "";
+    return CPyCppyy_PyText_AsString(pytmpl->fTemplateArgs);
+}
+
 //----------------------------------------------------------------------------
 TemplateInfo::TemplateInfo() : fPyClass(nullptr), fNonTemplated(nullptr),
     fTemplated(nullptr), fLowPriority(nullptr), fDoc(nullptr)
@@ -93,8 +99,14 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
             bool bArgSet = false;
 
         // special case for arrays
-            PyObject* pytc = PyObject_GetAttr(itemi, PyStrings::gTypeCode);
-            if (pytc) {
+            if (TemplateProxy_CheckExact(itemi)) {
+                TemplateProxy *tn = (TemplateProxy*)itemi;
+                PyObject *f = PyUnicode_FromFormat("%s%s", tn->fTI->fCppName.c_str(), targs2str(tn).c_str());
+                PyTuple_SET_ITEM(tpArgs, i, f);
+                bArgSet = true;
+            }
+            PyObject* pytc;
+            if (!bArgSet && (pytc = PyObject_GetAttr(itemi, PyStrings::gTypeCode))) {
                 Py_buffer bufinfo;
                 memset(&bufinfo, 0, sizeof(Py_buffer));
                 std::string ptrdef;
@@ -419,12 +431,6 @@ static int tpp_doc_set(TemplateProxy* pytmpl, PyObject *val, void *)
 { if (!errors.empty())                                                       \
       std::for_each(errors.begin(), errors.end(), Utility::PyError_t::Clear);\
   return result; }
-
-static inline std::string targs2str(TemplateProxy* pytmpl)
-{
-    if (!pytmpl || !pytmpl->fTemplateArgs) return "";
-    return CPyCppyy_PyText_AsString(pytmpl->fTemplateArgs);
-}
 
 static inline void UpdateDispatchMap(TemplateProxy* pytmpl, bool use_targs, uint64_t sighash, CPPOverload* pymeth)
 {
