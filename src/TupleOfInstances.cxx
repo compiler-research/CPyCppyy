@@ -146,8 +146,11 @@ PyObject* TupleOfInstances_New(
         return (PyObject*)ia;
     } else if (1 < dims.ndim()) {
     // not the innermost dimension, descend one level
-        size_t block_size = 0;
-        for (Py_ssize_t i = 1; i < dims.ndim(); ++i) block_size += (size_t)dims[i];
+        size_t block_size = 1;
+        for (Py_ssize_t i = 1; i < dims.ndim(); ++i) {
+            if (dims[i] != 0)
+                block_size *= (size_t)dims[i];
+        }
         block_size *= Cppyy::SizeOf(klass);
 
         Py_ssize_t nelems = dims[0];
