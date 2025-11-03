@@ -45,8 +45,8 @@ jobs:
             llvm_enable_projects: "clang;lld"
             llvm_targets_to_build: "WebAssembly"
             emsdk_ver: "3.1.73"
-          - name: osx13-x86-clang-clang-repl-19-emscripten
-            os: macos-13
+          - name: osx15-x86-clang-clang-repl-19-emscripten
+            os: macos-15-intel
             compiler: clang
             clang-runtime: '19'
             cling: Off
@@ -486,8 +486,8 @@ jobs:
             cling: Off
             micromamba_shell_init: bash
             emsdk_ver: "3.1.73"
-          - name: osx13-x86-clang-clang-repl-19-emscripten_wasm
-            os: macos-13
+          - name: osx15-x86-clang-clang-repl-19-emscripten_wasm
+            os: macos-15-intel
             compiler: clang
             clang-runtime: '19'
             cling: Off
