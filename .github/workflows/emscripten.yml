@@ -286,6 +286,12 @@ jobs:
         fi
         cd llvm-project
         # Build
+        mkdir native_build
+        cd native_build
+        cmake -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=host -DCMAKE_BUILD_TYPE=Release ../llvm/
+        cmake --build . --target llvm-tblgen clang-tblgen --parallel $(nproc --all)
+        export NATIVE_DIR=$PWD/bin/
+        cd ..
         mkdir build
         if [[ "${cling_on}" == "ON" ]]; then
           cd build
@@ -313,14 +319,13 @@ jobs:
         else
           # Apply patches
           llvm_vers=$(echo "${{ matrix.clang-runtime }}" | tr '[:lower:]' '[:upper:]')
-          if [[ "${llvm_vers}" == "19" ]]; then
-            git apply -v ${{ github.workspace }}/CppInterOp/patches/llvm/emscripten-clang${{ matrix.clang-runtime }}-*.patch
+          if [[ "${llvm_vers}" == "19" || "${llvm_vers}" == "20" ]]; then
+            git apply -v ../patches/llvm/emscripten-clang${{ matrix.clang-runtime }}-*.patch
             echo "Apply emscripten-clang${{ matrix.clang-runtime }}-*.patch patches:"
           fi
           cd build
           emcmake cmake -DCMAKE_BUILD_TYPE=Release \
                         -DLLVM_HOST_TRIPLE=wasm32-unknown-emscripten \
-                        -DLLVM_ENABLE_ASSERTIONS=ON                        \
                         -DLLVM_TARGETS_TO_BUILD="${{ matrix.llvm_targets_to_build }}" \
                         -DLLVM_ENABLE_LIBEDIT=OFF \
                         -DLLVM_ENABLE_PROJECTS="${{ matrix.llvm_enable_projects }}" \
@@ -334,9 +339,16 @@ jobs:
                         -DLLVM_INCLUDE_EXAMPLES=OFF                     \
                         -DLLVM_INCLUDE_TESTS=OFF                        \
                         -DLLVM_ENABLE_THREADS=OFF                       \
+                        -DLLVM_BUILD_TOOLS=OFF                          \
+                        -DLLVM_ENABLE_LIBPFM=OFF                        \
+                        -DCLANG_BUILD_TOOLS=OFF                         \
                         -G Ninja                                         \
+                        -DLLVM_NATIVE_TOOL_DIR=$NATIVE_DIR 		\
+                        -DCMAKE_C_FLAGS_RELEASE="-Oz -g0 -DNDEBUG" \
+                        -DCMAKE_CXX_FLAGS_RELEASE="-Oz -g0 -DNDEBUG" \
+                        -DLLVM_ENABLE_LTO=Full \
                         ../llvm
-          emmake ninja clang clang-repl lld -j ${{ env.ncpus }}
+          emmake ninja libclang clangInterpreter clangStaticAnalyzerCore lldWasm
         fi
         cd ../
         rm -rf $(find . -maxdepth 1 ! -name "build" ! -name "llvm" ! -name "clang" ! -name ".")
