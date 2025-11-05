@@ -179,6 +179,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsNamespace(TCppScope_t scope);
     CPPYY_IMPORT
+    bool IsCUDAFunction(TCppScope_t scope);
+    CPPYY_IMPORT
     bool IsClass(TCppScope_t scope);
     CPPYY_IMPORT
     bool IsTemplate(TCppScope_t handle);
@@ -328,6 +330,8 @@ namespace Cppyy {
     bool IsLambdaClass(TCppType_t type);
     CPPYY_IMPORT
     TCppScope_t WrapLambdaFromVariable(TCppScope_t var);
+    CPPYY_IMPORT
+    void AdaptCUDAFunction(TCppScope_t fn);
     CPPYY_IMPORT
     TCppScope_t AdaptFunctionForLambdaReturn(TCppScope_t fn);
     CPPYY_IMPORT
