@@ -584,6 +584,12 @@ static PyObject* addressof(PyObject* /* dummy */, PyObject* args, PyObject* kwds
             return PyLong_FromLongLong((intptr_t)caddr);
         }
 
+    // LowLevelViews
+    if (LowLevelView_CheckExact(arg0)) {
+        auto *llv = (LowLevelView*)arg0;
+        return PyLong_FromLongLong((intptr_t)llv->get_buf());
+    }
+
     // final attempt: any type of buffer
         Utility::GetBuffer(arg0, '*', 1, addr, false);
         if (addr) return PyLong_FromLongLong((intptr_t)addr);
