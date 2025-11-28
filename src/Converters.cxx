@@ -2650,7 +2650,7 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
     // find the overload with matching signature
         for (auto& m : ol->fMethodInfo->fMethods) {
             PyObject* sig = m->GetSignature(false);
-            bool found = signature == CPyCppyy_PyText_AsString(sig);
+            bool found = true_signature == CPyCppyy_PyText_AsString(sig);
             Py_DECREF(sig);
             if (found) {
                 void* fptr = (void*)m->GetFunctionAddress();
@@ -2658,6 +2658,9 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
                 break;  // fall-through, with calling through Python
             }
         }
+        // FIXME: maybe we should try BestOverloadFunctionMatch before failing
+        // FIXME: Should we fall-through, with calling through Python
+        return nullptr;
     }
 
     if (TemplateProxy_Check(pyobject)) {
@@ -2672,7 +2675,8 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
             void* fptr = (void*)Cppyy::GetFunctionAddress(cppmeth, false);
             if (fptr) return fptr;
         }
-        // fall-through, with calling through Python
+        // FIXME: Should we fall-through, with calling through Python
+        return nullptr;
     }
 
     if (PyObject_IsInstance(pyobject, (PyObject*)GetCTypesType(ct_c_funcptr))) {
