@@ -320,7 +320,10 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                     code << "{\n    return " << binfo.bname << "::" << mtCppName << "(";
                     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i) {
                         if (i != 0) code << ", ";
-                        code << "arg" << i;
+                        if (Cppyy::IsRValueReferenceType(Cppyy::GetMethodArgType(method, i)))
+                            code << "std::move(arg" << i << ")";
+                        else
+                            code << "arg" << i;
                     }
                     code << ");\n  }\n";
                 }

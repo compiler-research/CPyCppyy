@@ -335,6 +335,10 @@ namespace Cppyy {
     CPPYY_IMPORT
     std::string GetTypeAsString(TCppType_t type);
     CPPYY_IMPORT
+    bool IsRValueReferenceType(TCppType_t type);
+    CPPYY_IMPORT
+    bool IsLValueReferenceType(TCppType_t type);
+    CPPYY_IMPORT
     bool IsClassType(TCppType_t type);
     CPPYY_IMPORT
     bool IsFunctionPointerType(TCppType_t type);
