@@ -13,27 +13,6 @@
 
 namespace CPyCppyy {
 
-// signature hashes are also used by TemplateProxy
-inline uint64_t HashSignature(CPyCppyy_PyArgs_t args, size_t nargsf)
-{
-// Build a hash from the types of the given python function arguments.
-    uint64_t hash = 0;
-
-    Py_ssize_t nargs = CPyCppyy_PyArgs_GET_SIZE(args, nargsf);
-    for (Py_ssize_t i = 0; i < nargs; ++i) {
-    // TODO: hashing in the ref-count is for moves; resolve this together with the
-    // improved overloads for implicit conversions
-        PyObject* pyobj = CPyCppyy_PyArgs_GET_ITEM(args, i);
-        hash += (uint64_t)Py_TYPE(pyobj);
-        hash += (uint64_t)(pyobj->ob_refcnt == 1 ? 1 : 0);
-        hash += (hash << 10); hash ^= (hash >> 6);
-    }
-
-    hash += (hash << 3); hash ^= (hash >> 11); hash += (hash << 15);
-
-    return hash;
-}
-
 class CPPOverload {
 public:
     typedef std::vector<std::pair<uint64_t, PyCallable*>> DispatchMap_t;
@@ -114,6 +93,34 @@ inline CPPOverload* CPPOverload_New(const std::string& name, PyCallable* method)
     std::vector<PyCallable*> p;
     p.push_back(method);
     return CPPOverload_New(name, p);
+}
+
+// signature hashes are also used by TemplateProxy
+inline uint64_t HashSignature(CPyCppyy_PyArgs_t args, size_t nargsf) {
+  // Build a hash from the types of the given python function arguments.
+  uint64_t hash = 0;
+
+  Py_ssize_t nargs = CPyCppyy_PyArgs_GET_SIZE(args, nargsf);
+  for (Py_ssize_t i = 0; i < nargs; ++i) {
+    // TODO: hashing in the ref-count is for moves; resolve this together with
+    // the improved overloads for implicit conversions
+    PyObject *pyobj = CPyCppyy_PyArgs_GET_ITEM(args, i);
+    hash += (uint64_t)Py_TYPE(pyobj);
+    hash += (uint64_t)(pyobj->ob_refcnt == 1 ? 1 : 0);
+    if (CPPOverload_CheckExact(pyobj)) {
+      static std::hash<std::string> hash_string;
+      CPPOverload *overload = (CPPOverload *)pyobj;
+      hash += hash_string(overload->fMethodInfo->fName);
+    }
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+  }
+
+  hash += (hash << 3);
+  hash ^= (hash >> 11);
+  hash += (hash << 15);
+
+  return hash;
 }
 
 } // namespace CPyCppyy
