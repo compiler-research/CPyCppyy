@@ -346,6 +346,10 @@ CPyCppyy::CPPMethod::CPPMethod(
         fMethod = Cppyy::ReduceReturnType(fMethod, TypeReductionMap[result]);
     if (result && Cppyy::IsLambdaClass(result))
         fMethod = Cppyy::AdaptFunctionForLambdaReturn(fMethod);
+    if (fMethod && Cppyy::IsCUDAFunction(fMethod) && !Cppyy::IsConstructor(fMethod)) {
+        Cppyy::AdaptCUDAFunction(fMethod);
+        // Cppyy::DumpScope(fMethod);
+    }
 }
 
 //----------------------------------------------------------------------------
