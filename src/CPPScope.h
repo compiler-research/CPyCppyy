@@ -25,6 +25,8 @@ typedef struct {
 // Standard
 #include <vector>
 #include <map>
+#include "Cppyy.h"
+#include "Python.h"
 
 
 namespace CPyCppyy {

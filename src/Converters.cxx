@@ -2369,9 +2369,14 @@ bool CPyCppyy::InstanceRefConverter::SetArg(
         Cppyy::TCppScope_t cls;
         if (pyobj->IsSmart()) {
             cls = pyobj->ObjectIsA(false);
-            if (cls && Cppyy::IsSubclass(cls, fClass)) {
-                para.fValue.fVoidp = pyobj->GetObjectRaw();
-                argset = true;
+            Cppyy::TCppScope_t deref_cls = nullptr;
+            Cppyy::TCppScope_t deref_fClass = nullptr;
+            Cppyy::GetSmartPtrInfo(cls, &deref_cls, nullptr);
+            Cppyy::GetSmartPtrInfo(fClass, &deref_fClass, nullptr);
+            if (deref_cls && deref_fClass &&
+                Cppyy::IsSubclass(deref_cls, deref_fClass)) {
+              para.fValue.fVoidp = pyobj->GetObjectRaw();
+              argset = true;
             }
         }
 
@@ -2391,9 +2396,9 @@ bool CPyCppyy::InstanceRefConverter::SetArg(
             }
 
         // calculate offset between formal and actual arguments
-            if (cls != fClass) {
-                para.fValue.fIntPtr += Cppyy::GetBaseOffset(
-                    cls, fClass, para.fValue.fVoidp, 1 /* up-cast */);
+            if ((cls != fClass) && (!pyobj->IsSmart())) {
+              para.fValue.fIntPtr += Cppyy::GetBaseOffset(
+                  cls, fClass, para.fValue.fVoidp, 1 /* up-cast */);
             }
 
             para.fTypeCode = 'V';
@@ -2780,10 +2785,12 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
         if (pytmpl->fTemplateArgs)
             fullname += CPyCppyy_PyText_AsString(pytmpl->fTemplateArgs);
         Cppyy::TCppScope_t scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
+
         std::string ret{}, sig{};
         GetSignatureFromFnType(fn_type, ret, sig);
+        std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
         Cppyy::TCppMethod_t cppmeth = 
-            Cppyy::GetMethodTemplate(scope, fullname, sig.substr(1, sig.size() - 2));
+            Cppyy::GetMethodTemplate(scope, fullname, sig.substr(1, sig.size() - 2), ambiguous_candidates);
         if (cppmeth) {
             void* fptr = (void*)Cppyy::GetFunctionAddress(cppmeth, false);
             if (fptr) return fptr;

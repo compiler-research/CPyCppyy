@@ -4,12 +4,16 @@
 #include <climits>
 
 // Bindings
+#include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
 #include "CallContext.h"
 #include "Cppyy.h"
 
 
 namespace CPyCppyy {
+
+extern PyObject *gOverloadResolutionException;
+extern PyObject *gOverloadAmbiguityException;
 
 class CPPInstance;
 
@@ -18,6 +22,7 @@ public:
     virtual ~PyCallable() {}
 
 public:
+    virtual Cppyy::TCppMethod_t GetMethod()   { return nullptr; }
     virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
     virtual PyObject* GetSignatureNames() = 0;
     virtual PyObject* GetSignatureTypes() = 0;
@@ -29,9 +34,6 @@ public:
         PyErr_Format(PyExc_ValueError, "unsupported reflex request %d or format %d", request, format);
         return nullptr;
     };
-
-    virtual int GetPriority() = 0;
-    virtual bool IsGreedy() = 0;
 
     virtual int GetMaxArgs() = 0;
     virtual PyObject* GetCoVarNames() = 0;

@@ -48,11 +48,8 @@ static inline PyObject* add_template(PyObject* pyclass,
     }
 
     if (overloads) {
-    // adopt the new overloads
-        if (ncl != name)
-            for (auto clb : *overloads) pytmpl->AdoptTemplate(clb);
-        else
-            for (auto clb : *overloads) pytmpl->AdoptMethod(clb);
+        for (auto clb : *overloads)
+            pytmpl->AdoptMethod(clb);
     }
 
 // the caller expects a method matching the full name, thus is a specialization

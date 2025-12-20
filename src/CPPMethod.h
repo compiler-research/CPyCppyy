@@ -50,6 +50,7 @@ public:
     virtual ~CPPMethod();
 
 public:
+    Cppyy::TCppMethod_t GetMethod() override { return fMethod; }
     PyObject* GetSignature(bool show_formalargs = true) override;
     PyObject* GetSignatureNames() override;
     PyObject* GetSignatureTypes() override;
@@ -57,9 +58,6 @@ public:
     PyObject* GetTypeName() override;
     PyObject* Reflex(Cppyy::Reflex::RequestId_t request,
                              Cppyy::Reflex::FormatId_t = Cppyy::Reflex::OPTIMAL) override;
-
-    int       GetPriority() override;
-    bool      IsGreedy() override;
 
     int       GetMaxArgs() override;
     PyObject* GetCoVarNames() override;
@@ -74,8 +72,12 @@ public:
     int       GetArgMatchScore(PyObject* args_tuple) override;
 
     bool IsSimilarFnType(Cppyy::TCppType_t fn_type) override { 
-        return Cppyy::IsSimilarFnTypes(fn_type, Cppyy::GetTypeFromScope(fMethod));
+        return Cppyy::IsSimilarFnTypes(fn_type, Cppyy::GetTypeFromScope(fMethod.data));
     }
+    // extra info methods
+    bool IsOperator() { return Cppyy::IsOperator(fMethod.data); }
+    bool IsConversionOperator() { return Cppyy::IsConversionOperator(fMethod.data); }
+    bool IsStaticMethod() { return Cppyy::IsStaticMethod(fMethod); }
 
 public:
     PyObject* Call(CPPInstance*& self,
@@ -89,7 +91,6 @@ protected:
     bool ConvertAndSetArgs(CPyCppyy_PyArgs_t, size_t nargsf, CallContext* ctxt = nullptr);
     PyObject* Execute(void* self, ptrdiff_t offset, CallContext* ctxt = nullptr);
 
-    Cppyy::TCppMethod_t GetMethod()   { return fMethod; }
     Cppyy::TCppScope_t  GetScope()    { return fScope; }
     Executor*           GetExecutor() { return fExecutor; }
     std::string         GetSignatureString(bool show_formalargs = true);
