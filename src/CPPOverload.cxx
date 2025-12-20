@@ -18,6 +18,7 @@
 #include "CallContext.h"
 #include "PyStrings.h"
 #include "Utility.h"
+#include "CPPMethod.h"
 
 // Standard
 #include <algorithm>
@@ -728,6 +729,86 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
         ctxt.fFlags &= ~CallContext::kAllowImplicit;
         PyErr_Clear();
         ResetCallState(pymeth->fSelf, im_self);
+    }
+
+    std::vector<Cppyy::TCppMethod_t> overloads;
+    bool is_operator = false;
+    bool is_conversion_operator = false;
+    for (auto i : pymeth->fMethodInfo->fMethods) {
+      if (is_operator || dynamic_cast<CPyCppyy::CPPMethod*>(i)->IsOperator())
+        is_operator = true;
+      if (is_conversion_operator || dynamic_cast<CPyCppyy::CPPMethod*>(i)->IsConversionOperator())
+        is_conversion_operator = true;
+      overloads.push_back(i->GetMethod());
+    }
+
+    std::string proto = "";
+    if (im_self && !(ctxt.fFlags & CallContext::kIsConstructor)) {
+        PyObject *self = (PyObject*)im_self;
+        assert(AddTypeName(proto, (PyObject*)Py_TYPE(self), self, Utility::kNone));
+    }
+
+    ctxt.fFlags |= CallContext::kAllowImplicit;
+    {
+    size_t i = ((dynamic_cast<CPyCppyy::CPPMethod*>(methods[0])->IsStaticMethod()) || (ctxt.fFlags & CallContext::kIsConstructor)) ? 1 : 0;
+    size_t nArgs = PyVectorcall_NARGS(nargsf);
+    for (; i < nArgs; i++) {
+      if (!proto.empty())
+        proto += ", ";
+      PyObject *obj = CPyCppyy_PyArgs_GET_ITEM(args, i);
+      PyObject *typ = (PyObject *)Py_TYPE(obj);
+      if (!AddTypeName(proto, typ, obj, Utility::kNone)) {
+        proto += "__cppyy_internal::UnknownType";
+        break; // ???: do we need to raise error here
+      }
+    }
+    }
+
+    Cppyy::TCppScope_t meth =
+        Cppyy::BestOverloadFunctionMatch(overloads, proto, /*TODO:*/nullptr, is_operator);
+    if (!meth && (ctxt.fFlags & CallContext::kIsConstructor)) {
+        // this might be a POD class/struct
+        // and might need the self* for the overload resolution
+        // to pick up the custom generated constructor defined in
+        // __cppyy_internal namespace
+        std::string self_type_name = "";
+        if (PyVectorcall_NARGS(nargsf) > 0) {
+            PyObject *obj = CPyCppyy_PyArgs_GET_ITEM(args, 0);
+            PyObject *typ = (PyObject *)Py_TYPE(obj);
+            AddTypeName(self_type_name, typ, nullptr, Utility::kNone);
+            proto = self_type_name + "*, " + proto;
+        }
+    }
+    meth =
+        Cppyy::BestOverloadFunctionMatch(overloads, proto, /*TODO:*/nullptr, is_operator);
+    if (meth) {
+      for (auto i : pymeth->fMethodInfo->fMethods) {
+        if (i->GetMethod() == meth) {
+          PyObject *result = i->Call(im_self, args, nargsf, kwds, &ctxt);
+          if (result) {
+            // success: update the dispatch map for subsequent calls
+            if (!memoized_pc)
+              dispatchMap.push_back(std::make_pair(sighash, i));
+            else {
+              // debatable: apparently there are two methods that map onto the
+              // same sighash and preferring the latest may result in "ping
+              // pong."
+              for (auto &p : dispatchMap) {
+                if (p.first == sighash) {
+                  p.second = i;
+                  break;
+                }
+              }
+            }
+            return HandleReturn(pymeth, im_self, result);
+          }
+          return nullptr;
+        }
+      }
+    }
+    if (!is_conversion_operator) {
+        PyErr_SetString(PyExc_TypeError, "Non of the given Overload match");
+        return nullptr;
     }
 
 // ... otherwise loop over all methods and find the one that does not fail

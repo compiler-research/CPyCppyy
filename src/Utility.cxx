@@ -405,8 +405,8 @@ static inline std::string AnnotationAsText(PyObject* pyobj)
     return CPyCppyy_PyText_AsString(pyobj);
 }
 
-static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
-    CPyCppyy::Utility::ArgPreference pref, int* pcnt = nullptr)
+bool CPyCppyy::Utility::AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
+    CPyCppyy::Utility::ArgPreference pref, int* pcnt)
 {
 // Determine the appropriate C++ type for a given Python type; this is a helper because
 // it can recurse if the type is list or tuple and needs matching on std::vector.
