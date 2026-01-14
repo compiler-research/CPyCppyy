@@ -97,6 +97,14 @@ void AddPropertyToClass(PyObject* pyclass,
 
 // allow access at the instance level
     PyType_Type.tp_setattro(pyclass, pname, (PyObject*)property);
+    if (PyErr_Occurred()) {
+        // CPPDataMember.tp_descr_set raises an error
+        // when all of the following conditions are met
+        // 1. data is static const
+        // 2. scope is a derived class
+        // 3. data is defined in both parent and base class (using parent::attribute;)
+        PyErr_Clear();
+    }
 
 // allow access at the class level (always add after setting instance level)
     if (Cppyy::IsStaticDatamember(data) || Cppyy::IsEnumConstant(data))
