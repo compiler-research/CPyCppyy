@@ -990,9 +990,6 @@ void CPyCppyy::Utility::ConstructCallbackPreamble(const std::string& retType,
     if (!isVoid)
         code << "    " << retType << " ret{};\n";
 
-// acquire GIL
-    code << "    PyGILState_STATE state = PyGILState_Ensure();\n";
-
 // build argument tuple if needed
     if (nArgs) {
         code << "    std::vector<PyObject*> pyargs;\n";
@@ -1006,7 +1003,7 @@ void CPyCppyy::Utility::ConstructCallbackPreamble(const std::string& retType,
         }
         code << "    } catch(int) {\n"
              << "      for (auto pyarg : pyargs) Py_XDECREF(pyarg);\n"
-             << "      CPyCppyy::PyException pyexc; PyGILState_Release(state); throw pyexc;\n"
+             << "      CPyCppyy::PyException pyexc; throw pyexc;\n"
              << "    }\n";
     }
 }
@@ -1037,9 +1034,8 @@ void CPyCppyy::Utility::ConstructCallbackReturn(const std::string& retType, int 
 #ifdef _WIN32
             " /* do nothing */ }\n"
 #else
-            " CPyCppyy::PyException pyexc; PyGILState_Release(state); throw pyexc; }\n"
+            " CPyCppyy::PyException pyexc; throw pyexc; }\n"
 #endif
-            "    PyGILState_Release(state);\n"
             "    return";
     code << (isVoid ? ";\n  }\n" : " ret;\n  }\n");
 }

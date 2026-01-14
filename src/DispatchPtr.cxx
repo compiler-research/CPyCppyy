@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 PyObject* CPyCppyy::DispatchPtr::Get(bool borrowed) const
 {
+    PythonGILRAII python_gil_raii;
     if (fPyHardRef) {
         if (!borrowed) Py_INCREF(fPyHardRef);
         return fPyHardRef;
@@ -27,6 +28,7 @@ PyObject* CPyCppyy::DispatchPtr::Get(bool borrowed) const
 //-----------------------------------------------------------------------------
 CPyCppyy::DispatchPtr::DispatchPtr(PyObject* pyobj, bool strong) : fPyHardRef(nullptr)
 {
+    PythonGILRAII python_gil_raii;
     if (strong) {
         Py_INCREF(pyobj);
         fPyHardRef = pyobj;
@@ -41,6 +43,7 @@ CPyCppyy::DispatchPtr::DispatchPtr(PyObject* pyobj, bool strong) : fPyHardRef(nu
 //-----------------------------------------------------------------------------
 CPyCppyy::DispatchPtr::DispatchPtr(const DispatchPtr& other, void* cppinst) : fPyWeakRef(nullptr)
 {
+    PythonGILRAII python_gil_raii;
     PyObject* pyobj = other.Get(false /* not borrowed */);
     fPyHardRef = pyobj ? (PyObject*)((CPPInstance*)pyobj)->Copy(cppinst) : nullptr;
     if (fPyHardRef) ((CPPInstance*)fPyHardRef)->SetDispatchPtr(this);
@@ -53,6 +56,7 @@ CPyCppyy::DispatchPtr::~DispatchPtr() {
 // of a dispatcher intermediate, then this delete is from the C++ side, and Python
 // is "notified" by nulling out the reference and an exception will be raised on
 // continued access
+    PythonGILRAII python_gil_raii;
     if (fPyWeakRef) {
         PyObject* pyobj = CPyCppyy_GetWeakRef(fPyWeakRef);
         if (pyobj && ((CPPScope*)Py_TYPE(pyobj))->fFlags & CPPScope::kIsPython)
@@ -68,6 +72,7 @@ CPyCppyy::DispatchPtr::~DispatchPtr() {
 //-----------------------------------------------------------------------------
 CPyCppyy::DispatchPtr& CPyCppyy::DispatchPtr::assign(const DispatchPtr& other, void* cppinst)
 {
+    PythonGILRAII python_gil_raii;
     if (this != &other) {
         Py_XDECREF(fPyWeakRef); fPyWeakRef = nullptr;
         Py_XDECREF(fPyHardRef);
@@ -82,6 +87,7 @@ CPyCppyy::DispatchPtr& CPyCppyy::DispatchPtr::assign(const DispatchPtr& other, v
 //-----------------------------------------------------------------------------
 void CPyCppyy::DispatchPtr::PythonOwns()
 {
+    PythonGILRAII python_gil_raii;
 // Python maintains the hardref, so only allowed a weakref here
     if (fPyHardRef) {
         fPyWeakRef = PyWeakref_NewRef(fPyHardRef, nullptr);
@@ -92,6 +98,7 @@ void CPyCppyy::DispatchPtr::PythonOwns()
 //-----------------------------------------------------------------------------
 void CPyCppyy::DispatchPtr::CppOwns()
 {
+    PythonGILRAII python_gil_raii;
 // C++ maintains the hardref, keeping the PyObject alive w/o outstanding ref
     if (fPyWeakRef) {
         fPyHardRef = CPyCppyy_GetWeakRef(fPyWeakRef);

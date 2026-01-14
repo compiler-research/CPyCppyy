@@ -39,9 +39,11 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
 // program shutdown); note that this means that the actual result will be the default
 // and the caller may need to act on that, but that's still an improvement over a
 // possible crash
-    code << "    PyObject* iself = (PyObject*)_internal_self;\n"
+    code << "    CPyCppyy::PythonGILRAII python_gil_raii;\n" // acquire GIL
+            "    PyObject* iself = (PyObject*)_internal_self;\n"
             "    if (!iself || iself == Py_None) {\n"
-            "      PyErr_Warn(PyExc_RuntimeWarning, (char*)\"Call attempted on deleted python-side proxy\");\n"
+            "      PyErr_Warn(PyExc_RuntimeWarning, (char*)\"Call attempted on "
+            "deleted python-side proxy\");\n"
             "      return";
     if (retType != "void") {
         if (retType.back() != '*')
