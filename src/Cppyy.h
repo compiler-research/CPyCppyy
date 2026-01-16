@@ -36,7 +36,7 @@ typedef unsigned long long PY_ULONG_LONG;
 typedef long double PY_LONG_DOUBLE;
 #endif
 
-namespace Cpp {
+namespace CppImpl {
     struct TemplateArgInfo {
       void* m_Type;
       const char* m_IntegralValue;
@@ -44,6 +44,8 @@ namespace Cpp {
         : m_Type(type), m_IntegralValue(integral_value) {}
     };
 } // end namespace Cpp
+
+namespace Cpp = CppImpl;
 
 namespace Cppyy {
 
