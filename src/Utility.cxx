@@ -555,9 +555,10 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
             PyErr_Clear();
 
     // ctypes function pointer
-        PyObject* argtypes = PyObject_GetAttrString(arg, "argtypes");
-        PyObject* ret = PyObject_GetAttrString(arg, "restype");
-        if (argtypes && ret) {
+        PyObject* argtypes = nullptr;
+        PyObject* ret = nullptr;
+        if ((argtypes = PyObject_GetAttrString(arg, "argtypes"))
+            && (ret = PyObject_GetAttrString(arg, "restype"))) {
             std::ostringstream tpn;
             PyObject* pytc = PyObject_GetAttr(ret, PyStrings::gCTypesType);
             tpn << CT2CppNameS(pytc, false)
