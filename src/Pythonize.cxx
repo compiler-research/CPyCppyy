@@ -546,8 +546,14 @@ static PyObject* vector_iter(PyObject* v) {
 
 // tell the iterator code to set a life line if this container is a temporary
     vi->vi_flags = vectoriterobject::kDefault;
-    if (v->ob_refcnt <= 2 || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#if PY_VERSION_HEX >= 0x030e0000
+    if (PyUnstable_Object_IsUniqueReferencedTemporary(v) || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#else
+    if (Py_REFCNT(v) <= 1 || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#endif
         vi->vi_flags = vectoriterobject::kNeedLifeLine;
+
+    Py_INCREF(v);
 
     PyObject* pyvalue_type = PyObject_GetAttr((PyObject*)Py_TYPE(v), PyStrings::gValueTypePtr);
     if (pyvalue_type) {
