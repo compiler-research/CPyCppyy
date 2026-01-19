@@ -93,11 +93,24 @@ struct CPyCppyy_tagPyCArgObject {      // not public (but stable; note that olde
     void* pffi_type;
     char tag;
     union {                            // for convenience, kept only relevant vals
+        char c;
+        char b;
+        short h;
+        int i;
+        long l;
         long long q;
-        long double D;
+        long double g;
         void *p;
+#if PY_VERSION_HEX >= 0x030e0000
+        double D[2];
+        float F[2];
+        long double G[2];
+#endif
     } value;
     PyObject* obj;
+#if PY_VERSION_HEX >= 0x030e0000
+    Py_ssize_t size;
+#endif
 };
 
 // indices of ctypes types into the array caches (note that c_complex and c_fcomplex
