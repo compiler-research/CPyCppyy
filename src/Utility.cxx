@@ -1139,6 +1139,11 @@ Py_ssize_t CPyCppyy::Utility::GetBuffer(PyObject* pyobject, char tc, int size, v
     if (PyObject_CheckBuffer(pyobject)) {
         if (PySequence_Check(pyobject) && !PySequence_Size(pyobject))
             return 0;   // PyObject_GetBuffer() crashes on some platforms for some zero-sized seqeunces
+        if (PyErr_Occurred()) {
+            // PySequence_Size errored with 
+            // TypeError: object of type 'LP_c_type' has no len()
+            PyErr_Clear();
+        }
 
         Py_buffer bufinfo;
         memset(&bufinfo, 0, sizeof(Py_buffer));
