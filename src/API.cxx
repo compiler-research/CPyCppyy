@@ -7,6 +7,7 @@
 #include "CPPInstance.h"
 #include "CPPOverload.h"
 #include "CPPScope.h"
+#include "CPyCppyy/DispatchPtr.h"
 #include "ProxyWrappers.h"
 #include "PyStrings.h"
 
@@ -85,6 +86,7 @@ static bool Initialize()
     }
 
     if (!gMainDict) {
+        CPyCppyy::PythonGILRAII python_gil_raii;
     // retrieve the main dictionary
         gMainDict = PyModule_GetDict(
             PyImport_AddModule(const_cast<char*>("__main__")));
@@ -109,6 +111,8 @@ void* CPyCppyy::Instance_AsVoidPtr(PyObject* pyobject)
     if (!Initialize())
         return nullptr;
 
+    PythonGILRAII python_gil_raii;
+
 // check validity of cast
     if (!CPPInstance_Check(pyobject))
         return nullptr;
@@ -124,6 +128,8 @@ PyObject* CPyCppyy::Instance_FromVoidPtr(
 // Bind the addr to a python object of class defined by classname.
     if (!Initialize())
         return nullptr;
+
+    PythonGILRAII python_gil_raii;
 
 // perform cast (the call will check TClass and addr, and set python errors)
     PyObject* pyobject = BindCppObjectNoCast(addr, Cppyy::GetScope(classname), false);
@@ -142,6 +148,8 @@ PyObject* CPyCppyy::Instance_FromVoidPtr(
 // Bind the addr to a python object of class defined by classname.
     if (!Initialize())
         return nullptr;
+
+    PythonGILRAII python_gil_raii;
 
 // perform cast (the call will check TClass and addr, and set python errors)
     PyObject* pyobject = BindCppObjectNoCast(addr, klass_scope, false);
@@ -166,6 +174,7 @@ bool CPyCppyy::Scope_Check(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
     return CPPScope_Check(pyobject);
 }
 
@@ -176,6 +185,7 @@ bool CPyCppyy::Scope_CheckExact(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
     return CPPScope_CheckExact(pyobject);
 }
 
@@ -186,6 +196,7 @@ bool CPyCppyy::Instance_Check(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;    
 // detailed walk through inheritance hierarchy
     return CPPInstance_Check(pyobject);
 }
@@ -197,6 +208,7 @@ bool CPyCppyy::Instance_CheckExact(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
 // direct pointer comparison of type member
     return CPPInstance_CheckExact(pyobject);
 }
@@ -204,6 +216,7 @@ bool CPyCppyy::Instance_CheckExact(PyObject* pyobject)
 //-----------------------------------------------------------------------------
 bool CPyCppyy::Sequence_Check(PyObject* pyobject)
 {
+    PythonGILRAII python_gil_raii;
 // Extends on PySequence_Check() to determine whether an object can be iterated
 // over (technically, all objects can b/c of C++ pointer arithmetic, hence this
 // check isn't 100% accurate, but neither is PySequence_Check()).
@@ -237,6 +250,7 @@ bool CPyCppyy::Sequence_Check(PyObject* pyobject)
 //-----------------------------------------------------------------------------
 bool CPyCppyy::Instance_IsLively(PyObject* pyobject)
 {
+    PythonGILRAII python_gil_raii;
 // Test whether the given instance can safely return to C++
     if (!CPPInstance_Check(pyobject))
         return true;    // simply don't know
@@ -256,6 +270,7 @@ bool CPyCppyy::Overload_Check(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
 // detailed walk through inheritance hierarchy
     return CPPOverload_Check(pyobject);
 }
@@ -267,6 +282,7 @@ bool CPyCppyy::Overload_CheckExact(PyObject* pyobject)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
 // direct pointer comparison of type member
     return CPPOverload_CheckExact(pyobject);
 }
@@ -278,6 +294,8 @@ bool CPyCppyy::Import(const std::string& mod_name)
 // Import the named python module and create Cling equivalents for its classes.
     if (!Initialize())
         return false;
+
+    PythonGILRAII python_gil_raii;
 
     PyObject* mod = PyImport_ImportModule(mod_name.c_str());
     if (!mod) {
@@ -341,6 +359,8 @@ void CPyCppyy::ExecScript(const std::string& name, const std::vector<std::string
 
     if (!Initialize())
         return;
+
+    PythonGILRAII python_gil_raii;
 
 // verify arguments
     if (name.empty()) {
@@ -475,6 +495,7 @@ bool CPyCppyy::Exec(const std::string& cmd)
     if (!Initialize())
         return false;
 
+    PythonGILRAII python_gil_raii;
 // execute the command
     PyObject* result =
         PyRun_String(const_cast<char*>(cmd.c_str()), Py_file_input, gMainDict, gMainDict);
@@ -500,6 +521,7 @@ const CPyCppyy::PyResult CPyCppyy::Eval(const std::string& expr)
     if (!Initialize())
         return PyResult();
 
+    PythonGILRAII python_gil_raii;
 // evaluate the expression
     PyObject* result =
         PyRun_String(const_cast<char*>(expr.c_str()), Py_eval_input, gMainDict, gMainDict);
@@ -551,6 +573,7 @@ void CPyCppyy::Prompt() {
     if (!Initialize())
         return;
 
+    PythonGILRAII python_gil_raii;
 // enter i/o interactive mode
     PyRun_InteractiveLoop(stdin, const_cast<char*>("\0"));
 }
