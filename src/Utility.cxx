@@ -4,6 +4,7 @@
 #include "CPPFunction.h"
 #include "CPPInstance.h"
 #include "CPPOverload.h"
+#include "CPyCppyy/DispatchPtr.h"
 #include "ProxyWrappers.h"
 #include "PyCallable.h"
 #include "PyStrings.h"
@@ -1376,9 +1377,8 @@ PyObject* CPyCppyy::Utility::PyErr_Occurred_WithGIL()
 // released; note that the p2.2 code assumes that there are no callbacks in
 // C++ to python (or at least none returning errors).
 #if PY_VERSION_HEX >= 0x02030000
-    PyGILState_STATE gstate = PyGILState_Ensure();
+    PythonGILRAII python_gil_raii;
     PyObject* e = PyErr_Occurred();
-    PyGILState_Release(gstate);
 #else
     if (PyThreadState_GET())
         return PyErr_Occurred();
