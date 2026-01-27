@@ -468,6 +468,8 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                     PyType_Type.tp_setattro(pyclass, llname, pyuscope);
                     Py_DECREF(llname);
                     Py_DECREF(pyuscope);
+                } else {
+                    PyErr_Clear();
                 }
             }
         }

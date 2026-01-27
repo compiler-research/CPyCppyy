@@ -240,6 +240,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 // object goes before the C++ one, only __del__ is called)
     if (PyMapping_HasKeyString(dct, (char*)"__destruct__")) {
         code << "  virtual ~" << derivedName << "() {\n"
+                "    CPyCppyy::PythonGILRAII python_gil_raii;\n"
                 "    PyObject* iself = (PyObject*)_internal_self;\n"
                 "    if (!iself || iself == Py_None)\n"
                 "      return;\n"      // safe, as destructor always returns void
@@ -457,6 +458,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 
 // provide an accessor to re-initialize after round-tripping from C++ (internal)
     code << "\n  static PyObject* _get_dispatch(" << derivedName << "* inst) {\n"
+            "    CPyCppyy::PythonGILRAII python_gil_raii;\n"
             "    PyObject* res = (PyObject*)inst->_internal_self;\n"
             "    Py_XINCREF(res); return res;\n  }";
 
