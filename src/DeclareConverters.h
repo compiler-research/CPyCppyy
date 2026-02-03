@@ -218,9 +218,7 @@ protected:
 CPPYY_DECLARE_ARRAY_CONVERTER(Bool);
 CPPYY_DECLARE_ARRAY_CONVERTER(SChar);
 CPPYY_DECLARE_ARRAY_CONVERTER(UChar);
-#if (__cplusplus > 201402L) || (defined(_MSC_VER) && _MSVC_LANG > 201402L)
 CPPYY_DECLARE_ARRAY_CONVERTER(Byte);
-#endif
 CPPYY_DECLARE_ARRAY_CONVERTER(Int8);
 CPPYY_DECLARE_ARRAY_CONVERTER(UInt8);
 CPPYY_DECLARE_ARRAY_CONVERTER(Short);
@@ -392,9 +390,7 @@ protected:                                                                   \
 
 CPPYY_DECLARE_STRING_CONVERTER(STLString, std::string);
 CPPYY_DECLARE_STRING_CONVERTER(STLWString, std::wstring);
-#if (__cplusplus > 201402L) || (defined(_MSC_VER) && _MSVC_LANG > 201402L)
 CPPYY_DECLARE_STRING_CONVERTER(STLStringView, std::string_view);
-#endif
 
 class STLStringMoveConverter : public STLStringConverter {
 public:
