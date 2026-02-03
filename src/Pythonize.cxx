@@ -884,6 +884,7 @@ PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     return nullptr;
 }
 
+#if __cplusplus <= 202002L
 PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 {
 // Implement python's __contains__ for std::map/std::set
@@ -910,6 +911,7 @@ PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 
     return result;
 }
+#endif
 
 
 //- set behavior as primitives ------------------------------------------------
@@ -1251,6 +1253,7 @@ PyObject* STLStringDecode(CPPInstance* self, PyObject* args, PyObject* kwds)
     return PyUnicode_Decode(obj->data(), obj->size(), encoding, errors);
 }
 
+#if __cplusplus <= 202302L
 PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 {
     std::string* obj = GetSTLString(self);
@@ -1267,6 +1270,7 @@ PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 
     Py_RETURN_FALSE;
 }
+#endif
 
 PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* /*kwds*/)
 {
@@ -1639,6 +1643,10 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
         Utility::AddToClass(pyclass, "__len__", "size");
     }
 
+    if (HasAttrDirect(pyclass, PyStrings::gContains)) {
+        Utility::AddToClass(pyclass, "__contains__", "contains");
+    }
+
     if (!IsTemplatedSTLClass(name, "vector")  &&      // vector is dealt with below
            !((PyTypeObject*)pyclass)->tp_iter) {
         if (HasAttrDirect(pyclass, PyStrings::gBegin) && HasAttrDirect(pyclass, PyStrings::gEnd)) {
@@ -1871,16 +1879,20 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)MapInit, METH_VARARGS | METH_KEYWORDS);
-
+#if __cplusplus <= 202002L
+    // From C++20, std::map and std::unordered_map already implement a contains() method.
         Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
+#endif
     }
 
     else if (IsTemplatedSTLClass(name, "set")) {
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)SetInit, METH_VARARGS | METH_KEYWORDS);
-
+#if __cplusplus <= 202002L
+    // From C++20, std::set already implements a contains() method.
         Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
+#endif
     }
 
     else if (IsTemplatedSTLClass(name, "pair")) {
@@ -1908,7 +1920,10 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
         Utility::AddToClass(pyclass, "__cmp__",       (PyCFunction)STLStringCompare,    METH_O);
         Utility::AddToClass(pyclass, "__eq__",        (PyCFunction)STLStringIsEqual,    METH_O);
         Utility::AddToClass(pyclass, "__ne__",        (PyCFunction)STLStringIsNotEqual, METH_O);
+#if __cplusplus <= 202302L
+    // From C++23, std::string already implements a contains() method.
         Utility::AddToClass(pyclass, "__contains__",  (PyCFunction)STLStringContains,   METH_O);
+#endif
         Utility::AddToClass(pyclass, "decode",        (PyCFunction)STLStringDecode,     METH_VARARGS | METH_KEYWORDS);
         Utility::AddToClass(pyclass, "__cpp_find",    "find");
         Utility::AddToClass(pyclass, "find",          (PyCFunction)STLStringFind,       METH_VARARGS | METH_KEYWORDS);
