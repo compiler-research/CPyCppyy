@@ -412,6 +412,21 @@ PyObject* CPyCppyy::CPPMethod::GetPrototype(bool fa)
         GetSignatureString(fa).c_str());
 }
 
+PyObject* CPyCppyy::CPPMethod::GetDocString()
+{
+    // Get the prototype (signature)
+    PyObject* doc = GetPrototype();
+
+    // Get doxygen comment
+    std::string doxygen = Cppyy::GetDoxygenComment(fMethod, true);
+    if (!doxygen.empty()) {
+        CPyCppyy_PyText_AppendAndDel(&doc, CPyCppyy_PyText_FromString("\n\n"));
+        CPyCppyy_PyText_AppendAndDel(&doc, CPyCppyy_PyText_FromString(doxygen.c_str()));
+    }
+
+    return doc;
+}
+
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::CPPMethod::GetTypeName()
 {
