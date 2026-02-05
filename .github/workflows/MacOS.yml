@@ -549,13 +549,13 @@ jobs:
         echo ::endgroup::
         echo ::group::Run complete test suite
         set -o pipefail
-        python -m pytest -sv -ra | tee complete_testrun.log 2>&1
+        python -m pytest -sv -ra -n ${{ env.ncpus }} | tee complete_testrun.log 2>&1
         set +o pipefail
         echo ::group::Crashing Test Logs
         # See if we don't have a crash that went away
         # Comment out all xfails but the ones that have a run=False condition.
         find . -name "*.py" -exec sed -i '/run=False/!s/^ *@mark.xfail\(.*\)/#&/' {} \;
-        python -m pytest -n 1 -m "xfail" --runxfail -sv -ra --max-worker-restart 512 | tee test_crashed.log 2>&1 || true
+        python -m pytest -n ${{ env.ncpus }} -m "xfail" --runxfail -sv -ra --max-worker-restart 512 | tee test_crashed.log 2>&1 || true
         git checkout .
         echo ::endgroup::
         echo ::group::XFAIL Test Logs
@@ -563,7 +563,7 @@ jobs:
         # avoid conditionally crashing xfails
         find . -name "*.py" -exec gsed -i -E 's/(^ *)@mark.xfail\(run=(.*)/\1@mark.skipif(condition=not \2/g' {} \;
         # See if we don't have an xfail that went away
-        python -m pytest --runxfail -sv -ra  | tee test_xfailed.log 2>&1 || true
+        python -m pytest --runxfail -sv -ra -n ${{ env.ncpus }} | tee test_xfailed.log 2>&1 || true
         git checkout .
         echo ::endgroup::
         echo ::group::Passing Test Logs
