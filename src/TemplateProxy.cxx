@@ -293,6 +293,7 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
         }
 
     // cleanup
+        Py_XDECREF(exact);
         Py_DECREF(pyresname);
         Py_DECREF(pycachename);
 
