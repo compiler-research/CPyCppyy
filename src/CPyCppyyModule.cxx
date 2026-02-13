@@ -14,6 +14,7 @@
 #include "PyStrings.h"
 #include "TemplateProxy.h"
 #include "TupleOfInstances.h"
+#include "TypeHints.h"
 #include "Utility.h"
 
 #define CPYCPPYY_INTERNAL 1
@@ -1066,6 +1067,8 @@ static PyMethodDef gCPyCppyyMethods[] = {
       METH_NOARGS, (char*) "Begin capturing stderr to a in memory buffer."},
     {(char*) "_end_capture_stderr", (PyCFunction)EndCaptureStderr,
       METH_NOARGS, (char*) "End capturing stderr and returns the captured buffer."},
+    {(char*) "generate_typehints", (PyCFunction)generate_typehints,
+      METH_VARARGS, (char*) "Generates typehits (.pyi file) for the given C/C++ type name."},
     {nullptr, nullptr, 0, nullptr}
 };
 
