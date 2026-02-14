@@ -259,7 +259,9 @@ typedef void* TCppFuncAddr_t;
 
     CPPYY_IMPORT
     TCppMethod_t GetMethod(TCppScope_t scope, TCppIndex_t imeth);
-
+    CPPYY_IMPORT
+    std::string GetDoxygenComment(TCppMethod_t method, bool strip_markers = true);
+    
     CPPYY_IMPORT
     std::string GetMethodName(TCppMethod_t);
     CPPYY_IMPORT
