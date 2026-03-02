@@ -75,7 +75,7 @@ jobs:
         path: |
           llvm-project
           ${{ matrix.cling=='On' && 'cling' || '' }}
-        key: ${{ env.CLING_HASH }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.compiler }}-clang-${{ matrix.clang-runtime }}.x-patch-${{ hashFiles(format('patches/llvm/clang{0}-*.patch', matrix.clang-runtime)) || 'none' }}
+        key: ${{ env.CLING_HASH }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.compiler }}-clang-${{ matrix.clang-runtime }}-${{ matrix.root-llvm-tag || 'none' }}.x-patch-${{ hashFiles(format('patches/llvm/clang{0}-*.patch', matrix.clang-runtime)) || 'none' }}
         lookup-only: true
 
     - name: Setup default Build Type on Windows
@@ -122,7 +122,7 @@ jobs:
         if ( "${{ matrix.cling }}" -imatch "On" )
         {
           git clone --depth=1 --branch v${{ matrix.cling-version }} https://github.com/root-project/cling.git
-          git clone --depth=1 -b cling-llvm${{ matrix.clang-runtime }} https://github.com/root-project/llvm-project.git
+          git clone --depth=1 -b ${{ matrix.root-llvm-tag }} https://github.com/root-project/llvm-project.git
           $env:PWD_DIR= $PWD.Path
           $env:CLING_DIR="$env:PWD_DIR\cling"
           echo "CLING_DIR=$env:CLING_DIR"
@@ -321,7 +321,7 @@ jobs:
         path: |
           llvm-project
           ${{ matrix.cling=='On' && 'cling' || '' }}
-        key: ${{ env.CLING_HASH }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.compiler }}-clang-${{ matrix.clang-runtime }}.x-patch-${{ hashFiles(format('patches/llvm/clang{0}-*.patch', matrix.clang-runtime)) || 'none' }}
+        key: ${{ env.CLING_HASH }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.compiler }}-clang-${{ matrix.clang-runtime }}-${{ matrix.root-llvm-tag || 'none' }}.x-patch-${{ hashFiles(format('patches/llvm/clang{0}-*.patch', matrix.clang-runtime)) || 'none' }}
          
     - name: Build and Test/Install CppInterOp on Windows systems
       run: |
