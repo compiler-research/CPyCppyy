@@ -642,13 +642,7 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
     if (result)
         TPPCALL_RETURN;
 
-// case 3: select known template overload
-    result = SelectAndForward(pytmpl, pytmpl->fTI->fTemplated, args, nargsf, kwds,
-        false /* implicitOkay */, true /* use_targs */, sighash, errors);
-    if (result)
-        TPPCALL_RETURN;
-
-// case 4: auto-instantiation from types of arguments
+    // case 3: auto-instantiation from types of arguments
     for (auto pref : {Utility::kReference, Utility::kPointer, Utility::kValue}) {
         // TODO: no need to loop if there are no non-instance arguments; also, should any
         // failed lookup be removed?
@@ -663,7 +657,14 @@ static PyObject* tpp_call(TemplateProxy* pytmpl, PyObject* args, PyObject* kwds)
         if (!pcnt) break;         // preference never used; no point trying others
     }
 
-// case 5: low priority methods, such as ones that take void* arguments
+    // case 4: select known template overload
+    result = SelectAndForward(pytmpl, pytmpl->fTI->fTemplated, args, nargsf,
+                              kwds, false /* implicitOkay */,
+                              true /* use_targs */, sighash, errors);
+    if (result)
+      TPPCALL_RETURN;
+
+    // case 5: low priority methods, such as ones that take void* arguments
     result = SelectAndForward(pytmpl, pytmpl->fTI->fLowPriority, args, nargsf, kwds,
         false /* implicitOkay */, false /* use_targs */, sighash, errors);
     if (result)
