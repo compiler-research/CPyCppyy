@@ -16,6 +16,7 @@
 #include "Utility.h"
 
 // Standard
+#include <cassert>
 #include <complex>
 #include <limits.h>
 #include <stddef.h>      // for ptrdiff_t
@@ -3104,7 +3105,13 @@ bool CPyCppyy::InitializerListConverter::SetArg(
     // so either.
         PyErr_Clear();
 
-    // can only construct empty lists, so use a fake initializer list
+    // Can only construct empty lists, so use a fake initializer list. For that we
+    // need to construct default objects. Fail early if that cannot work.
+        if (fValueType && !Cppyy::IsDefaultConstructable(fValueType)) {
+            PyErr_SetString(PyExc_TypeError, "default constructor needed for initializer list of objects");
+            return false;
+        }
+
         size_t len = (size_t)PySequence_Size(pyobject);
         fake = (faux_initlist*)malloc(sizeof(faux_initlist)+fValueSize*len);
         fBuffer = (void*)fake;
@@ -3134,11 +3141,9 @@ bool CPyCppyy::InitializerListConverter::SetArg(
                     // clunky, but the use of a copy constructor isn't much better as the Python object
                     // need not be a C++ object
                         memloc = (void*)Cppyy::Construct(fValueType, memloc);
-                        if (memloc) entries += 1;
-                        else {
-                           PyErr_SetString(PyExc_TypeError,
-                              "default ctor needed for initializer list of objects");
-                        }
+                    // We checked above that we are able to construct default objects of fValueType.
+                        assert(memloc && ("failed to default construct object for type " + fValueTypeName).c_str());
+                        entries += 1;
                     }
                     if (memloc) {
                         convert_ok = converter->ToMemory(item, memloc);
