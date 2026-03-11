@@ -56,14 +56,14 @@ namespace Cpp = CppImpl;
 
 namespace Cppyy {
 
-typedef void* TCppScope_t;
-typedef TCppScope_t TCppType_t;
-typedef void* TCppEnum_t;
-typedef void* TCppObject_t;
-typedef void* TCppMethod_t;
+    typedef void* TCppScope_t;
+    typedef TCppScope_t TCppType_t;
+    typedef void* TCppEnum_t;
+    typedef void* TCppObject_t;
+    typedef void* TCppMethod_t;
 
-typedef size_t TCppIndex_t;
-typedef void* TCppFuncAddr_t;
+    typedef size_t TCppIndex_t;
+    typedef void* TCppFuncAddr_t;
 
 // direct interpreter access -------------------------------------------------
     CPPYY_IMPORT
@@ -399,6 +399,6 @@ typedef void* TCppFuncAddr_t;
 
     CPPYY_IMPORT
     TCppScope_t DumpScope(TCppScope_t scope);
-    } // namespace Cppyy
+} // namespace Cppyy
 
 #endif // !CPYCPPYY_CPPYY_H

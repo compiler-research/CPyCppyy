@@ -177,6 +177,13 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
 
         Py_DECREF(pyargs);
         Py_DECREF(tpArgs);
+
+    // Propagate the error that occurs if we can't construct the C++ name
+    // from the provided template argument
+        if (PyErr_Occurred()) {
+            return nullptr;
+        }
+
         if (name_v1.size())
             proto = name_v1.substr(1, name_v1.size()-2);
     }
@@ -719,6 +726,11 @@ static PyObject* tpp_subscript(TemplateProxy* pytmpl, PyObject* args)
     Py_XDECREF(typeBoundMethod->fTemplateArgs);
     typeBoundMethod->fTemplateArgs = CPyCppyy_PyText_FromString(
         Utility::ConstructTemplateArgs(nullptr, args).c_str());
+// Propagate the error that occurs if we can't construct the C++ name
+// from the provided template argument
+    if (PyErr_Occurred()) {
+        return nullptr;
+    }
     return (PyObject*)typeBoundMethod;
 }
 
@@ -796,6 +808,11 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
         if (ol) return ol;
 
         proto = Utility::ConstructTemplateArgs(nullptr, args);
+    // Propagate the error that occurs if we can't construct the C++ name
+    // from the provided template argument
+        if (PyErr_Occurred()) {
+            return nullptr;
+        }
 
         scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
         cppmeth = Cppyy::GetMethodTemplate(
