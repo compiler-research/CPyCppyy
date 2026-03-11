@@ -142,7 +142,7 @@ unsigned long CPyCppyy::PyLongOrInt_AsULong(PyObject* pyobject)
     }
 
     unsigned long ul = PyLong_AsUnsignedLong(pyobject);
-    if (PyErr_Occurred() && PyInt_Check(pyobject)) {
+    if (ul == (unsigned long)-1 && PyErr_Occurred() && PyInt_Check(pyobject)) {
         PyErr_Clear();
         long i = PyInt_AS_LONG(pyobject);
         if (0 <= i) {
@@ -480,11 +480,17 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
             std::string subtype{"std::initializer_list<"};
             PyObject* item = PySequence_GetItem(arg, 0);
             ArgPreference subpref = pref == kValue ? kValue : kPointer;
-            if (AddTypeName(subtype, (PyObject*)Py_TYPE(item), item, subpref)) {
+            bool ret = AddTypeName(subtype, (PyObject*)Py_TYPE(item), item, subpref);
+            if (ret) {
                 tmpl_name.append(subtype);
                 tmpl_name.append(">");
             }
             Py_DECREF(item);
+        // Error occurred in inner call to AddTypeName, which means it has
+        // also set a TypeError. We return and let the error propagate.
+            if (!ret) {
+                return false;
+            }
         }
 
         return true;
@@ -620,6 +626,15 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
         return true;
     }
 
+// Give up with a TypeError
+
+// Try to get a readable representation of the argument
+    PyObject *repr = PyObject_Repr(tn);
+    const char *repr_cstr = repr ? PyUnicode_AsUTF8(repr) : "<unprintable>";
+
+    PyErr_Format(PyExc_TypeError, "could not construct C++ name from template argument %s", repr_cstr);
+
+    Py_XDECREF(repr);
     return false;
 }
 

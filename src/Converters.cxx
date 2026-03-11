@@ -16,6 +16,7 @@
 #include "Utility.h"
 
 // Standard
+#include <cassert>
 #include <complex>
 #include <limits.h>
 #include <stddef.h>      // for ptrdiff_t
@@ -3797,6 +3798,19 @@ public:
         gf[CCOMPLEX_F " ptr"] =             gf["std::complex<float> ptr"];
         gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
 
+        // We always need these converters when cppyy is based on an unpatched
+        // ROOT, because the "long long" types are always converted to Long64_t
+        // and ULong64_t already at the ROOT Meta level.
+        // See https://github.com/root-project/root/issues/15872#issuecomment-2174092763
+        gf["Long64_t"] =                    gf["long long"];
+        gf["Long64_t ptr"] =                gf["long long ptr"];
+        gf["Long64_t&"] =                   gf["long long&"];
+        gf["const Long64_t&"] =             gf["const long long&"];
+        gf["ULong64_t"] =                   gf["unsigned long long"];
+        gf["ULong64_t ptr"] =               gf["unsigned long long ptr"];
+        gf["ULong64_t&"] =                  gf["unsigned long long&"];
+        gf["const ULong64_t&"] =            gf["const unsigned long long&"];
+
     // factories for special cases
         gf["nullptr_t"] =                   (cf_t)+[](cdims_t) { static NullptrConverter c{};        return &c;};
         gf["const char*"] =                 (cf_t)+[](cdims_t) { return new CStringConverter{}; };
@@ -3807,6 +3821,17 @@ public:
         gf["char[]"] =                      (cf_t)+[](cdims_t d) { return new NonConstCStringArrayConverter{d, true}; };
         gf["signed char*"] =                gf["char*"];
         gf["wchar_t*"] =                    (cf_t)+[](cdims_t) { return new WCStringConverter{}; };
+     // TODO: The libc++ library that is used most prominently by Apple for
+     // macOS is using the _Nonnull Clang attribute for some of its string
+     // constructors (_LIBCPP_DIAGNOSE_NULLPTR is a preprocessor macro that
+     // resolves to _Nullable). The cppyy backend doesn't strip away such Clang
+     // attributes, so the wchar_t* converter fails to match. To make the
+     // construction of std::wstring work on macOS, we are explicitly creating
+     // a converter for the wchar_t*_Nonnull type here, but we should try to
+     // find a more general solution for dealing with Clang attributes.
+     // [1] https://clang.llvm.org/docs/AttributeReference.html#id656
+     // [2] https://github.com/llvm/llvm-project/blob/2078da43e25a4623cab2d0d60decddf709aaea28/libcxx/include/string#L1061
+        gf["wchar_t*_Nonnull"] =            (cf_t)+[](cdims_t) { return new WCStringConverter{}; };
         gf["char16_t*"] =                   (cf_t)+[](cdims_t) { return new CString16Converter{}; };
         gf["char16_t[]"] =                  (cf_t)+[](cdims_t d) { return new CString16Converter{dims2stringsz(d)}; };
         gf["char32_t*"] =                   (cf_t)+[](cdims_t) { return new CString32Converter{}; };
