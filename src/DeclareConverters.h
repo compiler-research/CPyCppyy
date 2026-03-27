@@ -494,17 +494,6 @@ protected:
     size_t            fValueSize;
 };
 
-
-// raising converter to take out overloads
-class NotImplementedConverter : public Converter {
-public:
-    NotImplementedConverter(const std::string &failureMsg = std::string()) : fFailureMsg{failureMsg} {}
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    virtual std::string GetFailureMsg() { return "[NotImplementedConverter] " + fFailureMsg; }
-protected:
-    const std::string fFailureMsg;
-};
-
 } // unnamed namespace
 
 } // namespace CPyCppyy
