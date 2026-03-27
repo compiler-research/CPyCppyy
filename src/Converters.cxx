@@ -3602,7 +3602,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         if (h != gConvFactories.end())
             return (h->second)(dims);
     // else, unhandled moves
-        result = new NotImplementedConverter(failure_msg);
+        result = new NotImplementedConverter{PyExc_NotImplementedError, "this method cannot (yet) be called"};
     }
 
     if (!result && h != gConvFactories.end()) {
@@ -3615,7 +3615,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         } else if (!cpd.empty()) {
             result = new VoidArrayConverter(/* keepControl= */ true, failure_msg);        // "user knows best"
         } else {
-            result = new NotImplementedConverter(failure_msg);   // fails on use
+            result = new NotImplementedConverter{PyExc_NotImplementedError, "this method cannot (yet) be called"};   // fails on use
         }
     }
 
