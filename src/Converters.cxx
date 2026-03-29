@@ -1719,7 +1719,6 @@ bool CPyCppyy::StdSpanConverter::SetArg(PyObject *pyobject, Parameter &para, Cal
 #endif // __cplusplus >= 202002L
 
 
-
 //----------------------------------------------------------------------------
 #define CPPYY_IMPL_ARRAY_CONVERTER(name, ctype, type, code, suffix)            \
   CPyCppyy::name##ArrayConverter::name##ArrayConverter(cdims_t dims)           \
@@ -3730,7 +3729,8 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         } else if (!cpd.empty()) {
             result = new VoidArrayConverter(/* keepControl= */ true, failure_msg);        // "user knows best"
         } else {
-            result = new NotImplementedConverter{PyExc_NotImplementedError, "this method cannot (yet) be called"};   // fails on use
+            // fails on use
+            result = new NotImplementedConverter{PyExc_NotImplementedError, "this method cannot (yet) be called"};
         }
     }
 
