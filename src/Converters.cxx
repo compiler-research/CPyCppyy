@@ -2569,7 +2569,7 @@ bool CPyCppyy::InstanceArrayConverter::ToMemory(
 }
 
 //___________________________________________________________________________
-// CLING WORKAROUND -- classes for STL iterators are completely undefined in that
+// Cling WORKAROUND -- classes for STL iterators are completely undefined in that
 // they come in a bazillion different guises, so just do whatever
 bool CPyCppyy::STLIteratorConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* /* ctxt */)
@@ -2583,7 +2583,7 @@ bool CPyCppyy::STLIteratorConverter::SetArg(
     para.fTypeCode = 'V';
     return true;
 }
-// -- END CLING WORKAROUND
+// -- END Cling WORKAROUND
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::VoidPtrRefConverter::SetArg(
@@ -3475,12 +3475,12 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         }
 
         if (!result) {
-        // CLING WORKAROUND -- special case for STL iterators
+        // Cling WORKAROUND -- special case for STL iterators
             if (Utility::IsSTLIterator(realType)) {
                 static STLIteratorConverter c;
                 result = &c;
             } else
-       // -- CLING WORKAROUND
+       // -- Cling WORKAROUND
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
         }
     } else {
@@ -3683,7 +3683,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         }
 
         if (!result) {
-        // CLING WORKAROUND -- special case for STL iterators
+        // Cling WORKAROUND -- special case for STL iterators
             if (realTypeStr.rfind("__gnu_cxx::__normal_iterator", 0) /* vector */ == 0
 #ifdef __APPLE__
                 || realTypeStr.rfind("__wrap_iter", 0) == 0
@@ -3693,7 +3693,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
                 static STLIteratorConverter c;
                 result = &c;
             } else {
-       // -- CLING WORKAROUND
+       // -- Cling WORKAROUND
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
             }
         }
