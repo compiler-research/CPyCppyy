@@ -1205,10 +1205,10 @@ public:
         gf[CCOMPLEX_F " ptr"] =             gf["std::complex<float> ptr"];
         gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
 
-    // We always need these executors when cppyy is based on an unpatched
-    // ROOT, because the "long long" types are always converted to Long64_t
-    // and ULong64_t already at the ROOT Meta level.
-    // See https://github.com/root-project/root/issues/15872#issuecomment-2174092763
+        // We always need these executors when cppyy is based on an unpatched
+        // ROOT, because the "long long" types are always converted to Long64_t
+        // and ULong64_t already at the ROOT Meta level.
+        // See https://github.com/root-project/root/issues/15872#issuecomment-2174092763
         gf["Long64_t"] =                    gf["long long"];
         gf["Long64_t&"] =                   gf["long long&"];
         gf["Long64_t ptr"] =                gf["long long ptr"];
