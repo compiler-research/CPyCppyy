@@ -1104,7 +1104,7 @@ extern "C" PyObject* PyInit_libcppyy()
 
 // load commonly used python strings
     if (!CPyCppyy::CreatePyStrings())
-        return nullptr;;
+        return nullptr;
 
 // setup interpreter
 #if PY_VERSION_HEX < 0x03090000
@@ -1147,58 +1147,58 @@ extern "C" PyObject* PyInit_libcppyy()
 
 // inject meta type
     if (!Utility::InitProxy(gThisModule, &CPPScope_Type, "CPPScope"))
-        return nullptr;;
+        return nullptr;
 
 // inject object proxy type
     if (!Utility::InitProxy(gThisModule, &CPPInstance_Type, "CPPInstance"))
-        return nullptr;;
+        return nullptr;
 
 // inject exception object proxy type
     if (!Utility::InitProxy(gThisModule, &CPPExcInstance_Type, "CPPExcInstance"))
-        return nullptr;;
+        return nullptr;
 
 // inject method proxy type
     if (!Utility::InitProxy(gThisModule, &CPPOverload_Type, "CPPOverload"))
-        return nullptr;;
+        return nullptr;
 
 // inject template proxy type
     if (!Utility::InitProxy(gThisModule, &TemplateProxy_Type, "TemplateProxy"))
-        return nullptr;;
+        return nullptr;
 
 // inject property proxy type
     if (!Utility::InitProxy(gThisModule, &CPPDataMember_Type, "CPPDataMember"))
-        return nullptr;;
+        return nullptr;
 
 // inject custom data types
 #if PY_VERSION_HEX < 0x03000000
     if (!Utility::InitProxy(gThisModule, &RefFloat_Type, "Double"))
-        return nullptr;;
+        return nullptr;
 
     if (!Utility::InitProxy(gThisModule, &RefInt_Type, "Long"))
-        return nullptr;;
+        return nullptr;
 #endif
 
     if (!Utility::InitProxy(gThisModule, &CustomInstanceMethod_Type, "InstanceMethod"))
-        return nullptr;;
+        return nullptr;
 
     if (!Utility::InitProxy(gThisModule, &TupleOfInstances_Type, "InstanceArray"))
-       return nullptr;;
+       return nullptr;
 
     if (!Utility::InitProxy(gThisModule, &LowLevelView_Type, "LowLevelView"))
-        return nullptr;;
+        return nullptr;
 
     if (!Utility::InitProxy(gThisModule, &PyNullPtr_t_Type, "nullptr_t"))
-        return nullptr;;
+        return nullptr;
 
 // custom iterators
     if (PyType_Ready(&InstanceArrayIter_Type) < 0)
-        return nullptr;;
+        return nullptr;
 
     if (PyType_Ready(&IndexIter_Type) < 0)
-        return nullptr;;
+        return nullptr;
 
     if (PyType_Ready(&VectorIter_Type) < 0)
-        return nullptr;;
+        return nullptr;
 
 // inject identifiable nullptr and default
     gNullPtrObject = (PyObject*)&_CPyCppyy_NullPtrStruct;
