@@ -3559,6 +3559,14 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
     std::string realTypeStr   = Cppyy::GetTypeAsString(realType);
     std::string realUnresolvedTypeStr   = TypeManip::clean_type(fullType, false, true);
 
+// mutable pointer references (T*&) are incompatible with Python's object model
+   if (cpd == "*&") {
+       return new NotImplementedConverter{PyExc_TypeError,
+           "argument type '" + resolvedTypeStr + "' is not supported: non-const references to pointers (T*&) allow a"
+           " function to replace the pointer itself. Python cannot represent this safely. Consider changing the"
+           " C++ API to return the new pointer or use a wrapper"};
+   }
+
 // accept unqualified type (as python does not know about qualifiers)
     h = gConvFactories.find((isConst ? "const " : "") + realTypeStr + cpd);
     if (h != gConvFactories.end()) {
