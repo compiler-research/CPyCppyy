@@ -83,6 +83,12 @@ public:
     void CastToArray(Py_ssize_t sz);
     Py_ssize_t ArrayLength();
 
+// implementation of the __reduce__ method: doesn't wrap any function by
+// default but can be re-assigned by libraries that add C++ object
+// serialization support, like ROOT
+    static PyCFunction &ReduceMethod();
+
+
 private:
     void  CreateExtension();
     void* GetExtendedObject();

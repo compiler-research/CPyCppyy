@@ -400,6 +400,21 @@ static PySequenceMethods op_as_sequence = {
     0,                             // sq_inplace_repeat
 };
 
+PyCFunction &CPPInstance::ReduceMethod() {
+   static PyCFunction reducer = nullptr;
+   return reducer;
+}
+
+PyObject *op_reduce(PyObject *self, PyObject *args)
+{
+   auto &reducer = CPPInstance::ReduceMethod();
+   if (!reducer) {
+      PyErr_SetString(PyExc_NotImplementedError, "");
+      return nullptr;
+   }
+   return reducer(self, args);
+}
+
 
 //----------------------------------------------------------------------------
 static PyMethodDef op_methods[] = {
@@ -409,6 +424,8 @@ static PyMethodDef op_methods[] = {
       (char*)"dispatch to selected overload"},
     {(char*)"__smartptr__", (PyCFunction)op_get_smartptr, METH_NOARGS,
       (char*)"get associated smart pointer, if any"},
+    {(char*)"__reduce__",  (PyCFunction)op_reduce, METH_NOARGS,
+        (char*)"reduce method for serialization"},
     {(char*)"__reshape__",  (PyCFunction)op_reshape, METH_O,
         (char*)"cast pointer to 1D array type"},
     {(char*)nullptr, nullptr, 0, nullptr}
