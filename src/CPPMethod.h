@@ -45,6 +45,7 @@ public:
 class CPPMethod : public PyCallable {
 public:
     CPPMethod(Cppyy::TCppScope_t scope, Cppyy::TCppMethod_t method);
+    PyObject* GetDocString() override;
     CPPMethod(const CPPMethod&);
     CPPMethod& operator=(const CPPMethod&);
     virtual ~CPPMethod();
