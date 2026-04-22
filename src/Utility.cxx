@@ -25,7 +25,6 @@
 
 //- data _____________________________________________________________________
 #if PY_VERSION_HEX < 0x030b0000
-dict_lookup_func CPyCppyy::gDictLookupOrg = 0;
 bool CPyCppyy::gDictLookupActive = false;
 #endif
 
