@@ -35,6 +35,12 @@ PyObject* Instance_FromVoidPtr(
 #include <utility>
 #include <vector>
 
+#if PY_VERSION_HEX < 0x030b0000
+namespace CPyCppyy {
+extern dict_lookup_func gDictLookupOrg;
+dict_lookup_func gDictLookupOrg = nullptr;
+} // namespace CPyCppyy
+#endif
 
 std::map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
 
