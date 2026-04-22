@@ -38,22 +38,6 @@ jobs:
             cling: Off
             llvm_enable_projects: "clang"
             llvm_targets_to_build: "host"
-          - name: osx15-arm-clang-clang-repl-19
-            os: macos-15
-            compiler: clang
-            clang-runtime: '19'
-            python-version: '3.12'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host"
-          - name: osx15-arm-clang-clang-repl-18
-            os: macos-15
-            compiler: clang
-            clang-runtime: '18'
-            python-version: '3.11'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host"
           - name: osx15-arm-clang-clang20-cling
             os: macos-15
             compiler: clang
@@ -77,22 +61,6 @@ jobs:
             compiler: clang
             clang-runtime: '20'
             python-version: '3.13'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host"
-          - name: osx15-x86-clang-clang-repl-19
-            os: macos-15-intel
-            compiler: clang
-            clang-runtime: '19'
-            python-version: '3.12'
-            cling: Off
-            llvm_enable_projects: "clang"
-            llvm_targets_to_build: "host"
-          - name: osx15-x86-clang-clang-repl-18
-            os: macos-15-intel
-            compiler: clang
-            clang-runtime: '18'
-            python-version: '3.11'
             cling: Off
             llvm_enable_projects: "clang"
             llvm_targets_to_build: "host"
@@ -299,13 +267,6 @@ jobs:
             python-version: '3.13'
             cling: Off
             cppyy: On
-          - name: osx15-arm-clang-clang-repl-19-cppyy
-            os: macos-15
-            compiler: clang
-            clang-runtime: '19'
-            python-version: '3.12'
-            cling: Off
-            cppyy: On
           - name: osx15-arm-clang-clang20-cling-cppyy
             os: macos-15
             compiler: clang
@@ -327,13 +288,6 @@ jobs:
             compiler: clang
             clang-runtime: '20'
             python-version: '3.13'
-            cling: Off
-            cppyy: On
-          - name: osx15-x86-clang-clang-repl-19-cppyy
-            os: macos-15-intel
-            compiler: clang
-            clang-runtime: '19'
-            python-version: '3.12'
             cling: Off
             cppyy: On
           - name: osx15-x86-clang-clang20-cling-cppyy
