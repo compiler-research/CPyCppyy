@@ -241,6 +241,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool        GetSmartPtrInfo(const std::string&, TCppType_t* raw, TCppMethod_t* deref);
     CPPYY_IMPORT
+    bool GetSmartPtrInfo(TCppScope_t, TCppType_t *raw, TCppMethod_t *deref);
+    CPPYY_IMPORT
     void        AddSmartPtrType(const std::string&);
 
     CPPYY_IMPORT

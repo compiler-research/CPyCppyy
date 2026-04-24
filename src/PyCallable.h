@@ -10,6 +10,9 @@
 
 namespace CPyCppyy {
 
+extern PyObject *gOverloadResolutionException;
+extern PyObject *gOverloadAmbiguityException;
+
 class CPPInstance;
 
 class PyCallable {

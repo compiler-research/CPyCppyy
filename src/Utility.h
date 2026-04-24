@@ -39,8 +39,11 @@ PyCallable* FindBinaryOperator(const std::string& lcname, const std::string& rcn
 enum ArgPreference { kNone, kPointer, kReference, kValue };
 bool AddTypeName(std::string &tmpl_name, PyObject *tn, PyObject *arg,
                  ArgPreference pref, int *pcnt = nullptr);
-std::string ConstructTemplateArgs(
-    PyObject* pyname, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
+std::string ConstructTemplateArgs(PyObject *pyname, PyObject *tpArgs,
+                                  PyObject *args = nullptr,
+                                  ArgPreference = kNone, int argoff = 0,
+                                  int *pcnt = nullptr,
+                                  bool usingThisParameter = false);
 std::vector<Cpp::TemplateArgInfo> GetTemplateArgsTypes(
     PyObject* scope, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
 
