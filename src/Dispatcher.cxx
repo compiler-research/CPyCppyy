@@ -466,7 +466,8 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
 // finish class declaration
     code << "};\n}";
 
-// finally, compile the code
+    // finally, compile the code
+    // printf("\n\n%s\n\n", code.str().c_str());
     if (!Cppyy::Compile(code.str())) {
         err << "failed to compile the dispatcher code";
         return false;

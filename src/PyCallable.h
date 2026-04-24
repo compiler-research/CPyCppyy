@@ -10,6 +10,9 @@
 
 namespace CPyCppyy {
 
+extern PyObject *gOverloadResolutionException;
+extern PyObject *gOverloadAmbiguityException;
+
 class CPPInstance;
 
 class PyCallable {
@@ -17,6 +20,7 @@ public:
     virtual ~PyCallable() {}
 
 public:
+    virtual void* GetMethod()   { return nullptr; }
     virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
     virtual PyObject* GetSignatureNames() = 0;
     virtual PyObject* GetSignatureTypes() = 0;
