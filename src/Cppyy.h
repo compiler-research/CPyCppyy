@@ -73,7 +73,8 @@ namespace Cppyy {
 
 // name to opaque C++ scope representation -----------------------------------
     CPPYY_IMPORT
-    std::string ResolveName(const std::string& cppitem_name);
+    std::string ResolveName(const std::string& cppitem_name,
+                            TCppScope_t scope = nullptr);
 
     CPPYY_IMPORT
     TCppType_t ResolveEnumReferenceType(TCppType_t type);
@@ -354,7 +355,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool IsFunctionPointerType(TCppType_t type);
     CPPYY_IMPORT
-    TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false);
+    TCppType_t  GetType(const std::string& name, bool enable_slow_lookup = false,
+                        TCppScope_t scope = nullptr);
     CPPYY_IMPORT
     bool AppendTypesSlow(const std::string &name,
                          std::vector<Cpp::TemplateArgInfo>& types,
