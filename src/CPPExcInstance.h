@@ -1,6 +1,9 @@
 #ifndef CPYCPPYY_CPPEXCINSTANCE_H
 #define CPYCPPYY_CPPEXCINSTANCE_H
 
+#include "Python.h"
+#include "CPyCppyy/CommonDefs.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
 // CpyCppyy::CPPExceptionInstance                                           //

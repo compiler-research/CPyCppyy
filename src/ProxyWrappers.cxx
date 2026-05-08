@@ -151,10 +151,12 @@ static inline void sync_templates(
     if (!attr) PyErr_Clear();
     Py_DECREF(dct);
     if (!TemplateProxy_Check(attr)) {
-        TemplateProxy* pytmpl = TemplateProxy_New(mtCppName, mtName, pyclass);
-        if (CPPOverload_Check(attr)) pytmpl->MergeOverload((CPPOverload*)attr);
-        PyType_Type.tp_setattro(pyclass, pyname, (PyObject*)pytmpl);
-        Py_DECREF(pytmpl);
+      TemplateProxy *pytmpl =
+          TemplateProxy_New(mtCppName, mtName, pyclass, mtName == "__init__");
+      if (CPPOverload_Check(attr))
+        pytmpl->MergeOverload((CPPOverload *)attr);
+      PyType_Type.tp_setattro(pyclass, pyname, (PyObject *)pytmpl);
+      Py_DECREF(pytmpl);
     }
     Py_XDECREF(attr);
     Py_DECREF(pyname);

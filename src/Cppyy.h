@@ -241,6 +241,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool        GetSmartPtrInfo(const std::string&, TCppType_t* raw, TCppMethod_t* deref);
     CPPYY_IMPORT
+    bool GetSmartPtrInfo(TCppScope_t, TCppType_t *raw, TCppMethod_t *deref);
+    CPPYY_IMPORT
     void        AddSmartPtrType(const std::string&);
 
     CPPYY_IMPORT
@@ -302,16 +304,33 @@ namespace Cppyy {
     bool        ExistsMethodTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
     bool        IsTemplatedMethod(TCppMethod_t method);
+    // CPPYY_IMPORT
+    // bool        IsStaticTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
-    bool        IsStaticTemplate(TCppScope_t scope, const std::string& name);
-    CPPYY_IMPORT
-    TCppMethod_t GetMethodTemplate(
-        TCppScope_t scope, const std::string& name, const std::string& proto);
+    TCppMethod_t GetMethodTemplate(TCppScope_t scope, const std::string &name,
+                                   const std::string &proto,
+                                   std::vector<TCppMethod_t> &ambiguous_candidates,
+                                   bool include_non_templated = false);
 
+    CPPYY_IMPORT
+    bool IsNonStaticMethod(TCppMethod_t func);
+    CPPYY_IMPORT
+    TCppMethod_t
+    BestOverloadFunctionMatch(const std::vector<TCppMethod_t> &candidates,
+                              const std::string &proto,
+                              std::vector<TCppMethod_t> &ambiguous_candidates,
+                              TCppScope_t parent_scope = nullptr,
+                              bool is_operator = false);
+
+    CPPYY_IMPORT
+    bool IsOperator(Cppyy::TCppScope_t scope);
+    CPPYY_IMPORT
+    bool IsConversionOperator(Cppyy::TCppScope_t scope);
     CPPYY_IMPORT
     TCppMethod_t GetGlobalOperator(TCppType_t scope, const std::string &lc,
                                    const std::string &rc,
-                                   const std::string &op);
+                                   const std::string &op,
+                                   std::vector<TCppMethod_t> &ambiguous_candidates);
 
 // method properties ---------------------------------------------------------
     CPPYY_IMPORT
@@ -358,7 +377,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     bool AppendTypesSlow(const std::string &name,
                          std::vector<Cpp::TemplateArgInfo>& types,
-                         TCppScope_t parent = nullptr);
+                         TCppScope_t parent = nullptr,
+                         bool append_unknown=false);
     CPPYY_IMPORT
     TCppType_t  GetComplexType(const std::string& element_type);
     CPPYY_IMPORT

@@ -4,11 +4,15 @@
 #include <climits>
 
 // Bindings
+#include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
 #include "CallContext.h"
 
 
 namespace CPyCppyy {
+
+extern PyObject *gOverloadResolutionException;
+extern PyObject *gOverloadAmbiguityException;
 
 class CPPInstance;
 
@@ -17,6 +21,7 @@ public:
     virtual ~PyCallable() {}
 
 public:
+    virtual void* GetMethod()   { return nullptr; }
     virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
     virtual PyObject* GetSignatureNames() = 0;
     virtual PyObject* GetSignatureTypes() = 0;
