@@ -304,11 +304,12 @@ namespace Cppyy {
     bool        ExistsMethodTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
     bool        IsTemplatedMethod(TCppMethod_t method);
-    CPPYY_IMPORT
-    bool        IsStaticTemplate(TCppScope_t scope, const std::string& name);
+    // CPPYY_IMPORT
+    // bool        IsStaticTemplate(TCppScope_t scope, const std::string& name);
     CPPYY_IMPORT
     TCppMethod_t GetMethodTemplate(TCppScope_t scope, const std::string &name,
                                    const std::string &proto,
+                                   std::vector<TCppMethod_t> &ambiguous_candidates,
                                    bool include_non_templated = false);
 
     CPPYY_IMPORT
@@ -317,6 +318,7 @@ namespace Cppyy {
     TCppMethod_t
     BestOverloadFunctionMatch(const std::vector<TCppMethod_t> &candidates,
                               const std::string &proto,
+                              std::vector<TCppMethod_t> &ambiguous_candidates,
                               TCppScope_t parent_scope = nullptr,
                               bool is_operator = false);
 
@@ -327,7 +329,8 @@ namespace Cppyy {
     CPPYY_IMPORT
     TCppMethod_t GetGlobalOperator(TCppType_t scope, const std::string &lc,
                                    const std::string &rc,
-                                   const std::string &op);
+                                   const std::string &op,
+                                   std::vector<TCppMethod_t> &ambiguous_candidates);
 
 // method properties ---------------------------------------------------------
     CPPYY_IMPORT

@@ -1,5 +1,6 @@
 // Bindings
 #include "CPyCppyy.h"
+#include "Cppyy.h"
 #include "DeclareConverters.h"
 #include "CallContext.h"
 #include "CPPExcInstance.h"
@@ -29,6 +30,7 @@
 #include <sstream>
 #include <cstddef>
 #include <string_view>
+#include <vector>
 #if __cplusplus >= 202002L
 #include <span>
 #endif
@@ -2781,7 +2783,8 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
         if (pytmpl->fTemplateArgs)
             fullname += CPyCppyy_PyText_AsString(pytmpl->fTemplateArgs);
         Cppyy::TCppScope_t scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
-        Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(scope, fullname, true_signature);
+        std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
+        Cppyy::TCppMethod_t cppmeth = Cppyy::GetMethodTemplate(scope, fullname, true_signature, ambiguous_candidates);
         if (cppmeth) {
             void* fptr = (void*)Cppyy::GetFunctionAddress(cppmeth, false);
             if (fptr) return fptr;

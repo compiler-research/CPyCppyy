@@ -6,12 +6,14 @@
 #include "CPPFunction.h"
 #include "CPPMethod.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "PyCallable.h"
 #include "PyStrings.h"
 #include "Utility.h"
 
 // Standard
 #include <algorithm>
+#include <vector>
 
 
 namespace CPyCppyy {
@@ -200,8 +202,9 @@ PyObject *TemplateProxy::Instantiate(const std::string &fname,
 
 // the following causes instantiation as necessary
     Cppyy::TCppScope_t scope = ((CPPClass*)fTI->fPyClass)->fCppType;
+    std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
     Cppyy::TCppMethod_t cppmeth =
-        Cppyy::GetMethodTemplate(scope, fname, proto, include_non_templated);
+        Cppyy::GetMethodTemplate(scope, fname, proto, ambiguous_candidates, include_non_templated);
     if (cppmeth) {    // overload stops here
     // A successful instantiation needs to be cached to pre-empt future instantiations. There
     // are two names involved, the original asked (which may be partial) and the received.
@@ -226,7 +229,7 @@ PyObject *TemplateProxy::Instantiate(const std::string &fname,
             }
 
             Cppyy::TCppMethod_t m2 = Cppyy::GetMethodTemplate(
-                scope, fname, proto, include_non_templated);
+                scope, fname, proto, ambiguous_candidates, include_non_templated);
             if (m2 && m2 != cppmeth) {
             // replace if the new method with vector was found; otherwise just continue
             // with the previously found method with initializer_list.
@@ -808,6 +811,7 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
     Cppyy::TCppScope_t scope = (Cppyy::TCppScope_t) 0;
     Cppyy::TCppMethod_t cppmeth = (Cppyy::TCppMethod_t) 0;
     std::string proto;
+    std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
 
     if (PyArg_ParseTuple(args, const_cast<char*>("s|i:__overload__"), &sigarg, &want_const)) {
         want_const = PyTuple_GET_SIZE(args) == 1 ? -1 : want_const;
@@ -832,7 +836,7 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
         scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
         cppmeth = Cppyy::GetMethodTemplate(
             scope, pytmpl->fTI->fCppName,
-            proto.substr(1, proto.size() - 2)); // ???: include_non_templated
+            proto.substr(1, proto.size() - 2), ambiguous_candidates); // ???: include_non_templated
     } else if (PyArg_ParseTuple(args, const_cast<char*>("O|i:__overload__"), &sigarg_tuple, &want_const)) {
         PyErr_Clear();
         want_const = PyTuple_GET_SIZE(args) == 1 ? -1 : want_const;
@@ -864,7 +868,7 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
 
         scope = ((CPPClass*)pytmpl->fTI->fPyClass)->fCppType;
         cppmeth = Cppyy::GetMethodTemplate(
-            scope, pytmpl->fTI->fCppName, proto.substr(1, proto.size()-2));
+            scope, pytmpl->fTI->fCppName, proto.substr(1, proto.size()-2), ambiguous_candidates);
     } else {
         PyErr_Format(PyExc_TypeError, "Unexpected arguments to __overload__");
         return nullptr;

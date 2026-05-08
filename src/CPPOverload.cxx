@@ -1,6 +1,7 @@
 // Bindings
 #include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
+#include "Cppyy.h"
 #include "PyCallable.h"
 #include "dictobject.h"
 #include "listobject.h"
@@ -742,11 +743,14 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
     std::vector<Cppyy::TCppMethod_t> overloads;
     bool is_operator = false;
     bool is_conversion_operator = false;
+    bool is_static = false;
     for (auto i : pymeth->fMethodInfo->fMethods) {
       if (is_operator || dynamic_cast<CPyCppyy::CPPMethod*>(i)->IsOperator())
         is_operator = true;
       if (is_conversion_operator || dynamic_cast<CPyCppyy::CPPMethod*>(i)->IsConversionOperator())
         is_conversion_operator = true;
+      if (is_static || dynamic_cast<CPyCppyy::CPPMethod*>(i)->IsStaticMethod())
+        is_static = true;
       overloads.push_back(i->GetMethod());
     }
 
@@ -768,7 +772,7 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
             (pymeth->fMethodInfo->fName == "__setitem__")) {
           // unpack the tuple for Python getter and setter...
           // TODO: propogate this logic to TemplateProxy too
-          if ((typ == (PyObject *)&PyTuple_Type) && (i == 1)) {
+          if ((typ == (PyObject *)&PyTuple_Type) && (i == (im_self ? 0 : 1))) {
             for (Py_ssize_t j = 0; j < PyTuple_GET_SIZE(obj); j++) {
               if (!proto.empty())
                 proto += ", ";
@@ -781,7 +785,7 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
               }
             }
             continue;
-          } else if (i == 2)
+          } else if (i == (im_self ? 1 : 2))
             continue;
         }
         if (!proto.empty())
@@ -805,8 +809,9 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
       }
     }
 
+    std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
     Cppyy::TCppScope_t meth =
-        Cppyy::BestOverloadFunctionMatch(overloads, proto, /*TODO:*/nullptr, is_operator);
+        Cppyy::BestOverloadFunctionMatch(overloads, proto, ambiguous_candidates, /*TODO:*/nullptr, is_operator);
     if (!meth && (ctxt.fFlags & CallContext::kIsConstructor)) {
       // this might be a POD class/struct
       // and might need the self* for the overload resolution
@@ -819,7 +824,7 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
         PyObject *typ = (PyObject *)Py_TYPE(obj);
         AddTypeName(self_type_name, typ, nullptr, Utility::kNone);
         proto = self_type_name + "**, " + proto;
-        meth = Cppyy::BestOverloadFunctionMatch(overloads, proto,
+        meth = Cppyy::BestOverloadFunctionMatch(overloads, proto, ambiguous_candidates,
                                                 /*TODO:*/ nullptr, is_operator);
       }
     }
@@ -850,15 +855,27 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
     }
     if (!is_conversion_operator) {
       std::ostringstream overload_signatures;
-      for (const auto i : overloads) {
-        overload_signatures << "  " << Cppyy::GetMethodReturnTypeAsString(i)
-                            << " " << Cppyy::GetScopedFinalName(i)
-                            << Cppyy::GetMethodSignature(i, true) << "\n";
+      if (ambiguous_candidates.empty()) {
+        for (const auto i : overloads) {
+            overload_signatures << "  " << Cppyy::GetMethodReturnTypeAsString(i) // TODO: mention if the function is static from the list
+                                << " " << Cppyy::GetScopedFinalName(i)
+                                << Cppyy::GetMethodSignature(i, true) << "\n";
+        }
+        PyErr_Format(gOverloadResolutionException,
+                    "Overload Resolution Failed.\nOverload set:\n%sDeduced Argument Types: (%s)\n%s",
+                    overload_signatures.str().c_str(), proto.c_str(),
+                    is_static ? "Found static methods in the overload set. If you want to invoke the static overload, try calling the function using the class type instead of the instance.\n" : "");
+      } else {
+          for (const auto i : ambiguous_candidates) {
+              overload_signatures << "  " << Cppyy::GetMethodReturnTypeAsString(i)
+                                  << " " << Cppyy::GetScopedFinalName(i)
+                                  << Cppyy::GetMethodSignature(i, true) << "\n";
+          }
+          PyErr_Format(gOverloadAmbiguityException,
+                      "Overload Resolution Failed. Call to \"%s\" is ambiguous.\nAmbigious set:\n%sDeduced Argument Types: (%s)\n%s",
+                      pymeth->fMethodInfo->fName.c_str(), overload_signatures.str().c_str(), proto.c_str(),
+                      is_static ? "Found static methods in the overload set. If you want to invoke the static overload, try calling the function using the class type instead of the instance.\n" : "");
       }
-      PyErr_Format(gOverloadResolutionException,
-                   "Overload Resolution Failed.\nOverload set:\n%sArguments "
-                   "deduced: %s\n",
-                   overload_signatures.str().c_str(), proto.c_str());
       return nullptr;
     }
 

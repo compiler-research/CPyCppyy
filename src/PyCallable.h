@@ -4,6 +4,7 @@
 #include <climits>
 
 // Bindings
+#include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
 #include "CallContext.h"
 

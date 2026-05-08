@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 
+#include "Python.h"
+#include "Cppyy.h"
+
 
 namespace CPyCppyy {
 

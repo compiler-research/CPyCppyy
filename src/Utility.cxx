@@ -6,6 +6,7 @@
 #include "CPPOverload.h"
 #include "CPyCppyy.h"
 #include "CPyCppyy/DispatchPtr.h"
+#include "Cppyy.h"
 #include "CustomPyTypes.h"
 #include "LowLevelViews.h"
 #include "ProxyWrappers.h"
@@ -28,6 +29,7 @@
 #include <set>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 
 //- data _____________________________________________________________________
@@ -277,7 +279,8 @@ CPyCppyy::PyCallable* BuildOperator(const std::string& lcname, const std::string
 {
 // Helper to find a function with matching signature in 'funcs'.
 
-    Cppyy::TCppMethod_t meth = Cppyy::GetGlobalOperator(scope, lcname, rcname, op);
+    std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
+    Cppyy::TCppMethod_t meth = Cppyy::GetGlobalOperator(scope, lcname, rcname, op, ambiguous_candidates);
     if (!meth)
         return nullptr;
 
@@ -387,7 +390,8 @@ CPyCppyy::PyCallable* CPyCppyy::Utility::FindBinaryOperator(
             else { fname << "not_implemented<"; }
             fname << lcname << ", " << rcname << ">";
             proto << "const " << lcname << "&, const " << rcname;
-            Cppyy::TCppMethod_t method = Cppyy::GetMethodTemplate(s_intern, fname.str(), proto.str());
+            std::vector<Cppyy::TCppMethod_t> ambiguous_candidates;
+            Cppyy::TCppMethod_t method = Cppyy::GetMethodTemplate(s_intern, fname.str(), proto.str(), ambiguous_candidates);
             if (method) pyfunc = new CPPFunction(s_intern, method);
         }
     }
