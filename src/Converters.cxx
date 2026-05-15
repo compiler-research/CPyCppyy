@@ -3712,7 +3712,7 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
                ) {
                 static STLIteratorConverter c;
                 result = &c;
-            } else {
+            } else if(realTypeStr != "int8_t" and realTypeStr != "uint8_t") {
        // -- Cling WORKAROUND
                 result = selectInstanceCnv(klass, cpd, dims, isConst, control);
             }
