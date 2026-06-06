@@ -8,6 +8,7 @@
 #include "PyStrings.h"
 #include "TypeManip.h"
 #include "Utility.h"
+#include "MarshalScalar.h"
 
 // Standard
 #include <cstring>
@@ -78,6 +79,43 @@ CPPYY_IMPL_GILCALL(double,         D)
 CPPYY_IMPL_GILCALL(PY_LONG_DOUBLE, LD)
 CPPYY_IMPL_GILCALL(void*,          R)
 
+// Compile-time map T -> GILCall<X>: one entry to update when a new
+// fundamental T joins the family. ScalarExecutor<T> below dispatches
+// through it.
+namespace {
+
+template <class T> T GILCallFor(Cppyy::TCppMethod_t, Cppyy::TCppObject_t,
+                                CPyCppyy::CallContext*);
+
+template <> inline bool      GILCallFor<bool>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallB(m, s, c); }
+template <> inline int8_t    GILCallFor<int8_t>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (int8_t)GILCallC(m, s, c); }
+template <> inline uint8_t   GILCallFor<uint8_t>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (uint8_t)GILCallB(m, s, c); }
+template <> inline short     GILCallFor<short>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallH(m, s, c); }
+template <> inline unsigned short GILCallFor<unsigned short>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (unsigned short)GILCallI(m, s, c); }
+template <> inline int       GILCallFor<int>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallI(m, s, c); }
+template <> inline unsigned int GILCallFor<unsigned int>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (unsigned int)GILCallL(m, s, c); }
+template <> inline long      GILCallFor<long>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallL(m, s, c); }
+template <> inline unsigned long GILCallFor<unsigned long>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (unsigned long)GILCallLL(m, s, c); }
+template <> inline PY_LONG_LONG  GILCallFor<PY_LONG_LONG>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallLL(m, s, c); }
+template <> inline PY_ULONG_LONG GILCallFor<PY_ULONG_LONG>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return (PY_ULONG_LONG)GILCallLL(m, s, c); }
+template <> inline float     GILCallFor<float>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallF(m, s, c); }
+template <> inline double    GILCallFor<double>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallD(m, s, c); }
+template <> inline PY_LONG_DOUBLE GILCallFor<PY_LONG_DOUBLE>(Cppyy::TCppMethod_t m, Cppyy::TCppObject_t s, CPyCppyy::CallContext* c) { return GILCallLD(m, s, c); }
+
+// Single Execute body for every fundamental scalar T: call into C++
+// through GILCallFor<T>, hand the result to MarshalScalar.h.
+template <class T>
+class ScalarExecutor : public CPyCppyy::Executor {
+public:
+    PyObject* Execute(Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self,
+                      CPyCppyy::CallContext* ctxt) override {
+        T result = GILCallFor<T>(method, self, ctxt);
+        return CPyCppyy::MarshalToPy<T>(result);
+    }
+};
+
+} // anonymous namespace
+
 static inline Cppyy::TCppObject_t GILCallO(Cppyy::TCppMethod_t method,
     Cppyy::TCppObject_t self, CPyCppyy::CallContext* ctxt, Cppyy::TCppScope_t klass)
 {
@@ -143,16 +181,6 @@ CPyCppyy::Executor::~Executor()
 }
 
 //- executors for built-ins --------------------------------------------------
-PyObject* CPyCppyy::BoolExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python bool return value
-    bool retval = GILCallB(method, self, ctxt);
-    PyObject* result = retval ? Py_True : Py_False;
-    Py_INCREF(result);
-    return result;
-}
-
 //----------------------------------------------------------------------------
 PyObject* CPyCppyy::BoolConstRefExecutor::Execute(
     Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
@@ -225,96 +253,6 @@ PyObject* CPyCppyy::Char32Executor::Execute(
 // with the single char32
     char32_t res = (char32_t)GILCallL(method, self, ctxt);
     return PyUnicode_DecodeUTF32((const char*)&res, sizeof(char32_t), nullptr, nullptr);
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::IntExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python int return value
-    return PyInt_FromLong((int)GILCallI(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::Int8Executor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python int return value
-    return PyInt_FromLong((int8_t)GILCallC(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::UInt8Executor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python int return value
-    return PyInt_FromLong((uint8_t)GILCallB(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::ShortExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python int return value
-    return PyInt_FromLong((short)GILCallH(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::LongExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python long return value
-    return PyLong_FromLong((long)GILCallL(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::ULongExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python unsigned long return value
-    return PyLong_FromUnsignedLong((unsigned long)GILCallLL(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::LongLongExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python long long return value
-    PY_LONG_LONG result = GILCallLL(method, self, ctxt);
-    return PyLong_FromLongLong(result);
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::ULongLongExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python unsigned long long return value
-    PY_ULONG_LONG result = (PY_ULONG_LONG)GILCallLL(method, self, ctxt);
-    return PyLong_FromUnsignedLongLong(result);
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::FloatExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python float return value
-    return PyFloat_FromDouble((double)GILCallF(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::DoubleExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python float return value
-    return PyFloat_FromDouble((double)GILCallD(method, self, ctxt));
-}
-
-//----------------------------------------------------------------------------
-PyObject* CPyCppyy::LongDoubleExecutor::Execute(
-    Cppyy::TCppMethod_t method, Cppyy::TCppObject_t self, CallContext* ctxt)
-{
-// execute <method> with argument <self, ctxt>, construct python float return value
-    return PyFloat_FromDouble((double)GILCallLD(method, self, ctxt));
 }
 
 //----------------------------------------------------------------------------
@@ -1103,7 +1041,7 @@ public:
         CPyCppyy::ExecFactories_t& gf = gExecFactories;
 
     // factories for built-ins
-        gf["bool"] =                        (ef_t)+[](cdims_t) { static BoolExecutor e{};          return &e; };
+        gf["bool"] =                        (ef_t)+[](cdims_t) { static ScalarExecutor<bool> e{};          return &e; };
         gf["bool&"] =                       (ef_t)+[](cdims_t) { return new BoolRefExecutor{}; };
         gf["const bool&"] =                 (ef_t)+[](cdims_t) { static BoolConstRefExecutor e{};  return &e; };
         gf["char"] =                        (ef_t)+[](cdims_t) { static CharExecutor e{};          return &e; };
@@ -1118,36 +1056,36 @@ public:
         gf["wchar_t"] =                     (ef_t)+[](cdims_t) { static WCharExecutor e{};         return &e; };
         gf["char16_t"] =                    (ef_t)+[](cdims_t) { static Char16Executor e{};        return &e; };
         gf["char32_t"] =                    (ef_t)+[](cdims_t) { static Char32Executor e{};        return &e; };
-        gf["int8_t"] =                      (ef_t)+[](cdims_t) { static Int8Executor e{};          return &e; };
+        gf["int8_t"] =                      (ef_t)+[](cdims_t) { static ScalarExecutor<int8_t> e{};          return &e; };
         gf["int8_t&"] =                     (ef_t)+[](cdims_t) { return new Int8RefExecutor{}; };
         gf["const int8_t&"] =               (ef_t)+[](cdims_t) { static Int8RefExecutor e{};       return &e; };
-        gf["uint8_t"] =                     (ef_t)+[](cdims_t) { static UInt8Executor e{};         return &e; };
+        gf["uint8_t"] =                     (ef_t)+[](cdims_t) { static ScalarExecutor<uint8_t> e{};         return &e; };
         gf["uint8_t&"] =                    (ef_t)+[](cdims_t) { return new UInt8RefExecutor{}; };
         gf["const uint8_t&"] =              (ef_t)+[](cdims_t) { static UInt8RefExecutor e{};      return &e; };
-        gf["short"] =                       (ef_t)+[](cdims_t) { static ShortExecutor e{};         return &e; };
+        gf["short"] =                       (ef_t)+[](cdims_t) { static ScalarExecutor<short> e{};         return &e; };
         gf["short&"] =                      (ef_t)+[](cdims_t) { return new ShortRefExecutor{}; };
-        gf["int"] =                         (ef_t)+[](cdims_t) { static IntExecutor e{};           return &e; };
+        gf["int"] =                         (ef_t)+[](cdims_t) { static ScalarExecutor<int> e{};           return &e; };
         gf["int&"] =                        (ef_t)+[](cdims_t) { return new IntRefExecutor{}; };
         gf["unsigned short"] =              gf["int"];
         gf["unsigned short&"] =             (ef_t)+[](cdims_t) { return new UShortRefExecutor{}; };
-        gf["unsigned long"] =               (ef_t)+[](cdims_t) { static ULongExecutor e{};         return &e; };
+        gf["unsigned long"] =               (ef_t)+[](cdims_t) { static ScalarExecutor<unsigned long> e{};         return &e; };
         gf["unsigned long&"] =              (ef_t)+[](cdims_t) { return new ULongRefExecutor{}; };
         gf["unsigned int"] =                gf["unsigned long"];
         gf["unsigned int&"] =               (ef_t)+[](cdims_t) { return new UIntRefExecutor{}; };
-        gf["long"] =                        (ef_t)+[](cdims_t) { static LongExecutor e{};          return &e; };
+        gf["long"] =                        (ef_t)+[](cdims_t) { static ScalarExecutor<long> e{};          return &e; };
         gf["long&"] =                       (ef_t)+[](cdims_t) { return new LongRefExecutor{}; };
-        gf["unsigned long"] =               (ef_t)+[](cdims_t) { static ULongExecutor e{};         return &e; };
+        gf["unsigned long"] =               (ef_t)+[](cdims_t) { static ScalarExecutor<unsigned long> e{};         return &e; };
         gf["unsigned long&"] =              (ef_t)+[](cdims_t) { return new ULongRefExecutor{}; };
-        gf["long long"] =                   (ef_t)+[](cdims_t) { static LongLongExecutor e{};      return &e; };
+        gf["long long"] =                   (ef_t)+[](cdims_t) { static ScalarExecutor<PY_LONG_LONG> e{};      return &e; };
         gf["long long&"] =                  (ef_t)+[](cdims_t) { return new LongLongRefExecutor{}; };
-        gf["unsigned long long"] =          (ef_t)+[](cdims_t) { static ULongLongExecutor e{};     return &e; };
+        gf["unsigned long long"] =          (ef_t)+[](cdims_t) { static ScalarExecutor<PY_ULONG_LONG> e{};     return &e; };
         gf["unsigned long long&"] =         (ef_t)+[](cdims_t) { return new ULongLongRefExecutor{}; };
 
-        gf["float"] =                       (ef_t)+[](cdims_t) { static FloatExecutor e{};      return &e; };
+        gf["float"] =                       (ef_t)+[](cdims_t) { static ScalarExecutor<float> e{};      return &e; };
         gf["float&"] =                      (ef_t)+[](cdims_t) { return new FloatRefExecutor{}; };
-        gf["double"] =                      (ef_t)+[](cdims_t) { static DoubleExecutor e{};     return &e; };
+        gf["double"] =                      (ef_t)+[](cdims_t) { static ScalarExecutor<double> e{};     return &e; };
         gf["double&"] =                     (ef_t)+[](cdims_t) { return new DoubleRefExecutor{}; };
-        gf["long double"] =                 (ef_t)+[](cdims_t) { static LongDoubleExecutor e{}; return &e; }; // TODO: lost precision
+        gf["long double"] =                 (ef_t)+[](cdims_t) { static ScalarExecutor<PY_LONG_DOUBLE> e{}; return &e; }; // TODO: lost precision
         gf["long double&"] =                (ef_t)+[](cdims_t) { return new LongDoubleRefExecutor{}; };
         gf["std::complex<double>"] =        (ef_t)+[](cdims_t) { static ComplexDExecutor e{};    return &e; };
         gf["std::complex<double>&"] =       (ef_t)+[](cdims_t) { return new ComplexDRefExecutor{}; };

@@ -22,7 +22,6 @@ public:                                                                      \
 }
 
 // executors for built-ins
-CPPYY_DECL_EXEC(Bool);
 CPPYY_DECL_EXEC(BoolConstRef);
 CPPYY_DECL_EXEC(Char);
 CPPYY_DECL_EXEC(CharConstRef);
@@ -31,17 +30,6 @@ CPPYY_DECL_EXEC(UCharConstRef);
 CPPYY_DECL_EXEC(WChar);
 CPPYY_DECL_EXEC(Char16);
 CPPYY_DECL_EXEC(Char32);
-CPPYY_DECL_EXEC(Int8);
-CPPYY_DECL_EXEC(UInt8);
-CPPYY_DECL_EXEC(Short);
-CPPYY_DECL_EXEC(Int);
-CPPYY_DECL_EXEC(Long);
-CPPYY_DECL_EXEC(ULong);
-CPPYY_DECL_EXEC(LongLong);
-CPPYY_DECL_EXEC(ULongLong);
-CPPYY_DECL_EXEC(Float);
-CPPYY_DECL_EXEC(Double);
-CPPYY_DECL_EXEC(LongDouble);
 CPPYY_DECL_EXEC(Void);
 CPPYY_DECL_EXEC(CString);
 CPPYY_DECL_EXEC(CStringRef);
