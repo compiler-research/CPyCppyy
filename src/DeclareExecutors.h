@@ -1,6 +1,9 @@
 #ifndef CPYCPPYY_DECLAREEXECUTORS_H
 #define CPYCPPYY_DECLAREEXECUTORS_H
 
+#include "Python.h"
+#include "Cppyy.h"
+
 // Bindings
 #include "Executors.h"
 #include "CallContext.h"
@@ -89,7 +92,7 @@ CPPYY_DECL_EXEC(STLWString);
 
 class InstancePtrExecutor : public Executor {
 public:
-    InstancePtrExecutor(Cppyy::TCppType_t klass) : fClass(klass) {}
+    InstancePtrExecutor(Cppyy::TCppScope_t klass) : fClass(klass) {}
     PyObject* Execute(
         Cppyy::TCppMethod_t, Cppyy::TCppObject_t, CallContext*) override;
     bool HasState() override { return true; }

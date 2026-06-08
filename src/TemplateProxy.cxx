@@ -6,6 +6,7 @@
 #include "CPPFunction.h"
 #include "CPPMethod.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "PyCallable.h"
 #include "PyStrings.h"
 #include "Utility.h"
@@ -205,7 +206,7 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
     // TODO: this caches the lookup method before the call, meaning that failing overloads
     // can add already existing overloads to the set of methods.
 
-        std::string resname = Cppyy::GetMethodFullName(cppmeth);
+        std::string resname = Cppyy::GetFullName(Cppyy::TCppScope_t(cppmeth.data));
 
     // An initializer_list is preferred for the argument types, but should not leak into
     // the argument types. If it did, replace with vector and lookup anew.
@@ -221,7 +222,7 @@ PyObject* TemplateProxy::Instantiate(const std::string& fname,
             // replace if the new method with vector was found; otherwise just continue
             // with the previously found method with initializer_list.
                 cppmeth = m2;
-                resname = Cppyy::GetMethodFullName(cppmeth);
+                resname = Cppyy::GetFullName(Cppyy::TCppScope_t(cppmeth.data));
             }
         }
 
@@ -791,8 +792,8 @@ static PyObject* tpp_overload(TemplateProxy* pytmpl, PyObject* args)
     PyObject* sigarg_tuple = nullptr;
     int want_const = -1;
 
-    Cppyy::TCppScope_t scope = (Cppyy::TCppScope_t) 0;
-    Cppyy::TCppMethod_t cppmeth = (Cppyy::TCppMethod_t) 0;
+    Cppyy::TCppScope_t scope = nullptr;
+    Cppyy::TCppMethod_t cppmeth = nullptr;
     std::string proto;
 
     if (PyArg_ParseTuple(args, const_cast<char*>("s|i:__overload__"), &sigarg, &want_const)) {

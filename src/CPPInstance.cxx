@@ -3,6 +3,7 @@
 #include "CPPInstance.h"
 #include "CPPScope.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "MemoryRegulator.h"
 #include "ProxyWrappers.h"
 #include "PyStrings.h"
@@ -181,9 +182,9 @@ void CPyCppyy::CPPInstance::SetSmart(PyObject* smart_type)
 }
 
 //----------------------------------------------------------------------------
-Cppyy::TCppType_t CPyCppyy::CPPInstance::GetSmartIsA() const
+Cppyy::TCppScope_t CPyCppyy::CPPInstance::GetSmartIsA() const
 {
-    if (!IsSmart()) return (Cppyy::TCppType_t)0;
+    if (!IsSmart()) return Cppyy::TCppScope_t{};
     return SMART_TYPE(this);
 }
 
@@ -208,7 +209,7 @@ void CPyCppyy::CPPInstance::SetDispatchPtr(void* ptr)
 void CPyCppyy::op_dealloc_nofree(CPPInstance* pyobj) {
 // Destroy the held C++ object, if owned; does not deallocate the proxy.
 
-    Cppyy::TCppType_t klass = pyobj->ObjectIsA(false /* check_smart */);
+    Cppyy::TCppScope_t klass = pyobj->ObjectIsA(false /* check_smart */);
     void*& cppobj = pyobj->GetObjectRaw();
 
     if (pyobj->fFlags & CPPInstance::kIsRegulated)
@@ -655,7 +656,7 @@ static PyObject* op_repr(CPPInstance* self)
         return PyBaseObject_Type.tp_repr((PyObject*)self);
     PyObject* modname = PyObject_GetAttr(pyclass, PyStrings::gModule);
 
-    Cppyy::TCppType_t klass = self->ObjectIsA();
+    Cppyy::TCppScope_t klass = self->ObjectIsA();
     std::string clName = klass ? Cppyy::GetFinalName(klass) : "<unknown>";
     if (self->fFlags & CPPInstance::kIsPtrPtr)
         clName.append("**");

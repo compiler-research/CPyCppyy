@@ -22,7 +22,7 @@ class CPPOverload;
  */
 
 typedef std::pair<uint64_t, CPPOverload*> TP_DispatchEntry_t;
-typedef std::map<std::string, std::vector<TP_DispatchEntry_t>> TP_DispatchMap_t;
+typedef std::unordered_map<std::string, std::vector<TP_DispatchEntry_t>> TP_DispatchMap_t;
 
 class TemplateInfo {
 public:

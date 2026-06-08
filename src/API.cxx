@@ -1,5 +1,6 @@
 // Bindings
 #include "CPyCppyy.h"
+#include "Cppyy.h"
 #define CPYCPPYY_INTERNAL 1
 #include "CPyCppyy/API.h"
 #undef CPYCPPYY_INTERNAL
@@ -112,7 +113,7 @@ std::string CPyCppyy::Instance_GetScopedFinalName(PyObject* pyobject)
        return "";
    }
 
-   Cppyy::TCppType_t pyobjectClass = ((CPPInstance *)pyobject)->ObjectIsA();
+   Cppyy::TCppScope_t pyobjectClass = ((CPPInstance *)pyobject)->ObjectIsA();
    return Cppyy::GetScopedFinalName(pyobjectClass);
 }
 

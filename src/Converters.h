@@ -76,7 +76,7 @@ public:
     bool ToMemory(PyObject* value, void* address, PyObject* ctxt = nullptr) override;
 
 protected:
-    Cppyy::TCppType_t fClass;
+    Cppyy::TCppScope_t fClass;
 };
 
 class StrictInstancePtrConverter : public InstancePtrConverter<false> {

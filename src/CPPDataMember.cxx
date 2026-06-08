@@ -1,6 +1,7 @@
 // Bindings
 #include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
+#include "Cppyy.h"
 #include "PyStrings.h"
 #include "CPPDataMember.h"
 #include "CPPInstance.h"
@@ -193,7 +194,7 @@ static CPPDataMember* dm_new(PyTypeObject* pytype, PyObject*, PyObject*)
     dm->fOffset         = 0;
     dm->fFlags          = 0;
     dm->fConverter      = nullptr;
-    dm->fEnclosingScope = 0;
+    dm->fEnclosingScope = nullptr;
     dm->fDescription    = nullptr;
     dm->fDoc            = nullptr;
 
@@ -416,7 +417,7 @@ void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
 
 // the proxy's internal offset is calculated from the enclosing class
     ptrdiff_t offset = 0;
-    Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
+    Cppyy::TCppScope_t oisa = pyobj->ObjectIsA();
     if (oisa != fEnclosingScope)
         offset = Cppyy::GetBaseOffset(oisa, fEnclosingScope, obj, 1 /* up-cast */);
 

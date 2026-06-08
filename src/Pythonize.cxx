@@ -27,7 +27,7 @@
 //- data and local helpers ---------------------------------------------------
 namespace CPyCppyy {
     extern PyObject* gThisModule;
-    std::map<std::string, std::vector<PyObject*>> &pythonizations();
+    std::unordered_map<std::string, std::vector<PyObject*>> &pythonizations();
 }
 
 namespace {
@@ -610,7 +610,7 @@ static PyObject* vector_iter(PyObject* v) {
         vi->vi_data      = nullptr;
         vi->vi_stride    = 0;
         vi->vi_converter = nullptr;
-        vi->vi_klass     = 0;
+        vi->vi_klass     = nullptr;
         vi->vi_flags     = 0;
     }
 
@@ -658,7 +658,7 @@ PyObject* VectorGetItem(CPPInstance* self, PySliceObject* index)
 }
 
 
-static Cppyy::TCppType_t sVectorBoolTypeID = (Cppyy::TCppType_t)0;
+static Cppyy::TCppScope_t sVectorBoolTypeID;
 
 PyObject* VectorBoolGetItem(CPPInstance* self, PyObject* idx)
 {
@@ -1741,7 +1741,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
 
     if (Cppyy::IsAggregate(((CPPClass*)pyclass)->fCppType) && name.compare(0, 5, "std::", 5) != 0) {
     // create a pseudo-constructor to allow initializer-style object creation
-        Cppyy::TCppType_t kls = ((CPPClass*)pyclass)->fCppType;
+        Cppyy::TCppScope_t kls = ((CPPClass*)pyclass)->fCppType;
         std::vector<Cppyy::TCppScope_t> datamems;
         Cppyy::GetDatamembers(kls, datamems);
         if (!datamems.empty()) {
@@ -1821,7 +1821,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     if (IsTemplatedSTLClass(name, "vector")) {
 
     // std::vector<bool> is a special case in C++
-        if (!sVectorBoolTypeID) sVectorBoolTypeID = (Cppyy::TCppType_t)Cppyy::GetScope("std::vector<bool>");
+        if (!sVectorBoolTypeID) sVectorBoolTypeID = Cppyy::GetScope("std::vector<bool>");
         if (klass->fCppType == sVectorBoolTypeID) {
             Utility::AddToClass(pyclass, "__getitem__", (PyCFunction)VectorBoolGetItem, METH_O);
             Utility::AddToClass(pyclass, "__setitem__", (PyCFunction)VectorBoolSetItem);
@@ -1853,7 +1853,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
             Cppyy::TCppType_t value_type = Cppyy::GetTypeFromScope(Cppyy::GetNamed("value_type", scope));
             Cppyy::TCppType_t vtype = Cppyy::ResolveType(value_type);
             if (vtype) {    // actually resolved?
-                PyObject* pyvalue_type = PyLong_FromVoidPtr(vtype);
+                PyObject* pyvalue_type = PyLong_FromVoidPtr(vtype.data);
                 PyObject_SetAttr(pyclass, PyStrings::gValueTypePtr, pyvalue_type);
                 Py_DECREF(pyvalue_type);
                 pyvalue_type = PyUnicode_FromString(Cppyy::GetTypeAsString(vtype).c_str());

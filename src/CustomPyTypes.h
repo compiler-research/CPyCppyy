@@ -1,6 +1,9 @@
 #ifndef CPYCPPYY_CUSTOMPYTYPES_H
 #define CPYCPPYY_CUSTOMPYTYPES_H
 
+#include "Python.h"
+#include "Cppyy.h"
+
 namespace CPyCppyy {
 
 /** Custom "builtins," detectable by type, for pass by ref and improved
@@ -42,7 +45,7 @@ inline bool RefInt_CheckExact(T* object)
 //- custom type representing typedef to pointer of class ---------------------
 struct typedefpointertoclassobject {
     PyObject_HEAD
-    Cppyy::TCppType_t fCppType;
+    Cppyy::TCppScope_t fCppType;
 };
 
 extern PyTypeObject TypedefPointerToClass_Type;
@@ -91,7 +94,7 @@ struct vectoriterobject : public indexiterobject {
     void*                    vi_data;
     Py_ssize_t               vi_stride;
     CPyCppyy::Converter*     vi_converter;
-    Cppyy::TCppType_t        vi_klass;
+    Cppyy::TCppScope_t        vi_klass;
     int                      vi_flags;
 
     enum EFlags {

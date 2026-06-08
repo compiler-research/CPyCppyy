@@ -156,7 +156,7 @@ PyObject* CPyCppyy::CPPConstructor::Call(CPPInstance*& self,
     // mark as actual to prevent needless auto-casting and register on its class
         self->fFlags |= CPPInstance::kIsActual;
         if (!(((CPPClass*)Py_TYPE(self))->fFlags & CPPScope::kIsSmart))
-            MemoryRegulator::RegisterPyObject(self, (Cppyy::TCppObject_t)address);
+            MemoryRegulator::RegisterPyObject(self, Cppyy::TCppObject_t((void*)address));
 
     // handling smart types this way is deeply fugly, but if CPPInstance sets the proper
     // types in op_new first, then the wrong init is called

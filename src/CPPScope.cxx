@@ -5,6 +5,7 @@
 #include "CPPEnum.h"
 #include "CPPFunction.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "CustomPyTypes.h"
 #include "Dispatcher.h"
 #include "ProxyWrappers.h"
@@ -202,7 +203,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
     subtype->tp_dealloc = (destructor)meta_dealloc;
 
 // creation of the python-side class; extend the size if this is a smart ptr
-    Cppyy::TCppType_t raw{0}; Cppyy::TCppMethod_t deref{0};
+    Cppyy::TCppScope_t raw; Cppyy::TCppMethod_t deref;
     if (CPPScope_CheckExact(subtype)) {
         if (Cppyy::GetSmartPtrInfo(Cppyy::GetScopedFinalName(((CPPScope*)subtype)->fCppType), &raw, &deref))
             subtype->tp_basicsize = sizeof(CPPSmartClass);
@@ -274,7 +275,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
 
 // maps for using namespaces and tracking objects
     if (!Cppyy::IsNamespace(result->fCppType)) {
-        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("exception", Cppyy::GetScope("std"));
+        static Cppyy::TCppScope_t exc_type = Cppyy::GetScope("exception", Cppyy::GetScope("std"));
         if (Cppyy::IsSubclass(result->fCppType, exc_type))
             result->fFlags |= CPPScope::kIsException;
         if (!(result->fFlags & CPPScope::kIsPython))
@@ -365,7 +366,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if ((klass->fFlags & CPPScope::kIsNamespace) || 
                 scope == Cppyy::GetGlobalScope()) {
         // tickle lazy lookup of functions
-            const std::vector<Cppyy::TCppScope_t> methods =
+            const std::vector<Cppyy::TCppMethod_t> methods =
                 Cppyy::GetMethodsFromName(scope, name);
             if (!methods.empty()) {
             // function exists, now collect overloads

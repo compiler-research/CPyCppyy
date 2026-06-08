@@ -1,3 +1,6 @@
+#include "Python.h"
+#include "Cppyy.h"
+
 // Bindings
 #include "CPyCppyy.h"
 #include "TupleOfInstances.h"
@@ -8,7 +11,7 @@ namespace {
 
 typedef struct {
     PyObject_HEAD
-    Cppyy::TCppType_t        ia_klass;
+    Cppyy::TCppScope_t        ia_klass;
     void*                    ia_array_start;
     Py_ssize_t               ia_pos;
     Py_ssize_t               ia_len;
@@ -137,7 +140,7 @@ PyObject* TupleOfInstances_New(
         if (!ia) return nullptr;
 
         ia->ia_klass       = klass;
-        ia->ia_array_start = address;
+        ia->ia_array_start = address.data;
         ia->ia_pos         = 0;
         ia->ia_len         = -1;
         ia->ia_stride      = Cppyy::SizeOf(klass);
@@ -157,7 +160,7 @@ PyObject* TupleOfInstances_New(
         PyObject* tup = PyTuple_New(nelems);
         for (Py_ssize_t i = 0; i < nelems; ++i) {
             PyTuple_SetItem(tup, i, TupleOfInstances_New(
-                (char*)address + i*block_size, klass, dims.sub()));
+                ((char*)address.data) + i*block_size, klass, dims.sub()));
         }
         return tup;
     } else {
@@ -178,7 +181,7 @@ PyObject* TupleOfInstances_New(
         // TODO: there's an assumption here that there is no padding, which is bound
         // to be incorrect in certain cases
             PyTuple_SetItem(tup, i,
-                BindCppObjectNoCast((char*)address + i*block_size, klass));
+                BindCppObjectNoCast(((char*)address.data) + i*block_size, klass));
         // Note: objects are bound as pointers, yet since the pointer value stays in
         // place, updates propagate just as if they were bound by-reference
         }

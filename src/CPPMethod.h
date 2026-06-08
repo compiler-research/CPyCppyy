@@ -5,7 +5,7 @@
 #include "PyCallable.h"
 
 // Standard
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -113,7 +113,7 @@ private:
 
 // call dispatch buffers
     std::vector<Converter*>     fConverters;
-    std::map<std::string, int>* fArgIndices;
+    std::unordered_map<std::string, int>* fArgIndices;
 
 protected:
 // cached value that doubles as initialized flag (uninitialized if -1)

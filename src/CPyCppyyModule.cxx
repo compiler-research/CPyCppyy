@@ -7,6 +7,7 @@
 #include "CPPInstance.h"
 #include "CPPOverload.h"
 #include "CPPScope.h"
+#include "Cppyy.h"
 #include "CustomPyTypes.h"
 #include "LowLevelViews.h"
 #include "MemoryRegulator.h"
@@ -15,6 +16,7 @@
 #include "TemplateProxy.h"
 #include "TupleOfInstances.h"
 #include "Utility.h"
+#include <unordered_map>
 
 #define CPYCPPYY_INTERNAL 1
 #include "CPyCppyy/DispatchPtr.h"
@@ -28,7 +30,7 @@ PyObject* Instance_FromVoidPtr(
 // Standard
 #include <algorithm>
 #include <map>
-#include <set>
+#include <unordered_set>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -42,7 +44,7 @@ dict_lookup_func gDictLookupOrg = nullptr;
 } // namespace CPyCppyy
 #endif
 
-std::map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
+std::unordered_map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
 
 // Note: as of py3.11, dictionary objects no longer carry a function pointer for
 // the lookup, so it can no longer be shimmed and "from cppyy.interactive import *"
@@ -256,13 +258,13 @@ namespace CPyCppyy {
     PyObject* gSegvException = nullptr;
     PyObject* gIllException  = nullptr;
     PyObject* gAbrtException = nullptr;
-    std::set<Cppyy::TCppType_t> gPinnedTypes;
+    std::unordered_set<Cppyy::TCppScope_t> gPinnedTypes;
     std::ostringstream gCapturedError;
     std::streambuf* gOldErrorBuffer = nullptr;
 
-    std::map<std::string, std::vector<PyObject*>> &pythonizations()
+    std::unordered_map<std::string, std::vector<PyObject*>> &pythonizations()
     {
-       static std::map<std::string, std::vector<PyObject*>> pyzMap;
+       static std::unordered_map<std::string, std::vector<PyObject*>> pyzMap;
        return pyzMap;
     }
 }
@@ -666,7 +668,7 @@ static PyObject* AsMemoryView(PyObject* /* unused */, PyObject* pyobject)
     }
 
     CPPInstance* pyobj = (CPPInstance*)pyobject;
-    Cppyy::TCppType_t klass = ((CPPClass*)Py_TYPE(pyobject))->fCppType;
+    Cppyy::TCppScope_t klass = ((CPPClass*)Py_TYPE(pyobject))->fCppType;
 
     Py_ssize_t array_len = pyobj->ArrayLength();
 
@@ -705,7 +707,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
     }
 
 // convert 2nd argument first (used for both pointer value and instance cases)
-    Cppyy::TCppScope_t cast_type = 0;
+    Cppyy::TCppScope_t cast_type = nullptr;
     PyObject* arg1 = PyTuple_GET_ITEM(args, 1);
     if (!CPyCppyy_PyText_Check(arg1)) {          // not string, then class
         if (CPPScope_Check(arg1))
@@ -744,7 +746,7 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
         }
 
         int direction = 0;
-        Cppyy::TCppScope_t base = 0, derived = 0;
+        Cppyy::TCppScope_t base = nullptr, derived = nullptr;
         if (Cppyy::IsSubclass(cast_type, cur_type)) {
             derived = cast_type;
             base    = cur_type;
@@ -774,14 +776,14 @@ static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds)
         if (!isPython) {
         // ordinary C++ class
             PyObject* pyobj = BindCppObjectNoCast(
-                (void*)((intptr_t)address + offset), cast_type, owns ? CPPInstance::kIsOwner : 0);
+                Cppyy::TCppObject_t((void*)((intptr_t)address.data + offset)), cast_type, owns ? CPPInstance::kIsOwner : 0);
             if (owns && pyobj) arg0_pyobj->CppOwns();
             return pyobj;
 
         } else {
         // rebinding to a Python-side class, create a fresh instance first to be able to
         // perform a lookup of the original dispatch object and if found, return original
-            void* cast_address = (void*)((intptr_t)address + offset);
+            void* cast_address = (void*)((intptr_t)address.data + offset);
             PyObject* pyobj = ((PyTypeObject*)arg1)->tp_new((PyTypeObject*)arg1, nullptr, nullptr);
             ((CPPInstance*)pyobj)->GetObjectRaw() = cast_address;
 
@@ -988,7 +990,7 @@ static PyObject* AddSmartPtrType(PyObject*, PyObject* args)
     if (!PyArg_ParseTuple(args, const_cast<char*>("s"), &type_name))
         return nullptr;
 
-    Cppyy::AddSmartPtrType(type_name);
+    // Cppyy::AddSmartPtrType(type_name);
 
     Py_RETURN_NONE;
 }

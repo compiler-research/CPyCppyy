@@ -3,6 +3,7 @@
 
 // Bindings
 #include "Converters.h"
+#include "Cppyy.h"
 #include "Dimensions.h"
 
 // Standard
@@ -273,7 +274,7 @@ public:
 
 class InstanceRefConverter : public Converter  {
 public:
-    InstanceRefConverter(Cppyy::TCppType_t klass, bool isConst) :
+    InstanceRefConverter(Cppyy::TCppScope_t klass, bool isConst) :
         fClass(klass), fIsConst(isConst) {}
 
 public:
@@ -283,13 +284,13 @@ public:
     virtual std::string GetFailureMsg() { return "[InstanceRefConverter]"; };
 
 protected:
-    Cppyy::TCppType_t fClass;
+    Cppyy::TCppScope_t fClass;
     bool fIsConst;
 };
 
 class InstanceMoveConverter : public InstanceRefConverter  {
 public:
-    InstanceMoveConverter(Cppyy::TCppType_t klass) : InstanceRefConverter(klass, true) {}
+    InstanceMoveConverter(Cppyy::TCppScope_t klass) : InstanceRefConverter(klass, true) {}
     bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
     virtual std::string GetFailureMsg() { return "[InstanceMoveConverter]"; };
 };
@@ -308,7 +309,7 @@ public:
 
 class InstanceArrayConverter : public InstancePtrConverter<false> {
 public:
-    InstanceArrayConverter(Cppyy::TCppType_t klass, cdims_t dims, bool keepControl = false) :
+    InstanceArrayConverter(Cppyy::TCppScope_t klass, cdims_t dims, bool keepControl = false) :
             InstancePtrConverter<false>(klass, keepControl), fShape(dims) { }
     InstanceArrayConverter(const InstanceArrayConverter&) = delete;
     InstanceArrayConverter& operator=(const InstanceArrayConverter&) = delete;
@@ -446,8 +447,8 @@ protected:
 // smart pointer converter
 class SmartPtrConverter : public Converter {
 public:
-    SmartPtrConverter(Cppyy::TCppType_t smart,
-                      Cppyy::TCppType_t underlying,
+    SmartPtrConverter(Cppyy::TCppScope_t smart,
+                      Cppyy::TCppScope_t underlying,
                       bool keepControl = false,
                       bool isRef = false)
         : fSmartPtrType(smart), fUnderlyingType(underlying),
@@ -463,8 +464,8 @@ public:
 protected:
     virtual bool GetAddressSpecialCase(PyObject*, void*&) { return false; }
 
-    Cppyy::TCppType_t   fSmartPtrType;
-    Cppyy::TCppType_t   fUnderlyingType;
+    Cppyy::TCppScope_t  fSmartPtrType;
+    Cppyy::TCppScope_t  fUnderlyingType;
     bool                fKeepControl;
     bool                fIsRef;
 };
@@ -473,7 +474,7 @@ protected:
 // initializer lists
 class InitializerListConverter : public InstanceConverter {
 public:
-    InitializerListConverter(Cppyy::TCppType_t klass, std::string const& value_type);
+    InitializerListConverter(Cppyy::TCppScope_t klass, std::string const& value_type);
     InitializerListConverter(const InitializerListConverter&) = delete;
     InitializerListConverter& operator=(const InitializerListConverter&) = delete;
     virtual ~InitializerListConverter();
@@ -490,7 +491,7 @@ protected:
     void*             fBuffer = nullptr;
     std::vector<Converter*> fConverters;
     std::string       fValueTypeName;
-    Cppyy::TCppType_t fValueType;
+    Cppyy::TCppScope_t fValueType;
     size_t            fValueSize;
 };
 

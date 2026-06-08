@@ -1,4 +1,5 @@
 // Bindings
+#include "Cppyy.h"
 #include "CPyCppyy.h"
 #include "MemoryRegulator.h"
 #include "CPPInstance.h"
@@ -109,7 +110,7 @@ CPyCppyy::MemoryRegulator::MemoryRegulator()
 
 //- public members -----------------------------------------------------------
 bool CPyCppyy::MemoryRegulator::RecursiveRemove(
-    Cppyy::TCppObject_t cppobj, Cppyy::TCppType_t klass)
+    Cppyy::TCppObject_t cppobj, Cppyy::TCppScope_t klass)
 {
 // if registered by the framework, called whenever a cppobj gets destroyed
     if (!cppobj)
