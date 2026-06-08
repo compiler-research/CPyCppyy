@@ -30,6 +30,9 @@
 #include <sstream>
 #include <cstddef>
 #include <string_view>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #if __cplusplus >= 202002L
 #include <span>
 #endif
@@ -56,6 +59,14 @@ namespace CPyCppyy {
 // factories
     typedef std::unordered_map<std::string, cf_t> ConvFactories_t;
     static ConvFactories_t gConvFactories;
+
+// Canonical TCppType_t -> cf_t projection of gConvFactories. Built
+// lazily and dropped whenever the public Register*/UnregisterConverter
+// API mutates the source so the cache cannot go stale.
+    typedef std::unordered_map<Cppyy::TCppType_t, cf_t> ConvFactoriesByType_t;
+    static ConvFactoriesByType_t gConvFactoriesByType;
+    static std::mutex gConvFactoriesByTypeMutex;
+    static bool gConvFactoriesByTypePopulated = false;
 
 // special objects
     extern PyObject* gNullPtrObject;
@@ -3538,6 +3549,46 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 CPYCPPYY_EXPORT
 CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t dims)
 {
+// Canonical-identity primary lookup. The string ladder below stays as
+// the fallback for decoration-policy cases (drop const, array decay,
+// T&& -> const T&) that aren't yet expressible as QT transforms.
+//
+// Lock covers population and lookup so a concurrent
+// Register*/UnregisterConverter can't catch the cache mid-rebuild.
+// Alias-collision skip: two spellings, same TCppType_t, different
+// cf_t -- can't choose one, so leave the pair on the string path.
+    cf_t qt_fac = nullptr;
+    {
+        std::lock_guard<std::mutex> _L(gConvFactoriesByTypeMutex);
+        if (!gConvFactoriesByTypePopulated) {
+            std::unordered_map<Cppyy::TCppType_t, cf_t> first_seen;
+            std::unordered_set<Cppyy::TCppType_t> ambiguous;
+            for (const auto& kv : gConvFactories) {
+                Cppyy::TCppType_t qt = nullptr;
+                try {
+                    qt = Cppyy::GetType(kv.first, /*enable_slow_lookup=*/true);
+                } catch (const std::exception&) {
+                    continue;  // pseudo-type spelling (e.g. SCharAsInt).
+                }
+                if (!qt) continue;
+                auto it = first_seen.find(qt);
+                if (it == first_seen.end())
+                    first_seen.emplace(qt, kv.second);
+                else if (it->second != kv.second)
+                    ambiguous.insert(qt);
+            }
+            for (const auto& kv : first_seen)
+                if (!ambiguous.count(kv.first))
+                    gConvFactoriesByType.emplace(kv.first, kv.second);
+            gConvFactoriesByTypePopulated = true;
+        }
+        auto h = gConvFactoriesByType.find(type);
+        if (h != gConvFactoriesByType.end())
+            qt_fac = h->second;
+    }
+    if (qt_fac)
+        return qt_fac(dims);
+
 // The matching of the fulltype to a converter factory goes through up to five levels:
 //   1) full, exact match
 //   2) match of decorated, unqualified type
@@ -3760,6 +3811,15 @@ void CPyCppyy::DestroyConverter(Converter* p)
 }
 
 //----------------------------------------------------------------------------
+namespace CPyCppyy {
+// Drop the QT projection so CreateConverter rebuilds it on next call.
+static void InvalidateConvFactoriesByType() {
+    std::lock_guard<std::mutex> _L(gConvFactoriesByTypeMutex);
+    gConvFactoriesByType.clear();
+    gConvFactoriesByTypePopulated = false;
+}
+} // namespace CPyCppyy
+
 CPYCPPYY_EXPORT
 bool CPyCppyy::RegisterConverter(const std::string& name, cf_t fac)
 {
@@ -3769,6 +3829,7 @@ bool CPyCppyy::RegisterConverter(const std::string& name, cf_t fac)
         return false;
 
     gConvFactories[name] = fac;
+    InvalidateConvFactoriesByType();
     return true;
 }
 
@@ -3786,6 +3847,7 @@ bool CPyCppyy::RegisterConverterAlias(const std::string& name, const std::string
         return false;
 
     gConvFactories[name] = t->second;
+    InvalidateConvFactoriesByType();
     return true;
 }
 
@@ -3797,6 +3859,7 @@ bool CPyCppyy::UnregisterConverter(const std::string& name)
     auto f = gConvFactories.find(name);
     if (f != gConvFactories.end()) {
         gConvFactories.erase(f);
+        InvalidateConvFactoriesByType();
         return true;
     }
     return false;
