@@ -14,6 +14,7 @@
 #include "TemplateProxy.h"
 #include "TupleOfInstances.h"
 #include "TypeManip.h"
+#include "MarshalScalar.h"
 #include "Utility.h"
 
 // Standard
@@ -30,6 +31,9 @@
 #include <sstream>
 #include <cstddef>
 #include <string_view>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #if __cplusplus >= 202002L
 #include <span>
 #endif
@@ -56,6 +60,14 @@ namespace CPyCppyy {
 // factories
     typedef std::unordered_map<std::string, cf_t> ConvFactories_t;
     static ConvFactories_t gConvFactories;
+
+// Canonical TCppType_t -> cf_t projection of gConvFactories. Built
+// lazily and dropped whenever the public Register*/UnregisterConverter
+// API mutates the source so the cache cannot go stale.
+    typedef std::unordered_map<Cppyy::TCppType_t, cf_t> ConvFactoriesByType_t;
+    static ConvFactoriesByType_t gConvFactoriesByType;
+    static std::mutex gConvFactoriesByTypeMutex;
+    static bool gConvFactoriesByTypePopulated = false;
 
 // special objects
     extern PyObject* gNullPtrObject;
@@ -380,72 +392,12 @@ static inline bool StrictBool(PyObject* pyobject, CPyCppyy::CallContext* ctxt)
     return true;
 }
 
-static inline bool CPyCppyy_PyLong_AsBool(PyObject* pyobject)
-{
-// range-checking python integer to C++ bool conversion
-    long l = PyLong_AsLong(pyobject);
-// fail to pass float -> bool; the problem is rounding (0.1 -> 0 -> False)
-    if (!(l == 0|| l == 1) || PyFloat_Check(pyobject)) {
-        PyErr_SetString(PyExc_ValueError, "boolean value should be bool, or integer 1 or 0");
-        return (bool)-1;
-    }
-    return (bool)l;
-}
+// CPyCppyy_PyLong_As{Bool,Int8,UInt8,Short,UShort,StrictInt,StrictLong,
+// StrictLongLong} were the per-T validators the scalar Converter family
+// called as F2 before #61 migrated them to MarshalScalar.h's
+// MarshalFromPyStrict<T>. Deleted in this commit; the spec lives in the
+// header now.
 
-
-// range-checking python integer to C++ integer conversion (prevents p2.7 silent conversions)
-#define CPPYY_PYLONG_AS_TYPE(name, type, limit_low, limit_high)              \
-static inline type CPyCppyy_PyLong_As##name(PyObject* pyobject)              \
-{                                                                            \
-    if (!(PyLong_Check(pyobject) || PyInt_Check(pyobject))) {                \
-        if (pyobject == CPyCppyy::gDefaultObject)                            \
-            return (type)0;                                                  \
-        PyErr_SetString(PyExc_TypeError, #type" conversion expects an integer object");\
-        return (type)-1;                                                     \
-    }                                                                        \
-    long l = PyLong_AsLong(pyobject);                                        \
-    if (l < limit_low || limit_high < l) {                                   \
-        PyErr_Format(PyExc_ValueError, "integer %ld out of range for "#type, l);\
-        return (type)-1;                                                     \
-    }                                                                        \
-    return (type)l;                                                          \
-}
-
-CPPYY_PYLONG_AS_TYPE(UInt8,     uint8_t,        0,         UCHAR_MAX)
-CPPYY_PYLONG_AS_TYPE(Int8,      int8_t,         SCHAR_MIN, SCHAR_MAX)
-CPPYY_PYLONG_AS_TYPE(UShort,    unsigned short, 0,         USHRT_MAX)
-CPPYY_PYLONG_AS_TYPE(Short,     short,          SHRT_MIN,  SHRT_MAX)
-CPPYY_PYLONG_AS_TYPE(StrictInt, int,            INT_MIN,   INT_MAX)
-
-static inline long CPyCppyy_PyLong_AsStrictLong(PyObject* pyobject)
-{
-// strict python integer to C++ long integer conversion
-
-// prevent float -> long (see CPyCppyy_PyLong_AsStrictInt)
-    if (!(PyLong_Check(pyobject) || PyInt_Check(pyobject))) {
-        if (pyobject == CPyCppyy::gDefaultObject)
-            return (long)0;
-        PyErr_SetString(PyExc_TypeError, "int/long conversion expects an integer object");
-        return (long)-1;
-    }
-
-    return (long)PyLong_AsLong(pyobject);   // already does long range check
-}
-
-static inline PY_LONG_LONG CPyCppyy_PyLong_AsStrictLongLong(PyObject* pyobject)
-{
-// strict python integer to C++ long long integer conversion
-
-// prevent float -> long (see CPyCppyy_PyLong_AsStrictInt)
-    if (!(PyLong_Check(pyobject) || PyInt_Check(pyobject))) {
-        if (pyobject == CPyCppyy::gDefaultObject)
-            return (PY_LONG_LONG)0;
-        PyErr_SetString(PyExc_TypeError, "int/long conversion expects an integer object");
-        return (PY_LONG_LONG)-1;
-    }
-
-    return PyLong_AsLongLong(pyobject);     // already does long range check
-}
 
 
 //- helper for pointer/array/reference conversions ---------------------------
@@ -471,8 +423,9 @@ static inline bool CArraySetArg(
     else {
         Py_ssize_t buflen = CPyCppyy::Utility::GetBuffer(pyobject, tc, size, para.fValue.fVoidp, check);
         if (!buflen) {
-        // stuck here as it's the least common
-            if (CPyCppyy_PyLong_AsStrictInt(pyobject) == 0)
+        // stuck here as it's the least common; probe for an int that's zero
+            int probe = 0;
+            if (CPyCppyy::MarshalFromPyStrict<int>(pyobject, probe) && probe == 0)
                 para.fValue.fVoidp = nullptr;
             else {
                 PyErr_Format(PyExc_TypeError,     // ValueError?
@@ -568,10 +521,16 @@ bool CPyCppyy::Converter::ToMemory(PyObject*, void*, PyObject* /* ctxt */)
 
 
 //- helper macro's -----------------------------------------------------------
-#define CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, F1, F2, tc)\
-/* convert <pyobject> to C++ 'type', set arg for call */                     \
-    type val = (type)F2(pyobject);                                           \
-    if (val == (type)-1 && PyErr_Occurred()) {                               \
+// MarshalFromPyStrict<type> mirrors the F2-validator contract
+// (range-check + float-reject + gDefaultObject -> 0 for int family).
+// The ctypes fallback and the outer gDefaultObject branch survive --
+// the latter still catches bool / float where MarshalFromPyStrict
+// matches CPyCppyy_PyLong_AsBool / PyFloat_AsDouble (no internal
+// gDefaultObject handling). F1 / F2 macro args are unused now; 3c
+// drops them from the wrapper macros + call sites.
+#define CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, tc)        \
+    type val;                                                                \
+    if (!MarshalFromPyStrict<type>(pyobject, val)) {                         \
         static PyTypeObject* ctypes_type = nullptr;                          \
         if (!ctypes_type) {                                                  \
             auto error = CPyCppyy::Utility::FetchPyError();                  \
@@ -591,56 +550,61 @@ bool CPyCppyy::Converter::ToMemory(PyObject*, void*, PyObject* /* ctxt */)
     para.fTypeCode = tc;                                                     \
     return true;
 
-#define CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype, F1, F2) \
+// FromMemory routes through MarshalScalar.h's MarshalToPy<type> -- the
+// per-T PyLong_FromLong / PyFloat_FromDouble / PyBool_FromLong dispatch
+// lives in one place now. ToMemory keeps F2 because F2's range-checking
+// + float-to-int rejection (CPyCppyy_PyLong_AsInt8 etc.) is stricter
+// than MarshalFromPy; the strict-marshal variants are a follow-up.
+// ToMemory routes through MarshalScalar.h's MarshalFromPyStrict<type>
+// which mirrors the CPyCppyy_PyLong_As* validator contract (range-check
+// + float-reject + gDefaultObject -> 0). F2 disappears from this macro;
+// the wrapper macros (_NI, _IB, _NB) still take F2 because SetArg uses
+// it through CPPYY_IMPL_BASIC_CONVERTER_BODY.
+#define CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype)         \
 PyObject* CPyCppyy::name##Converter::FromMemory(void* address)               \
 {                                                                            \
-    return F1((stype)*((type*)address));                                     \
+    return MarshalToPy<type>(*((type*)address));                             \
 }                                                                            \
                                                                              \
 bool CPyCppyy::name##Converter::ToMemory(                                    \
     PyObject* value, void* address, PyObject* /* ctxt */)                    \
 {                                                                            \
-    type s = (type)F2(value);                                                \
-    if (s == (type)-1 && PyErr_Occurred()) {                                 \
-        if (value == CPyCppyy::gDefaultObject) {                             \
-            PyErr_Clear();                                                   \
-            s = (type)0;                                                     \
-        } else                                                               \
-            return false;                                                    \
-    }                                                                        \
-    *((type*)address) = (type)s;                                             \
+    type s;                                                                  \
+    if (!MarshalFromPyStrict<type>(value, s))                                \
+        return false;                                                        \
+    *((type*)address) = s;                                                   \
     return true;                                                             \
 }
 
-#define CPPYY_IMPL_BASIC_CONVERTER_NI(name, type, stype, ctype, F1, F2, tc)  \
+#define CPPYY_IMPL_BASIC_CONVERTER_NI(name, type, stype, ctype, tc)          \
 bool CPyCppyy::name##Converter::SetArg(                                      \
     PyObject* pyobject, Parameter& para, CallContext* ctxt)                  \
 {                                                                            \
     if (!StrictBool(pyobject, ctxt))                                         \
         return false;                                                        \
-    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, F1, F2, tc)    \
+    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, tc)            \
 }                                                                            \
-CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype, F1, F2)
+CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype)
 
-#define CPPYY_IMPL_BASIC_CONVERTER_IB(name, type, stype, ctype, F1, F2, tc)  \
+#define CPPYY_IMPL_BASIC_CONVERTER_IB(name, type, stype, ctype, tc)          \
 bool CPyCppyy::name##Converter::SetArg(                                      \
     PyObject* pyobject, Parameter& para, CallContext* ctxt)                  \
 {                                                                            \
     if (!ImplicitBool(pyobject, ctxt))                                       \
         return false;                                                        \
-    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, F1, F2, tc)    \
+    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, tc)            \
 }                                                                            \
-CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype, F1, F2)
+CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype)
 
-#define CPPYY_IMPL_BASIC_CONVERTER_NB(name, type, stype, ctype, F1, F2, tc)  \
+#define CPPYY_IMPL_BASIC_CONVERTER_NB(name, type, stype, ctype, tc)          \
 bool CPyCppyy::name##Converter::SetArg(                                      \
     PyObject* pyobject, Parameter& para, CallContext* /*ctxt*/)              \
 {                                                                            \
     if (PyBool_Check(pyobject))                                              \
         return false;                                                        \
-    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, F1, F2, tc)    \
+    CPPYY_IMPL_BASIC_CONVERTER_BODY(name, type, stype, ctype, tc)            \
 }                                                                            \
-CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype, F1, F2)
+CPPYY_IMPL_BASIC_CONVERTER_METHODS(name, type, stype, ctype)
 
 //----------------------------------------------------------------------------
 static inline int ExtractChar(PyObject* pyobject, const char* tname, int low, int high)
@@ -692,12 +656,15 @@ PyObject* CPyCppyy::name##RefConverter::FromMemory(void* ptr)                \
 }
 
 //----------------------------------------------------------------------------
-#define CPPYY_IMPL_BASIC_CONST_REFCONVERTER(name, type, ctype, F1)           \
+// Const ref-converter SetArg through MarshalFromPyStrict<type>. The
+// outer gDefaultObject branch survives for bool / float where strict()
+// doesn't handle it internally.
+#define CPPYY_IMPL_BASIC_CONST_REFCONVERTER(name, type, ctype)               \
 bool CPyCppyy::Const##name##RefConverter::SetArg(                            \
     PyObject* pyobject, Parameter& para, CallContext* /* ctxt */)            \
 {                                                                            \
-    type val = (type)F1(pyobject);                                           \
-    if (val == (type)-1 && PyErr_Occurred()) {                               \
+    type val;                                                                \
+    if (!MarshalFromPyStrict<type>(pyobject, val)) {                         \
         if (pyobject == CPyCppyy::gDefaultObject) {                          \
             PyErr_Clear();                                                   \
             val = (type)0;                                                   \
@@ -784,7 +751,7 @@ bool CPyCppyy::name##Converter::ToMemory(                                    \
 
 
 //- converters for built-ins -------------------------------------------------
-CPPYY_IMPL_BASIC_CONVERTER_IB(Long, long, long, c_long, PyLong_FromLong, CPyCppyy_PyLong_AsStrictLong, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(Long, long, long, c_long, 'l')
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::LongRefConverter::SetArg(
@@ -818,17 +785,17 @@ bool CPyCppyy::LongRefConverter::SetArg(
 CPPYY_IMPL_BASIC_CONST_CHAR_REFCONVERTER(Char,  char,          c_char,  CHAR_MIN,  CHAR_MAX)
 CPPYY_IMPL_BASIC_CONST_CHAR_REFCONVERTER(UChar, unsigned char, c_uchar,        0, UCHAR_MAX)
 
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Bool,   bool,           c_bool,      CPyCppyy_PyLong_AsBool)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int8,   int8_t,         c_int8,      CPyCppyy_PyLong_AsInt8)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt8,  uint8_t,        c_uint8,     CPyCppyy_PyLong_AsUInt8)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Short,  short,          c_short,     CPyCppyy_PyLong_AsShort)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UShort, unsigned short, c_ushort,    CPyCppyy_PyLong_AsUShort)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int,    int,            c_int,       CPyCppyy_PyLong_AsStrictInt)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt,   unsigned int,   c_uint,      PyLongOrInt_AsULong)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Long,   long,           c_long,      CPyCppyy_PyLong_AsStrictLong)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(ULong,  unsigned long,  c_ulong,     PyLongOrInt_AsULong)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(LLong,  PY_LONG_LONG,   c_longlong,  CPyCppyy_PyLong_AsStrictLongLong)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(ULLong, PY_ULONG_LONG,  c_ulonglong, PyLongOrInt_AsULong64)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Bool, bool, c_bool)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int8, int8_t, c_int8)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt8, uint8_t, c_uint8)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Short, short, c_short)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UShort, unsigned short, c_ushort)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int, int, c_int)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt, unsigned int, c_uint)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Long, long, c_long)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(ULong, unsigned long, c_ulong)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(LLong, PY_LONG_LONG, c_longlong)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(ULLong, PY_ULONG_LONG, c_ulonglong)
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::IntRefConverter::SetArg(
@@ -911,8 +878,7 @@ CPPYY_IMPL_REFCONVERTER(LDouble, c_longdouble, PY_LONG_DOUBLE,     'g');
 
 //----------------------------------------------------------------------------
 // convert <pyobject> to C++ bool, allow int/long -> bool, set arg for call
-CPPYY_IMPL_BASIC_CONVERTER_NI(
-    Bool, bool, long, c_bool, PyBool_FromLong, CPyCppyy_PyLong_AsBool, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_NI(Bool, bool, long, c_bool, 'l')
 
 //----------------------------------------------------------------------------
 CPPYY_IMPL_BASIC_CHAR_CONVERTER(Char,  char,          CHAR_MIN,  CHAR_MAX)
@@ -1050,16 +1016,11 @@ bool CPyCppyy::Char32Converter::ToMemory(PyObject* value, void* address, PyObjec
 }
 
 //----------------------------------------------------------------------------
-CPPYY_IMPL_BASIC_CONVERTER_IB(
-    Int8,  int8_t,  long, c_int8, PyInt_FromLong, CPyCppyy_PyLong_AsInt8,  'l')
-CPPYY_IMPL_BASIC_CONVERTER_IB(
-    UInt8, uint8_t, long, c_uint8, PyInt_FromLong, CPyCppyy_PyLong_AsUInt8, 'l')
-CPPYY_IMPL_BASIC_CONVERTER_IB(
-    Short, short, long, c_short, PyInt_FromLong, CPyCppyy_PyLong_AsShort, 'l')
-CPPYY_IMPL_BASIC_CONVERTER_IB(
-    UShort, unsigned short, long, c_ushort, PyInt_FromLong, CPyCppyy_PyLong_AsUShort, 'l')
-CPPYY_IMPL_BASIC_CONVERTER_IB(
-    Int, int, long, c_uint, PyInt_FromLong, CPyCppyy_PyLong_AsStrictInt, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(Int8, int8_t, long, c_int8, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(UInt8, uint8_t, long, c_uint8, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(Short, short, long, c_short, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(UShort, unsigned short, long, c_ushort, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(Int, int, long, c_uint, 'l')
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::ULongConverter::SetArg(
@@ -1121,13 +1082,10 @@ bool CPyCppyy::UIntConverter::ToMemory(PyObject* value, void* address, PyObject*
 }
 
 //- floating point converters ------------------------------------------------
-CPPYY_IMPL_BASIC_CONVERTER_NB(
-    Float,  float,  double, c_float,  PyFloat_FromDouble, PyFloat_AsDouble, 'f')
-CPPYY_IMPL_BASIC_CONVERTER_NB(
-    Double, double, double, c_double, PyFloat_FromDouble, PyFloat_AsDouble, 'd')
+CPPYY_IMPL_BASIC_CONVERTER_NB(Float, float, double, c_float, 'f')
+CPPYY_IMPL_BASIC_CONVERTER_NB(Double, double, double, c_double, 'd')
 
-CPPYY_IMPL_BASIC_CONVERTER_NB(
-    LDouble, PY_LONG_DOUBLE, PY_LONG_DOUBLE, c_longdouble, PyFloat_FromDouble, PyFloat_AsDouble, 'g')
+CPPYY_IMPL_BASIC_CONVERTER_NB(LDouble, PY_LONG_DOUBLE, PY_LONG_DOUBLE, c_longdouble, 'g')
 
 CPyCppyy::ComplexDConverter::ComplexDConverter(bool keepControl) :
     InstanceConverter(Cppyy::GetFullScope("std::complex<double>"), keepControl) {}
@@ -1203,9 +1161,9 @@ bool CPyCppyy::DoubleRefConverter::SetArg(
 }
 
 //----------------------------------------------------------------------------
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Float,   float,          c_float,      PyFloat_AsDouble)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Double,  double,         c_double,     PyFloat_AsDouble)
-CPPYY_IMPL_BASIC_CONST_REFCONVERTER(LDouble, PY_LONG_DOUBLE, c_longdouble, PyFloat_AsDouble)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Float, float, c_float)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Double, double, c_double)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(LDouble, PY_LONG_DOUBLE, c_longdouble)
 
 //----------------------------------------------------------------------------
 bool CPyCppyy::VoidConverter::SetArg(PyObject*, Parameter&, CallContext*)
@@ -1223,9 +1181,10 @@ bool CPyCppyy::LLongConverter::SetArg(
     if (!ImplicitBool(pyobject, ctxt))
         return false;
 
-    para.fValue.fLLong = CPyCppyy_PyLong_AsStrictLongLong(pyobject);
-    if (PyErr_Occurred())
+    PY_LONG_LONG val;
+    if (!MarshalFromPyStrict<PY_LONG_LONG>(pyobject, val))
         return false;
+    para.fValue.fLLong = val;
     para.fTypeCode = 'q';
     return true;
 }
@@ -3538,6 +3497,46 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
 CPYCPPYY_EXPORT
 CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t dims)
 {
+// Canonical-identity primary lookup. The string ladder below stays as
+// the fallback for decoration-policy cases (drop const, array decay,
+// T&& -> const T&) that aren't yet expressible as QT transforms.
+//
+// Lock covers population and lookup so a concurrent
+// Register*/UnregisterConverter can't catch the cache mid-rebuild.
+// Alias-collision skip: two spellings, same TCppType_t, different
+// cf_t -- can't choose one, so leave the pair on the string path.
+    cf_t qt_fac = nullptr;
+    {
+        std::lock_guard<std::mutex> _L(gConvFactoriesByTypeMutex);
+        if (!gConvFactoriesByTypePopulated) {
+            std::unordered_map<Cppyy::TCppType_t, cf_t> first_seen;
+            std::unordered_set<Cppyy::TCppType_t> ambiguous;
+            for (const auto& kv : gConvFactories) {
+                Cppyy::TCppType_t qt = nullptr;
+                try {
+                    qt = Cppyy::GetType(kv.first, /*enable_slow_lookup=*/true);
+                } catch (const std::exception&) {
+                    continue;  // pseudo-type spelling (e.g. SCharAsInt).
+                }
+                if (!qt) continue;
+                auto it = first_seen.find(qt);
+                if (it == first_seen.end())
+                    first_seen.emplace(qt, kv.second);
+                else if (it->second != kv.second)
+                    ambiguous.insert(qt);
+            }
+            for (const auto& kv : first_seen)
+                if (!ambiguous.count(kv.first))
+                    gConvFactoriesByType.emplace(kv.first, kv.second);
+            gConvFactoriesByTypePopulated = true;
+        }
+        auto h = gConvFactoriesByType.find(type);
+        if (h != gConvFactoriesByType.end())
+            qt_fac = h->second;
+    }
+    if (qt_fac)
+        return qt_fac(dims);
+
 // The matching of the fulltype to a converter factory goes through up to five levels:
 //   1) full, exact match
 //   2) match of decorated, unqualified type
@@ -3760,6 +3759,15 @@ void CPyCppyy::DestroyConverter(Converter* p)
 }
 
 //----------------------------------------------------------------------------
+namespace CPyCppyy {
+// Drop the QT projection so CreateConverter rebuilds it on next call.
+static void InvalidateConvFactoriesByType() {
+    std::lock_guard<std::mutex> _L(gConvFactoriesByTypeMutex);
+    gConvFactoriesByType.clear();
+    gConvFactoriesByTypePopulated = false;
+}
+} // namespace CPyCppyy
+
 CPYCPPYY_EXPORT
 bool CPyCppyy::RegisterConverter(const std::string& name, cf_t fac)
 {
@@ -3769,6 +3777,7 @@ bool CPyCppyy::RegisterConverter(const std::string& name, cf_t fac)
         return false;
 
     gConvFactories[name] = fac;
+    InvalidateConvFactoriesByType();
     return true;
 }
 
@@ -3786,6 +3795,7 @@ bool CPyCppyy::RegisterConverterAlias(const std::string& name, const std::string
         return false;
 
     gConvFactories[name] = t->second;
+    InvalidateConvFactoriesByType();
     return true;
 }
 
@@ -3797,6 +3807,7 @@ bool CPyCppyy::UnregisterConverter(const std::string& name)
     auto f = gConvFactories.find(name);
     if (f != gConvFactories.end()) {
         gConvFactories.erase(f);
+        InvalidateConvFactoriesByType();
         return true;
     }
     return false;
