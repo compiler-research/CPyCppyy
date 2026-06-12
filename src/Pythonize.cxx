@@ -1254,7 +1254,6 @@ PyObject* STLStringDecode(CPPInstance* self, PyObject* args, PyObject* kwds)
     return PyUnicode_Decode(obj->data(), obj->size(), encoding, errors);
 }
 
-#if __cplusplus <= 202302L
 PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 {
     std::string* obj = GetSTLString(self);
@@ -1271,7 +1270,6 @@ PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 
     Py_RETURN_FALSE;
 }
-#endif
 
 PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* /*kwds*/)
 {
@@ -1923,10 +1921,11 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
         Utility::AddToClass(pyclass, "__cmp__",       (PyCFunction)STLStringCompare,    METH_O);
         Utility::AddToClass(pyclass, "__eq__",        (PyCFunction)STLStringIsEqual,    METH_O);
         Utility::AddToClass(pyclass, "__ne__",        (PyCFunction)STLStringIsNotEqual, METH_O);
-#if __cplusplus <= 202302L
-    // From C++23, std::string already implements a contains() method.
+    // Python's `in` operator needs __contains__ on the proxy regardless of the
+    // C++ standard CPyCppyy is built with; it never dispatches to C++'s
+    // std::string::contains (C++23+). The old `__cplusplus <= 202302L` guard
+    // wrongly dropped it when built with -std=c++2c (__cplusplus == 202400L).
         Utility::AddToClass(pyclass, "__contains__",  (PyCFunction)STLStringContains,   METH_O);
-#endif
         Utility::AddToClass(pyclass, "decode",        (PyCFunction)STLStringDecode,     METH_VARARGS | METH_KEYWORDS);
         Utility::AddToClass(pyclass, "__cpp_find",    "find");
         Utility::AddToClass(pyclass, "find",          (PyCFunction)STLStringFind,       METH_VARARGS | METH_KEYWORDS);
