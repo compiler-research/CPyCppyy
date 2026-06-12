@@ -884,7 +884,6 @@ PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     return nullptr;
 }
 
-#if __cplusplus <= 202002L
 PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 {
 // Implement python's __contains__ for std::map/std::set
@@ -911,7 +910,6 @@ PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 
     return result;
 }
-#endif
 
 
 //- set behavior as primitives ------------------------------------------------
@@ -1878,20 +1876,24 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)MapInit, METH_VARARGS | METH_KEYWORDS);
-#if __cplusplus <= 202002L
-    // From C++20, std::map and std::unordered_map already implement a contains() method.
-        Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
-#endif
+    // From C++20, std::map/unordered_map have a native contains() that the generic
+    // contains->__contains__ mapping above will pick up. Strong-types reflection
+    // does not always expose it, so fall back to a find()-based __contains__ when
+    // none was reflected (still O(log n)/O(1), never iterating).
+        if (!HasAttrDirect(pyclass, PyStrings::gContains))
+            Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
     }
 
     else if (IsTemplatedSTLClass(name, "set")) {
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)SetInit, METH_VARARGS | METH_KEYWORDS);
-#if __cplusplus <= 202002L
-    // From C++20, std::set already implements a contains() method.
-        Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
-#endif
+    // From C++20, std::set has a native contains() that the generic
+    // contains->__contains__ mapping above will pick up. Strong-types reflection
+    // does not always expose it, so fall back to a find()-based __contains__ when
+    // none was reflected (still O(log n), never iterating).
+        if (!HasAttrDirect(pyclass, PyStrings::gContains))
+            Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
     }
 
     else if (IsTemplatedSTLClass(name, "pair")) {
