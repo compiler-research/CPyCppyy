@@ -1666,7 +1666,7 @@ namespace CPyCppyy {
 
 class StdSpanConverter : public InstanceConverter {
 public:
-    StdSpanConverter(std::string const &typeName, Cppyy::TCppType_t klass, bool keepControl = false)
+    StdSpanConverter(std::string const &typeName, Cppyy::TCppScope_t klass, bool keepControl = false)
         : InstanceConverter{klass, keepControl}, fTypeName{typeName}
     {
     }
