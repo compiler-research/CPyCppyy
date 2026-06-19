@@ -15,3 +15,10 @@ __pycache__
 .pytest_cache
 .vscode
 build
+
+# Bazel convenience symlinks and module lock
+/bazel-bin
+/bazel-out
+/bazel-testlogs
+/bazel-CPyCppyy
+MODULE.bazel.lock
