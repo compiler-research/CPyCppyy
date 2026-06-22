@@ -670,11 +670,7 @@ PyTypeObject CPPScope_Type = {
     (getattrofunc)meta_getattro,   // tp_getattro
     (setattrofunc)meta_setattro,   // tp_setattro
     0,                             // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE
-#if PY_VERSION_HEX >= 0x03040000
-        | Py_TPFLAGS_TYPE_SUBCLASS
-#endif
-        ,                          // tp_flags
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_TYPE_SUBCLASS, // tp_flags
     (char*)"CPyCppyy metatype (internal)",        // tp_doc
     0,                             // tp_traverse
     0,                             // tp_clear
@@ -699,19 +695,11 @@ PyTypeObject CPPScope_Type = {
     0,                             // tp_mro
     0,                             // tp_cache
     0,                             // tp_subclasses
-    0                              // tp_weaklist
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                            // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                            // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                            // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                           // tp_vectorcall
-#endif
+    0,                             // tp_weaklist
+    0,                             // tp_del
+    0,                             // tp_version_tag
+    0,                             // tp_finalize
+    0                              // tp_vectorcall
     CPYCPPYY_PYTYPE_TAIL
 };
 

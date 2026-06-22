@@ -34,21 +34,6 @@
 #include <span>
 #endif
 
-// codecvt does not exist for gcc4.8.5 and is in principle deprecated; it is
-// only used in py2 for char -> wchar_t conversion for std::wstring; if not
-// available, the conversion is done through Python (requires an extra copy)
-#if PY_VERSION_HEX < 0x03000000
-#if defined(__GNUC__) && !defined(__APPLE__)
-# if __GNUC__ > 4 && __has_include("codecvt")
-# include <codecvt>
-# define HAS_CODECVT 1
-# endif
-#else
-#include <codecvt>
-#define HAS_CODECVT 1
-#endif
-#endif // py2
-
 
 //- data _____________________________________________________________________
 namespace CPyCppyy {
@@ -68,18 +53,7 @@ namespace CPyCppyy {
 // Define our own PyUnstable_Object_IsUniqueReferencedTemporary function if the
 // Python version is lower than 3.14, the version where that function got introduced.
 #if PY_VERSION_HEX < 0x030e0000
-#if PY_VERSION_HEX < 0x03000000
 const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 1;
-#elif PY_VERSION_HEX < 0x03080000
-// p3 has at least 2 ref-counts, as contrary to p2, it will create a descriptor
-// copy for the method holding self in the case of __init__; but there can also
-// be a reference held by the frame object, which is indistinguishable from a
-// local variable reference, so the cut-off has to remain 2.
-const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 2;
-#else
-// since py3.8, vector calls behave again as expected
-const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 1;
-#endif
 inline bool PyUnstable_Object_IsUniqueReferencedTemporary(PyObject *pyobject) {
     return Py_REFCNT(pyobject) <= MOVE_REFCOUNT_CUTOFF;
 }
@@ -791,13 +765,6 @@ bool CPyCppyy::LongRefConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* /* ctxt */)
 {
 // convert <pyobject> to C++ long&, set arg for call
-#if PY_VERSION_HEX < 0x03000000
-    if (RefInt_CheckExact(pyobject)) {
-        para.fValue.fVoidp = (void*)&((PyIntObject*)pyobject)->ob_ival;
-        para.fTypeCode = 'V';
-        return true;
-    }
-#endif
 
     if (Py_TYPE(pyobject) == GetCTypesType(ct_c_long)) {
         para.fValue.fVoidp = (void*)((CPyCppyy_tagCDataObject*)pyobject)->b_ptr;
@@ -835,21 +802,12 @@ bool CPyCppyy::IntRefConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* /* ctxt */)
 {
 // convert <pyobject> to C++ (pseudo)int&, set arg for call
-#if PY_VERSION_HEX < 0x03000000
-    if (RefInt_CheckExact(pyobject)) {
-        para.fValue.fVoidp = (void*)&((PyIntObject*)pyobject)->ob_ival;
-        para.fTypeCode = 'V';
-        return true;
-    }
-#endif
 
-#if PY_VERSION_HEX >= 0x02050000
     if (Py_TYPE(pyobject) == GetCTypesType(ct_c_int)) {
         para.fValue.fVoidp = (void*)((CPyCppyy_tagCDataObject*)pyobject)->b_ptr;
         para.fTypeCode = 'V';
         return true;
     }
-#endif
 
 // alternate, pass pointer from buffer
     Py_ssize_t buflen = Utility::GetBuffer(pyobject, 'i', sizeof(int), para.fValue.fVoidp);
@@ -858,11 +816,7 @@ bool CPyCppyy::IntRefConverter::SetArg(
         return true;
     };
 
-#if PY_VERSION_HEX < 0x02050000
-    PyErr_SetString(PyExc_TypeError, "use cppyy.Long for pass-by-ref of ints");
-#else
     PyErr_SetString(PyExc_TypeError, "use ctypes.c_int for pass-by-ref of ints");
-#endif
     return false;
 }
 
@@ -1171,21 +1125,12 @@ bool CPyCppyy::DoubleRefConverter::SetArg(
     PyObject* pyobject, Parameter& para, CallContext* /* ctxt */)
 {
 // convert <pyobject> to C++ double&, set arg for call
-#if PY_VERSION_HEX < 0x03000000
-    if (RefFloat_CheckExact(pyobject)) {
-        para.fValue.fVoidp = (void*)&((PyFloatObject*)pyobject)->ob_fval;
-        para.fTypeCode = 'V';
-        return true;
-    }
-#endif
 
-#if PY_VERSION_HEX >= 0x02050000
     if (Py_TYPE(pyobject) == GetCTypesType(ct_c_double)) {
         para.fValue.fVoidp = (void*)((CPyCppyy_tagCDataObject*)pyobject)->b_ptr;
         para.fTypeCode = 'V';
         return true;
     }
-#endif
 
 // alternate, pass pointer from buffer
     Py_ssize_t buflen = Utility::GetBuffer(pyobject, 'd', sizeof(double), para.fValue.fVoidp);
@@ -1194,11 +1139,7 @@ bool CPyCppyy::DoubleRefConverter::SetArg(
         return true;
     }
 
-#if PY_VERSION_HEX < 0x02050000
-    PyErr_SetString(PyExc_TypeError, "use cppyy.Double for pass-by-ref of doubles");
-#else
     PyErr_SetString(PyExc_TypeError, "use ctypes.c_double for pass-by-ref of doubles");
-#endif
     return false;
 }
 
@@ -1895,9 +1836,7 @@ bool CPyCppyy::CStringArrayConverter::SetArg(
         return true;
 
     } else if (PySequence_Check(pyobject) && !CPyCppyy_PyText_Check(pyobject)
-#if PY_VERSION_HEX >= 0x03000000
         && !PyBytes_Check(pyobject)
-#endif
     ) {
         //for (auto& p : fBuffer) free(p);
         fBuffer.clear();
@@ -1976,12 +1915,7 @@ static inline bool CPyCppyy_PyUnicodeAsBytes2Buffer(PyObject* pyobject, T& buffe
         Py_INCREF(pyobject);
         pybytes = pyobject;
     } else if (PyUnicode_Check(pyobject)) {
-#if PY_VERSION_HEX < 0x03030000
-        pybytes = PyUnicode_EncodeUTF8(
-            PyUnicode_AS_UNICODE(pyobject), CPyCppyy_PyUnicode_GET_SIZE(pyobject), nullptr);
-#else
         pybytes = PyUnicode_AsUTF8String(pyobject);
-#endif
     }
 
     if (pybytes) {
@@ -2052,23 +1986,6 @@ bool CPyCppyy::STLWStringConverter::SetArg(
         para.fTypeCode = 'V';
         return true;
     }
-#if PY_VERSION_HEX < 0x03000000
-    else if (PyString_Check(pyobject)) {
-#ifdef HAS_CODECVT
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cnv;
-        fBuffer = cnv.from_bytes(PyString_AS_STRING(pyobject));
-#else
-        PyObject* pyu = PyUnicode_FromString(PyString_AS_STRING(pyobject));
-        if (!pyu) return false;
-        Py_ssize_t len = CPyCppyy_PyUnicode_GET_SIZE(pyu);
-        fBuffer.resize(len);
-        CPyCppyy_PyUnicode_AsWideChar(pyu, &fBuffer[0], len);
-#endif
-        para.fValue.fVoidp = &fBuffer;
-        para.fTypeCode = 'V';
-        return true;
-    }
-#endif
 
     if (!(PyInt_Check(pyobject) || PyLong_Check(pyobject))) {
         bool result = InstancePtrConverter<false>::SetArg(pyobject, para, ctxt);
@@ -2338,11 +2255,7 @@ bool CPyCppyy::InstanceConverter::ToMemory(PyObject* value, void* address, PyObj
 {
 // assign value to C++ instance living at <address> through assignment operator
     PyObject* pyobj = BindCppObjectNoCast(address, fClass);
-#if PY_VERSION_HEX >= 0x03080000
     PyObject* result = PyObject_CallMethodOneArg(pyobj, PyStrings::gAssign, value);
-#else
-    PyObject* result = PyObject_CallMethod(pyobj, (char*)"__assign__", (char*)"O", value);
-#endif
     Py_DECREF(pyobj);
 
     if (result) {
@@ -3086,11 +2999,7 @@ bool CPyCppyy::SmartPtrConverter::ToMemory(PyObject* value, void* address, PyObj
 // assign value to C++ instance living at <address> through assignment operator (this
 // is similar to InstanceConverter::ToMemory, but prevents wrapping the smart ptr)
     PyObject* pyobj = BindCppObjectNoCast(address, fSmartPtrType, CPPInstance::kNoWrapConv);
-#if PY_VERSION_HEX >= 0x03080000
     PyObject* result = PyObject_CallMethodOneArg(pyobj, PyStrings::gAssign, value);
-#else
-    PyObject* result = PyObject_CallMethod(pyobj, (char*)"__assign__", (char*)"O", value);
-#endif
     Py_DECREF(pyobj);
 
     if (result) {
@@ -3171,12 +3080,7 @@ bool CPyCppyy::InitializerListConverter::SetArg(
 // convert the given argument to an initializer list temporary; this is purely meant
 // to be a syntactic thing, so only _python_ sequences are allowed; bound C++ proxies
 // (likely explicitly created std::initializer_list, go through an instance converter
-    if (!PySequence_Check(pyobject) || CPyCppyy_PyText_Check(pyobject)
-#if PY_VERSION_HEX >= 0x03000000
-        || PyBytes_Check(pyobject)
-#else
-        || PyUnicode_Check(pyobject)
-#endif
+    if (!PySequence_Check(pyobject) || CPyCppyy_PyText_Check(pyobject) || PyBytes_Check(pyobject)
         )
         return false;
 

@@ -33,11 +33,7 @@ PyObject* CPyCppyy::pyval_from_enum(const std::string& enum_type, PyObject* pyty
     PyObject* bval;
     if (enum_type == "char") {
         char val = (char)llval;
-#if PY_VERSION_HEX < 0x03000000
-        bval = CPyCppyy_PyText_FromStringAndSize(&val, 1);
-#else
         bval = PyUnicode_FromOrdinal((int)val);
-#endif
     } else if (enum_type == "int" || enum_type == "unsigned int")
         bval = PyInt_FromLong((long)llval);
     else

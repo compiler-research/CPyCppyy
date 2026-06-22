@@ -41,7 +41,6 @@ CPyCppyy::PyCallArgs::~PyCallArgs() {
     if (fFlags & kSelfSwap)            // if self swap, fArgs has been offset by -1
         std::swap((PyObject*&)fSelf, ((PyObject**)fArgs)[0]);
 
-#if PY_VERSION_HEX >= 0x03080000
     if (fFlags & kIsOffset) fArgs -= 1;
 
     if (fFlags & kDoItemDecref) {
@@ -56,12 +55,6 @@ CPyCppyy::PyCallArgs::~PyCallArgs() {
         int offset = (fFlags & kSelfSwap) ? 1 : 0;
         std::swap(((PyObject**)fArgs+offset)[0], ((PyObject**)fArgs+offset)[1]);
     }
-#else
-    if (fFlags & kDoDecref)
-        Py_DECREF((PyObject*)fArgs);
-    else if (fFlags & kArgsSwap)
-        std::swap(PyTuple_GET_ITEM(fArgs, 0), PyTuple_GET_ITEM(fArgs, 1));
-#endif
 }
 
 
@@ -708,11 +701,7 @@ PyObject* CPyCppyy::CPPMethod::GetArgDefault(int iarg, bool silent)
 
         PyObject* pycode = Py_CompileString((char*)defvalue.c_str(), "cppyy_default_compiler", Py_eval_input);
         if (pycode) {
-            pyval = PyEval_EvalCode(
-#if PY_VERSION_HEX < 0x03000000
-                (PyCodeObject*)
-#endif
-                pycode, gdct, gdct);
+            pyval = PyEval_EvalCode(pycode, gdct, gdct);
             Py_DECREF(pycode);
         }
 
@@ -806,19 +795,11 @@ bool CPyCppyy::CPPMethod::Initialize(CallContext* ctxt)
 //----------------------------------------------------------------------------
 bool CPyCppyy::CPPMethod::ProcessKwds(PyObject* self_in, PyCallArgs& cargs)
 {
-#if PY_VERSION_HEX >= 0x03080000
     if (!PyTuple_CheckExact(cargs.fKwds)) {
         SetPyError_(CPyCppyy_PyText_FromString("received unknown keyword names object"));
         return false;
     }
     Py_ssize_t nKeys = PyTuple_GET_SIZE(cargs.fKwds);
-#else
-    if (!PyDict_CheckExact(cargs.fKwds)) {
-        SetPyError_(CPyCppyy_PyText_FromString("received unknown keyword arguments object"));
-        return false;
-    }
-    Py_ssize_t nKeys = PyDict_Size(cargs.fKwds);
-#endif
 
     if (nKeys == 0 && !self_in)
         return true;
@@ -839,15 +820,10 @@ bool CPyCppyy::CPPMethod::ProcessKwds(PyObject* self_in, PyCallArgs& cargs)
     PyObject *key, *value;
     Py_ssize_t maxpos = -1;
 
-#if PY_VERSION_HEX >= 0x03080000
     Py_ssize_t npos_args = CPyCppyy_PyArgs_GET_SIZE(cargs.fArgs, cargs.fNArgsf);
     for (Py_ssize_t ikey = 0; ikey < nKeys; ++ikey) {
         key = PyTuple_GET_ITEM(cargs.fKwds, ikey);
         value = cargs.fArgs[npos_args+ikey];
-#else
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(cargs.fKwds, &pos, &key, &value)) {
-#endif
         const char* ckey = CPyCppyy_PyText_AsStringChecked(key);
         if (!ckey)
             return false;
@@ -910,23 +886,15 @@ bool CPyCppyy::CPPMethod::ProcessKwds(PyObject* self_in, PyCallArgs& cargs)
         }
     }
 
-#if PY_VERSION_HEX >= 0x03080000
     if (cargs.fFlags & PyCallArgs::kDoFree) {
         if (cargs.fFlags & PyCallArgs::kIsOffset)
             cargs.fArgs -= 1;
-#else
-    if (cargs.fFlags & PyCallArgs::kDoDecref) {
-#endif
        CPyCppyy_PyArgs_DEL(cargs.fArgs);
     }
 
     cargs.fArgs = newArgs;
     cargs.fNArgsf = maxargs;
-#if PY_VERSION_HEX >= 0x03080000
     cargs.fFlags = PyCallArgs::kDoFree | PyCallArgs::kDoItemDecref;
-#else
-    cargs.fFlags = PyCallArgs::kDoDecref;
-#endif
 
     return true;
 }
@@ -957,15 +925,8 @@ bool CPyCppyy::CPPMethod::ProcessArgs(PyCallArgs& cargs)
                 cargs.fSelf = pyobj;
 
             // offset args by 1
-#if PY_VERSION_HEX >= 0x03080000
                 cargs.fArgs += 1;
                 cargs.fFlags |= PyCallArgs::kIsOffset;
-#else
-                if (cargs.fFlags & PyCallArgs::kDoDecref)
-                    Py_DECREF((PyObject*)cargs.fArgs);
-                cargs.fArgs = PyTuple_GetSlice(cargs.fArgs, 1, PyTuple_GET_SIZE(cargs.fArgs));
-                cargs.fFlags |= PyCallArgs::kDoDecref;
-#endif
                 cargs.fNArgsf -= 1;
 
             // put the keywords, if any, in their places in the arguments array

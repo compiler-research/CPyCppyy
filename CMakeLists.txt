@@ -11,18 +11,18 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 message(STATUS "Looking for python ...")
-set(Python_FIND_VIRTUALENV ONLY)
-find_package (Python COMPONENTS Interpreter Development)
-if (NOT Python_FOUND)
-   set(Python_FIND_VIRTUALENV STANDARD)
-   find_package (Python COMPONENTS Interpreter Development)
+set(Python3_FIND_VIRTUALENV ONLY)
+find_package(Python3 3.10 COMPONENTS Interpreter Development)
+if (NOT Python3_FOUND)
+   set(Python3_FIND_VIRTUALENV STANDARD)
+   find_package(Python3 3.10 COMPONENTS Interpreter Development)
 endif()
 
-if (NOT Python_Development_FOUND)
+if (NOT Python3_Development_FOUND)
    message(FATAL_ERROR "Python development package not found and python component required")
 endif()
 
-include_directories("${PROJECT_SOURCE_DIR}/include" "${Python_INCLUDE_DIRS}")
+include_directories("${PROJECT_SOURCE_DIR}/include" "${Python3_INCLUDE_DIRS}")
 
 file (GLOB cppyy_src src/*.cxx)
 

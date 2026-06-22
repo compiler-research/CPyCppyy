@@ -50,11 +50,7 @@ inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
     const std::string& name = CT2CppNameS(pytc, allow_voidp);
     if (!name.empty()) {
         if (name == "const char*") cpd = "";
-#if PY_VERSION_HEX < 0x03000000
-        return PyString_FromString((std::string{name}+cpd).c_str());
-#else
         return PyUnicode_FromString((std::string{name}+cpd).c_str());
-#endif
     }
     return nullptr;
 }

@@ -60,11 +60,7 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
     Utility::ConstructCallbackPreamble(retType, argtypes, code);
 
 // perform actual method call
-#if PY_VERSION_HEX < 0x03000000
-    code << "    PyObject* mtPyName = PyString_FromString(\"" << mtCppName << "\");\n" // TODO: intern?
-#else
     code << "    PyObject* mtPyName = PyUnicode_FromString(\"" << mtCppName << "\");\n"
-#endif
             "    PyObject* pyresult = PyObject_CallMethodObjArgs(iself, mtPyName";
     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i)
         code << ", pyargs[" << i << "]";

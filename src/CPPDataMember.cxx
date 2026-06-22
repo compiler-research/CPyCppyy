@@ -298,19 +298,11 @@ PyTypeObject CPPDataMember_Type = {
     0,                             // tp_mro
     0,                             // tp_cache
     0,                             // tp_subclasses
-    0                              // tp_weaklist
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                            // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                            // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                            // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                           // tp_vectorcall
-#endif
+    0,                             // tp_weaklist
+    0,                             // tp_del
+    0,                             // tp_version_tag
+    0,                             // tp_finalize
+    0                              // tp_vectorcall
     CPYCPPYY_PYTYPE_TAIL
 };
 

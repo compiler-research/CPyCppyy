@@ -214,9 +214,6 @@ PyObject* NullCheckBool(PyObject* self)
 }
 
 //- vector behavior as primitives ----------------------------------------------
-#if PY_VERSION_HEX < 0x03040000
-#define PyObject_LengthHint _PyObject_LengthHint
-#endif
 
 // TODO: can probably use the below getters in the InitializerListConverter
 struct ItemGetter {
@@ -850,13 +847,8 @@ PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     if (PyTuple_GET_SIZE(args) == 1 && PyMapping_Check(PyTuple_GET_ITEM(args, 0)) && \
            !(PyTuple_Check(PyTuple_GET_ITEM(args, 0)) || PyList_Check(PyTuple_GET_ITEM(args, 0)))) {
         PyObject* assoc = PyTuple_GET_ITEM(args, 0);
-#if PY_VERSION_HEX < 0x03000000
-    // to prevent warning about literal string, expand macro
-        PyObject* items = PyObject_CallMethod(assoc, (char*)"items", nullptr);
-#else
     // in p3, PyMapping_Items isn't a macro, but a function that short-circuits dict
         PyObject* items = PyMapping_Items(assoc);
-#endif
         if (items && PySequence_Check(items)) {
             PyObject* result = MapFromPairs(self, items);
             Py_DECREF(items);
@@ -1115,12 +1107,10 @@ PyObject* SmartPtrInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
 
 
 //- string behavior as primitives --------------------------------------------
-#if PY_VERSION_HEX >= 0x03000000
 // TODO: this is wrong, b/c it doesn't order
 static int PyObject_Compare(PyObject* one, PyObject* other) {
     return !PyObject_RichCompareBool(one, other, Py_EQ);
 }
-#endif
 static inline
 PyObject* CPyCppyy_PyString_FromCppString(std::string_view s, bool native=true) {
     if (native)
@@ -1624,11 +1614,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
 
 // for pre-check of nullptr for boolean types
     if (HasAttrDirect(pyclass, PyStrings::gCppBool)) {
-#if PY_VERSION_HEX >= 0x03000000
         const char* pybool_name = "__bool__";
-#else
-        const char* pybool_name = "__nonzero__";
-#endif
         Utility::AddToClass(pyclass, pybool_name, (PyCFunction)NullCheckBool, METH_NOARGS);
     }
 

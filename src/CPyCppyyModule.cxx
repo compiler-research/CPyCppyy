@@ -52,7 +52,6 @@ std::unordered_map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
 #if PY_VERSION_HEX < 0x030b0000
 
 //- from Python's dictobject.c -------------------------------------------------
-#if PY_VERSION_HEX >= 0x03030000
     typedef struct PyDictKeyEntry {
     /* Cached hash code of me_key. */
         Py_hash_t me_hash;
@@ -65,7 +64,6 @@ std::unordered_map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
         Py_ssize_t dk_size;
         dict_lookup_func dk_lookup;
         Py_ssize_t dk_usable;
-#if PY_VERSION_HEX >= 0x03060000
         Py_ssize_t dk_nentries;
         union {
             int8_t as_1[8];
@@ -75,20 +73,10 @@ std::unordered_map<Cppyy::TCppType_t, Cppyy::TCppType_t> TypeReductionMap;
             int64_t as_8[1];
 #endif
         } dk_indices;
-#else
-        PyDictKeyEntry dk_entries[1];
-#endif
     } PyDictKeysObject;
 
 #define CPYCPPYY_GET_DICT_LOOKUP(mp)                                          \
     ((dict_lookup_func&)mp->ma_keys->dk_lookup)
-
-#else
-
-#define CPYCPPYY_GET_DICT_LOOKUP(mp)                                          \
-    ((dict_lookup_func&)mp->ma_lookup)
-
-#endif
 
 #endif // PY_VERSION_HEX < 0x030b0000
 
@@ -110,40 +98,18 @@ static int nullptr_nonzero(PyObject*)
 
 static PyNumberMethods nullptr_as_number = {
     0, 0, 0,
-#if PY_VERSION_HEX < 0x03000000
-    0,
-#endif
     0, 0, 0, 0, 0, 0,
     (inquiry)nullptr_nonzero,           // tp_nonzero (nb_bool in p3)
     0, 0, 0, 0, 0, 0,
-#if PY_VERSION_HEX < 0x03000000
-    0,                                  // nb_coerce
-#endif
     0, 0, 0,
-#if PY_VERSION_HEX < 0x03000000
+    0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+    0,                                  // nb_floor_divide
+    0,                                  // nb_true_divide
     0, 0,
-#endif
-    0, 0, 0,
-#if PY_VERSION_HEX < 0x03000000
-    0,                                  // nb_inplace_divide
-#endif
-    0, 0, 0, 0, 0, 0, 0
-#if PY_VERSION_HEX >= 0x02020000
-    , 0                                 // nb_floor_divide
-#if PY_VERSION_HEX < 0x03000000
-    , 0                                 // nb_true_divide
-#else
-    , 0                                 // nb_true_divide
-#endif
-    , 0, 0
-#endif
-#if PY_VERSION_HEX >= 0x02050000
-    , 0                                 // nb_index
-#endif
-#if PY_VERSION_HEX >= 0x03050000
-    , 0                                 // nb_matrix_multiply
-    , 0                                 // nb_inplace_matrix_multiply
-#endif
+    0,                                  // nb_index
+    0,                                  // nb_matrix_multiply
+    0                                   // nb_inplace_matrix_multiply
 };
 
 static PyTypeObject PyNullPtr_t_Type = {
@@ -162,19 +128,11 @@ static PyTypeObject PyNullPtr_t_Type = {
     (hashfunc)_Py_HashPointer, // tp_hash
 #endif
     0, 0, 0, 0, 0, Py_TPFLAGS_DEFAULT, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                  // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                  // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                  // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                  // tp_vectorcall
-#endif
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,                   // tp_del
+    0,                   // tp_version_tag
+    0,                   // tp_finalize
+    0                    // tp_vectorcall
     CPYCPPYY_PYTYPE_TAIL
 };
 
@@ -204,19 +162,11 @@ static PyTypeObject PyDefault_t_Type = {
     (hashfunc)_Py_HashPointer, // tp_hash
 #endif
     0, 0, 0, 0, 0, Py_TPFLAGS_DEFAULT, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                  // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                  // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                  // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                 // tp_vectorcall
-#endif
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,                  // tp_del
+    0,                  // tp_version_tag
+    0,                  // tp_finalize
+    0                   // tp_vectorcall
     CPYCPPYY_PYTYPE_TAIL
 };
 
@@ -286,7 +236,6 @@ private:
 
 } // unnamed namespace
 
-#if PY_VERSION_HEX >= 0x03060000
 inline Py_ssize_t OrgDictLookup(PyDictObject* mp, PyObject* key,
     Py_hash_t hash, PyObject*** value_addr, Py_ssize_t* hashpos)
 {
@@ -297,50 +246,16 @@ inline Py_ssize_t OrgDictLookup(PyDictObject* mp, PyObject* key,
 
 Py_ssize_t CPyCppyyLookDictString(PyDictObject* mp, PyObject* key,
     Py_hash_t hash, PyObject*** value_addr, Py_ssize_t* hashpos)
-
-#elif PY_VERSION_HEX >= 0x03030000
-inline PyDictKeyEntry* OrgDictLookup(
-    PyDictObject* mp, PyObject* key, Py_hash_t hash, PyObject*** value_addr)
-{
-    return (*gDictLookupOrg)(mp, key, hash, value_addr);
-}
-
-#define CPYCPPYY_ORGDICT_LOOKUP(mp, key, hash, value_addr, hashpos)           \
-    OrgDictLookup(mp, key, hash, value_addr)
-
-PyDictKeyEntry* CPyCppyyLookDictString(
-    PyDictObject* mp, PyObject* key, Py_hash_t hash, PyObject*** value_addr)
-
-#else /* < 3.3 */
-
-inline PyDictEntry* OrgDictLookup(PyDictObject* mp, PyObject* key, long hash)
-{
-    return (*gDictLookupOrg)(mp, key, hash);
-}
-
-#define CPYCPPYY_ORGDICT_LOOKUP(mp, key, hash, value_addr, hashpos)           \
-    OrgDictLookup(mp, key, hash)
-
-PyDictEntry* CPyCppyyLookDictString(PyDictObject* mp, PyObject* key, long hash)
-#endif
 {
     static GblGetter gbl;
-#if PY_VERSION_HEX >= 0x03060000
     Py_ssize_t ep;
-#else
-    PyDictEntry* ep;
-#endif
 
 // first search dictionary itself
     ep = CPYCPPYY_ORGDICT_LOOKUP(mp, key, hash, value_addr, hashpos);
     if (gDictLookupActive)
         return ep;
 
-#if PY_VERSION_HEX >= 0x03060000
     if (ep >= 0)
-#else
-    if (!ep || (ep->me_key && ep->me_value))
-#endif
         return ep;
 
 // filter for builtins
@@ -371,12 +286,7 @@ PyDictEntry* CPyCppyyLookDictString(PyDictObject* mp, PyObject* key, long hash)
         if (PyDict_SetItem((PyObject*)mp, key, val) == 0) {
             ep = CPYCPPYY_ORGDICT_LOOKUP(mp, key, hash, value_addr, hashpos);
         } else {
-#if PY_VERSION_HEX >= 0x03060000
             ep = -1;
-#else
-            ep->me_key   = nullptr;
-            ep->me_value = nullptr;
-#endif
         }
         CPYCPPYY_GET_DICT_LOOKUP(mp) = CPyCppyyLookDictString;   // restore
 
@@ -385,7 +295,6 @@ PyDictEntry* CPyCppyyLookDictString(PyDictObject* mp, PyObject* key, long hash)
     } else
         PyErr_Clear();
 
-#if PY_VERSION_HEX >= 0x03030000
     if (mp->ma_keys->dk_usable <= 0) {
     // big risk that this lookup will result in a resize, so force it here
     // to be able to reset the lookup function; of course, this is nowhere
@@ -413,7 +322,6 @@ PyDictEntry* CPyCppyyLookDictString(PyDictObject* mp, PyObject* key, long hash)
         gDictLookupOrg = CPYCPPYY_GET_DICT_LOOKUP(mp);
         CPYCPPYY_GET_DICT_LOOKUP(mp) = CPyCppyyLookDictString;   // restore
     }
-#endif
 
 // stopped calling into the reflection system
     gDictLookupActive = false;
@@ -614,11 +522,7 @@ static PyObject* AsCapsule(PyObject* /* unused */, PyObject* args, PyObject* kwd
 // Return object proxy as an opaque PyCapsule.
     void* addr = GetCPPInstanceAddress("as_capsule", args, kwds);
     if (addr)
-#if PY_VERSION_HEX < 0x02060000
-        return PyCObject_FromVoidPtr(addr, nullptr);
-#else
         return PyCapsule_New(addr, nullptr, nullptr);
-#endif
     return nullptr;
 }
 
@@ -1059,7 +963,6 @@ static PyMethodDef gCPyCppyyMethods[] = {
 };
 
 
-#if PY_VERSION_HEX >= 0x03000000
 struct module_state {
     PyObject *error;
 };
@@ -1091,8 +994,6 @@ static struct PyModuleDef moduledef = {
     nullptr
 };
 
-#endif
-
 namespace CPyCppyy {
 
 //----------------------------------------------------------------------------
@@ -1105,9 +1006,6 @@ extern "C" PyObject* PyInit_libcppyy()
         return nullptr;
 
 // setup interpreter
-#if PY_VERSION_HEX < 0x03090000
-    PyEval_InitThreads();
-#endif
 
 #if PY_VERSION_HEX < 0x030b0000
 // prepare for laziness (the insert is needed to capture the most generic lookup
@@ -1116,20 +1014,12 @@ extern "C" PyObject* PyInit_libcppyy()
     PyObject* notstring = PyInt_FromLong(5);
     PyDict_SetItem(dict, notstring, notstring);
     Py_DECREF(notstring);
-#if PY_VERSION_HEX >= 0x03030000
     gDictLookupOrg = (dict_lookup_func)((PyDictObject*)dict)->ma_keys->dk_lookup;
-#else
-    gDictLookupOrg = (dict_lookup_func)((PyDictObject*)dict)->ma_lookup;
-#endif
     Py_DECREF(dict);
 #endif // PY_VERSION_HEX < 0x030b0000
 
 // setup this module
-#if PY_VERSION_HEX >= 0x03000000
     gThisModule = PyModule_Create(&moduledef);
-#else
-    gThisModule = Py_InitModule(const_cast<char*>("libcppyy"), gCPyCppyyMethods);
-#endif
     if (!gThisModule)
         return nullptr;
 
@@ -1166,15 +1056,6 @@ extern "C" PyObject* PyInit_libcppyy()
 // inject property proxy type
     if (!Utility::InitProxy(gThisModule, &CPPDataMember_Type, "CPPDataMember"))
         return nullptr;
-
-// inject custom data types
-#if PY_VERSION_HEX < 0x03000000
-    if (!Utility::InitProxy(gThisModule, &RefFloat_Type, "Double"))
-        return nullptr;
-
-    if (!Utility::InitProxy(gThisModule, &RefInt_Type, "Long"))
-        return nullptr;
-#endif
 
     if (!Utility::InitProxy(gThisModule, &CustomInstanceMethod_Type, "InstanceMethod"))
         return nullptr;

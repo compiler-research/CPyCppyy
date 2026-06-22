@@ -10,38 +10,6 @@ namespace CPyCppyy {
     performance.
  */
 
-#if PY_VERSION_HEX < 0x03000000
-//- reference float object type and type verification ------------------------
-extern PyTypeObject RefFloat_Type;
-
-template<typename T>
-inline bool RefFloat_Check(T* object)
-{
-    return object && PyObject_TypeCheck(object, &RefFloat_Type);
-}
-
-template<typename T>
-inline bool RefFloat_CheckExact(T* object)
-{
-    return object && Py_TYPE(object) == &RefFloat_Type;
-}
-
-//- reference long object type and type verification -------------------------
-extern PyTypeObject RefInt_Type;
-
-template<typename T>
-inline bool RefInt_Check(T* object)
-{
-    return object && PyObject_TypeCheck(object, &RefInt_Type);
-}
-
-template<typename T>
-inline bool RefInt_CheckExact(T* object)
-{
-    return object && Py_TYPE(object) == &RefInt_Type;
-}
-#endif
-
 //- custom type representing typedef to pointer of class ---------------------
 struct typedefpointertoclassobject {
     PyObject_HEAD
