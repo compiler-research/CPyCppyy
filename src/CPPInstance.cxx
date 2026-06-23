@@ -189,6 +189,16 @@ Cppyy::TCppScope_t CPyCppyy::CPPInstance::GetSmartIsA() const
 }
 
 //----------------------------------------------------------------------------
+Cppyy::TCppScope_t CPyCppyy::CPPInstance::GetSmartUnderlyingType() const
+{
+// Declared underlying type of the embedded smart pointer ('Base' for a
+// std::unique_ptr<Base>), independent of any downcast of the dereferenced
+// object.
+    if (!IsSmart()) return Cppyy::TCppScope_t{};
+    return SMART_CLS(this)->fUnderlyingType;
+}
+
+//----------------------------------------------------------------------------
 CPyCppyy::CI_DatamemberCache_t& CPyCppyy::CPPInstance::GetDatamemberCache()
 {
 // Return the cache for expensive data objects (and make extended as necessary)
