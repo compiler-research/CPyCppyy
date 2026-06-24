@@ -53,7 +53,7 @@ public:
     PyObject* FromMemory(void* address) override;
     bool ToMemory(PyObject* value, void* address, PyObject* ctxt = nullptr) override;
     bool HasState() override { return true; }
-    virtual std::string GetFailureMsg() { return "[VoidArrayConverter] " + fFailureMsg; }
+    std::string GetFailureMsg() override { return "[VoidArrayConverter] " + fFailureMsg; }
 
 protected:
     virtual bool GetAddressSpecialCase(PyObject* pyobject, void*& address);
