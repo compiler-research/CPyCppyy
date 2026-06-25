@@ -367,7 +367,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         } else {
             if (!attr) PyErr_Clear();
         // normal case, add a new method
-            CPPOverload* method = CPPOverload_New(imd->first, imd->second);
+            CPPOverload* method = CPPOverload_New(imd->first, scope, imd->second);
             PyObject* pymname = CPyCppyy_PyText_InternFromString(const_cast<char*>(method->GetName().c_str()));
             PyType_Type.tp_setattro(pyclass, pymname, (PyObject*)method);
             Py_DECREF(pymname);

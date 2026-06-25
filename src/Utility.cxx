@@ -260,7 +260,7 @@ bool CPyCppyy::Utility::AddToClass(PyObject* pyclass, const char* label, PyCalla
         if (PyErr_Occurred())
             PyErr_Clear();
         Py_XDECREF((PyObject*)method);
-        method = CPPOverload_New(label, pyfunc);
+        method = CPPOverload_New(label, Cppyy::GetParentScope(pyfunc->GetMethod().data), pyfunc);
         PyObject* pylabel = CPyCppyy_PyText_InternFromString(const_cast<char*>(label));
         bool isOk = PyType_Type.tp_setattro(pyclass, pylabel, (PyObject*)method) == 0;
         Py_DECREF(pylabel);

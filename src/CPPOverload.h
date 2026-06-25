@@ -2,6 +2,7 @@
 #define CPYCPPYY_CPPOVERLOAD_H
 
 // Bindings
+#include "Cppyy.h"
 #include "PyCallable.h"
 
 // Standard
@@ -27,6 +28,7 @@ public:
         CPPOverload::DispatchMap_t  fDispatchMap;
         CPPOverload::Methods_t      fMethods;
         PyObject*                   fDoc;
+        Cppyy::TCppScope_t          fScope;
         uint32_t                    fFlags;
 
         int* fRefCount;
@@ -37,7 +39,7 @@ public:
     };
 
 public:
-    void Set(const std::string& name, std::vector<PyCallable*>& methods);
+    void Set(const std::string& name, Cppyy::TCppScope_t scope, std::vector<PyCallable*>& methods);
     void AdoptMethod(PyCallable* pc);
     void MergeOverload(CPPOverload* meth);
 
@@ -79,20 +81,20 @@ inline bool CPPOverload_CheckExact(T* object)
 
 //- creation -----------------------------------------------------------------
 inline CPPOverload* CPPOverload_New(
-    const std::string& name, std::vector<PyCallable*>& methods)
+    const std::string& name, Cppyy::TCppScope_t scope, std::vector<PyCallable*>& methods)
 {
 // Create and initialize a new method proxy from the overloads.
     CPPOverload* pymeth = (CPPOverload*)CPPOverload_Type.tp_new(&CPPOverload_Type, nullptr, nullptr);
-    pymeth->Set(name, methods);
+    pymeth->Set(name, scope, methods);
     return pymeth;
 }
 
-inline CPPOverload* CPPOverload_New(const std::string& name, PyCallable* method)
+inline CPPOverload* CPPOverload_New(const std::string& name, Cppyy::TCppScope_t scope, PyCallable* method)
 {
 // Create and initialize a new method proxy from the method.
     std::vector<PyCallable*> p;
     p.push_back(method);
-    return CPPOverload_New(name, p);
+    return CPPOverload_New(name, scope, p);
 }
 
 // signature hashes are also used by TemplateProxy

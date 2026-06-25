@@ -3,6 +3,8 @@
 #include "CPyCppyy/Reflex.h"
 #include "Cppyy.h"
 #include "PyCallable.h"
+#include "ProxyWrappers.h"
+#include "MemoryRegulator.h"
 #include "dictobject.h"
 #include "listobject.h"
 #include "object.h"
@@ -164,12 +166,6 @@ public:
 static inline bool IsPseudoFunc(CPPOverload* pymeth)
 {
     return pymeth->fMethodInfo->fFlags & CallContext::kIsPseudoFunc;
-}
-
-// helper to sort on method priority
-static int PriorityCmp(const std::pair<int, PyCallable*>& left, const std::pair<int, PyCallable*>& right)
-{
-    return left.first > right.first;
 }
 
 // return helper
@@ -754,12 +750,20 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
     std::string proto = "";
     if (im_self && !(ctxt.fFlags & CallContext::kIsConstructor)) {
         PyObject *self = (PyObject*)im_self;
-        assert(AddTypeName(proto, (PyObject*)Py_TYPE(self), self, Utility::kNone));
+        [[maybe_unused]] auto res =
+            AddTypeName(proto, (PyObject*)Py_TYPE(self), self, Utility::kNone);
+        assert(res);
     }
 
     ctxt.fFlags |= CallContext::kAllowImplicit;
     {
       size_t i = ctxt.fFlags & CallContext::kIsConstructor && !im_self ? 1 : 0;
+      CPPInstance *self = nullptr;
+      if (i) {
+          self = (CPPInstance*)CPyCppyy_PyArgs_GET_ITEM(args, 0);
+      } else {
+          self = im_self;
+      }
       size_t nArgs = PyVectorcall_NARGS(nargsf);
       for (; i < nArgs; i++) {
         PyObject *obj = CPyCppyy_PyArgs_GET_ITEM(args, i);
@@ -773,7 +777,7 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
             for (Py_ssize_t j = 0; j < PyTuple_GET_SIZE(obj); j++) {
               if (!proto.empty())
                 proto += ", ";
-              PyObject *unpacking_obj = PyTuple_GET_ITEM(obj, i);
+              PyObject *unpacking_obj = PyTuple_GET_ITEM(obj, j);
               PyObject *unpacking_typ = (PyObject *)Py_TYPE(unpacking_obj);
               if (!AddTypeName(proto, unpacking_typ, unpacking_obj,
                                Utility::kNone)) {
@@ -784,6 +788,91 @@ static PyObject* mp_call(CPPOverload* pymeth, PyObject* args, PyObject* kwds)
             continue;
           } else if (i == (im_self ? 1 : 2))
             continue;
+        }
+        if (self && IsConstructor(ctxt.fFlags) &&
+            self->ObjectIsA(/*check_smart=*/false) != pymeth->fMethodInfo->fScope) {
+            // this is a constructor of cross-inherited class
+            Cppyy::TCppScope_t disp = self->ObjectIsA(/*check_smart=*/false);
+
+            // happens for Python derived types (which have a dispatcher inserted that
+            // is not otherwise user-visible: call it instead) and C++ derived classes
+            // without public constructors
+        
+            // get the dispatcher class and verify
+            PyObject* dispproxy = CPyCppyy::GetScopeProxy(disp);
+            if (!dispproxy) {
+                PyErr_SetString(PyExc_TypeError, "dispatcher proxy was never created");
+                return nullptr;
+            }
+    
+            if (!(((CPPClass*)dispproxy)->fFlags & CPPScope::kIsPython)) {
+                PyErr_SetString(PyExc_TypeError, const_cast<char*>((
+                    "constructor for " + Cppyy::GetScopedFinalName(disp) + " is not a dispatcher").c_str()));
+                return nullptr;
+            }
+    
+            PyObject* pyobj = CPyCppyy_PyObject_Call(dispproxy, args + (self == im_self ? 0 : 1), nargsf - (self == im_self ? 0 : 1), kwds);
+            if (!pyobj)
+                return nullptr;
+    
+        // retrieve the actual pointer, take over control, and set set _internal_self
+            intptr_t address = (intptr_t)((CPPInstance*)pyobj)->GetObject();
+            if (address) {
+                ((CPPInstance*)pyobj)->CppOwns();    // b/c self will control the object on address
+                PyObject* res = PyObject_CallMethodObjArgs(
+                    dispproxy, PyStrings::gDispInit, pyobj, (PyObject*)self, nullptr);
+                Py_XDECREF(res);
+            }
+            Py_DECREF(dispproxy);
+
+            // return object if successful, lament if not
+            if (address) {
+                Py_INCREF(self);
+        
+            // note: constructors are no longer set to take ownership by default; instead that is
+            // decided by the method proxy (which carries a creator flag) upon return
+                self->Set((void*)address);
+        
+            // mark as actual to prevent needless auto-casting and register on its class
+                self->fFlags |= CPPInstance::kIsActual;
+                if (!(((CPPClass*)Py_TYPE(self))->fFlags & CPPScope::kIsSmart))
+                    MemoryRegulator::RegisterPyObject(self, Cppyy::TCppObject_t((void*)address));
+        
+            // handling smart types this way is deeply fugly, but if CPPInstance sets the proper
+            // types in op_new first, then the wrong init is called
+                if (((CPPClass*)Py_TYPE(self))->fFlags & CPPScope::kIsSmart) {
+                    PyObject* pyclass = CreateScopeProxy(((CPPSmartClass*)Py_TYPE(self))->fUnderlyingType);
+                    if (pyclass) {
+                        self->SetSmart((PyObject*)Py_TYPE(self));
+                        Py_DECREF((PyObject*)Py_TYPE(self));
+                        Py_SET_TYPE(self, (PyTypeObject*)pyclass);
+                    }
+                }
+        
+            // done with self
+                Py_DECREF(self);
+        
+                Py_RETURN_NONE;                     // by definition
+            }
+        }
+        if (IsConstructor(ctxt.fFlags) &&
+            Cppyy::GetScopedFinalName(pymeth->fMethodInfo->fScope).find("__cppyy_internal::Dispatcher") == 0) {    
+            if (typ == (PyObject *)&PyTuple_Type) {
+              if (i > 1)
+                proto += ", __cppyy_internal::Sep*";
+              for (Py_ssize_t j = 0; j < PyTuple_GET_SIZE(obj); j++) {
+                if (!proto.empty())
+                  proto += ", ";
+                PyObject *unpacking_obj = PyTuple_GET_ITEM(obj, j);
+                PyObject *unpacking_typ = (PyObject *)Py_TYPE(unpacking_obj);
+                if (!AddTypeName(proto, unpacking_typ, unpacking_obj,
+                                 Utility::kNone)) {
+                  proto += "__cppyy_internal::UnknownType";
+                  // break; // ???: do we need to raise error here
+                }
+              }
+              continue;
+            }
         }
         if (!proto.empty())
           proto += ", ";
@@ -1179,10 +1268,11 @@ PyTypeObject CPPOverload_Type = {
 
 
 //- public members -----------------------------------------------------------
-void CPyCppyy::CPPOverload::Set(const std::string& name, std::vector<PyCallable*>& methods)
+void CPyCppyy::CPPOverload::Set(const std::string& name, Cppyy::TCppScope_t scope, std::vector<PyCallable*>& methods)
 {
 // Fill in the data of a freshly created method proxy.
     fMethodInfo->fName = name;
+    fMethodInfo->fScope = scope;
     fMethodInfo->fMethods.swap(methods);
 
 // special case: all constructors are considered creators by default
@@ -1258,7 +1348,7 @@ PyObject* CPyCppyy::CPPOverload::FindOverload(const std::string& signature, int 
             if (!newmeth) {
                 newmeth = mp_new(nullptr, nullptr, nullptr);
                 CPPOverload::Methods_t vec; vec.push_back(meth->Clone());
-                newmeth->Set(fMethodInfo->fName, vec);
+                newmeth->Set(fMethodInfo->fName, nullptr, vec);
 
                 if (fSelf) {
                     Py_INCREF(fSelf);
@@ -1329,7 +1419,7 @@ PyObject* CPyCppyy::CPPOverload::FindOverload(PyObject *args_tuple, int want_con
     CPPOverload* newmeth = mp_new(nullptr, nullptr, nullptr);
     CPPOverload::Methods_t vec;
     vec.push_back(methods[best_method]->Clone());
-    newmeth->Set(fMethodInfo->fName, vec);
+    newmeth->Set(fMethodInfo->fName, nullptr, vec);
 
     if (fSelf) {
         Py_INCREF(fSelf);

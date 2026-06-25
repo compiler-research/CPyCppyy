@@ -378,7 +378,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
                 if (Cppyy::ExistsMethodTemplate(scope, name))
                     attr = add_template(pyclass, name, &overloads);
                 else
-                    attr = (PyObject*)CPPOverload_New(name, overloads);
+                    attr = (PyObject*)CPPOverload_New(name, scope, overloads);
                 templated_functions_checked = true;
             }
         }
