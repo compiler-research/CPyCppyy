@@ -3,11 +3,11 @@
 # build step runs for real and surfaces a regression as a warning, not a false
 # green.
 #
-# TEMPORARY fork coupling: the Bazel infra (cppyy/bazel/ = the cppyy_bazel
-# module, plus the MODULE.bazel files) currently lives ONLY on the conrade-ctc
-# forks @ bazel-build-upstream, not on the compiler-research default branches.
-# Until it merges upstream, the sibling repos are cloned from the fork
-# (FORK_OWNER / FORK_BRANCH below). After the merge, repoint those two variables.
+# TEMPORARY fork coupling: the cppyy_bazel module (cppyy/bazel/) plus the
+# MODULE.bazel files of the cppyy stack still live ONLY on the conrade-ctc forks
+# @ bazel-build-upstream. CppInterOp's Bazel infra is already merged upstream, so
+# it is cloned from compiler-research/main; the rest come from the fork
+# (FORK_OWNER / FORK_BRANCH below). Drop the fork clone once those merge too.
 name: bazel
 
 on:
@@ -31,13 +31,16 @@ jobs:
       - name: Checkout CPyCppyy
         uses: actions/checkout@v4
 
-      - name: Clone sibling repos (fork carries the Bazel infra)
+      - name: Clone sibling repos (fork carries the remaining Bazel infra)
         run: |
           set -eux
+          cd "$GITHUB_WORKSPACE/.."
+          # CppInterOp's Bazel infra is merged upstream.
+          git clone --depth=1 -b main \
+            "https://github.com/compiler-research/CppInterOp.git"
           FORK_OWNER="conrade-ctc"            # TODO: compiler-research after infra merges
           FORK_BRANCH="bazel-build-upstream"  # TODO: default branch after infra merges
-          cd "$GITHUB_WORKSPACE/.."
-          for repo in cppyy CppInterOp; do
+          for repo in cppyy; do
             git clone --depth=1 -b "$FORK_BRANCH" \
               "https://github.com/${FORK_OWNER}/${repo}.git"
           done
