@@ -1216,7 +1216,7 @@ PyTypeObject CPPOverload_Type = {
     0,                                 // tp_as_buffer
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC
 #if PY_VERSION_HEX >= 0x03080000
-        | Py_TPFLAGS_HAVE_VECTORCALL | Py_TPFLAGS_METHOD_DESCRIPTOR
+        | Py_TPFLAGS_HAVE_VECTORCALL
 #endif
     ,                                  // tp_flags
     (char*)"cppyy method proxy (internal)", // tp_doc
