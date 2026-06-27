@@ -152,10 +152,12 @@ static inline void sync_templates(
     if (!attr) PyErr_Clear();
     Py_DECREF(dct);
     if (!TemplateProxy_Check(attr)) {
-        TemplateProxy* pytmpl = TemplateProxy_New(mtCppName, mtName, pyclass);
-        if (CPPOverload_Check(attr)) pytmpl->MergeOverload((CPPOverload*)attr);
-        PyType_Type.tp_setattro(pyclass, pyname, (PyObject*)pytmpl);
-        Py_DECREF(pytmpl);
+      TemplateProxy *pytmpl =
+          TemplateProxy_New(mtCppName, mtName, pyclass, mtName == "__init__");
+      if (CPPOverload_Check(attr))
+        pytmpl->MergeOverload((CPPOverload *)attr);
+      PyType_Type.tp_setattro(pyclass, pyname, (PyObject *)pytmpl);
+      Py_DECREF(pytmpl);
     }
     Py_XDECREF(attr);
     Py_DECREF(pyname);
@@ -268,8 +270,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         // template proxy was already created in sync_templates call above, so
         // add only here, not to the cache of collected methods
             PyObject* attr = PyObject_GetAttrString(pyclass, const_cast<char*>(mtName.c_str()));
-            if (isTemplate) ((TemplateProxy*)attr)->AdoptTemplate(pycall);
-            else ((TemplateProxy*)attr)->AdoptMethod(pycall);
+            ((TemplateProxy*)attr)->AdoptMethod(pycall);
             Py_DECREF(attr);
 
         // for operator[]/() that returns by ref, also add __setitem__
@@ -283,8 +284,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
                      Py_XDECREF(precursor);
                      PyObject_SetAttrString(pyclass, const_cast<char*>("__setitem__"), (PyObject*)pysi);
                 }
-                if (isTemplate) pysi->AdoptTemplate(new CPPSetItem(scope, method));
-                else pysi->AdoptMethod(new CPPSetItem(scope, method));
+                pysi->AdoptMethod(new CPPSetItem(scope, method));
                 Py_XDECREF(pysi);
             }
 
@@ -367,7 +367,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         } else {
             if (!attr) PyErr_Clear();
         // normal case, add a new method
-            CPPOverload* method = CPPOverload_New(imd->first, imd->second);
+            CPPOverload* method = CPPOverload_New(imd->first, scope, imd->second);
             PyObject* pymname = CPyCppyy_PyText_InternFromString(const_cast<char*>(method->GetName().c_str()));
             PyType_Type.tp_setattro(pyclass, pymname, (PyObject*)method);
             Py_DECREF(pymname);

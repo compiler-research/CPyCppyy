@@ -146,7 +146,7 @@ static PyNumberMethods nullptr_as_number = {
 #endif
 };
 
-static PyTypeObject PyNullPtr_t_Type = {
+PyTypeObject PyNullPtr_t_Type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "nullptr_t",         // tp_name
     sizeof(PyObject),    // tp_basicsize
@@ -248,6 +248,8 @@ namespace CPyCppyy {
     PyObject* gSegvException = nullptr;
     PyObject* gIllException  = nullptr;
     PyObject* gAbrtException = nullptr;
+    PyObject *gOverloadResolutionException = nullptr;
+    PyObject *gOverloadAmbiguityException = nullptr;
     std::unordered_set<Cppyy::TCppScope_t> gPinnedTypes;
     std::ostringstream gCapturedError;
     std::streambuf* gOldErrorBuffer = nullptr;
@@ -1219,8 +1221,16 @@ extern "C" PyObject* PyInit_libcppyy()
     PyModule_AddObject(gThisModule, (char*)"IllegalInstruction", gIllException);
     gAbrtException = PyErr_NewException((char*)"cppyy.ll.AbortSignal", cppfatal, nullptr);
     PyModule_AddObject(gThisModule, (char*)"AbortSignal", gAbrtException);
+    gOverloadResolutionException = PyErr_NewException(
+        (char *)"cppyy.OverloadResolutionException", nullptr, nullptr);
+    PyModule_AddObject(gThisModule, (char *)"OverloadResolutionException",
+                       gOverloadResolutionException);
+    gOverloadAmbiguityException = PyErr_NewException(
+        (char *)"cppyy.OverloadAmbiguityException", gOverloadResolutionException, nullptr);
+    PyModule_AddObject(gThisModule, (char *)"OverloadAmbiguityException",
+                       gOverloadAmbiguityException);
 
-// policy labels
+    // policy labels
     PyModule_AddObject(gThisModule, (char*)"kMemoryHeuristics",
         PyInt_FromLong((int)CallContext::kUseHeuristics));
     PyModule_AddObject(gThisModule, (char*)"kMemoryStrict",
