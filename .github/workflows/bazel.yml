@@ -3,11 +3,11 @@
 # build step runs for real and surfaces a regression as a warning, not a false
 # green.
 #
-# TEMPORARY fork coupling: the cppyy_bazel module (cppyy/bazel/) plus the
-# MODULE.bazel files of the cppyy stack still live ONLY on the conrade-ctc forks
-# @ bazel-build-upstream. CppInterOp's Bazel infra is already merged upstream, so
-# it is cloned from compiler-research/main; the rest come from the fork
-# (FORK_OWNER / FORK_BRANCH below). Drop the fork clone once those merge too.
+# Sibling repos are cloned from the compiler-research default branches. The
+# cppyy_bazel module (cppyy/bazel/) and the per-repo MODULE.bazel files are still
+# landing across the four repos' Bazel PRs; until all four land this best-effort
+# job may fail (non-gating). Cloning the default branches means no follow-up PR
+# is needed once they do — the job goes green on its own.
 name: bazel
 
 on:
@@ -31,18 +31,13 @@ jobs:
       - name: Checkout CPyCppyy
         uses: actions/checkout@v4
 
-      - name: Clone sibling repos (fork carries the remaining Bazel infra)
+      - name: Clone sibling repos
         run: |
           set -eux
           cd "$GITHUB_WORKSPACE/.."
-          # CppInterOp's Bazel infra is merged upstream.
-          git clone --depth=1 -b main \
-            "https://github.com/compiler-research/CppInterOp.git"
-          FORK_OWNER="conrade-ctc"            # TODO: compiler-research after infra merges
-          FORK_BRANCH="bazel-build-upstream"  # TODO: default branch after infra merges
-          for repo in cppyy; do
-            git clone --depth=1 -b "$FORK_BRANCH" \
-              "https://github.com/${FORK_OWNER}/${repo}.git"
+          for repo in cppyy CppInterOp; do
+            git clone --depth=1 \
+              "https://github.com/compiler-research/${repo}.git"
           done
 
       - name: Setup LLVM ${{ matrix.llvm }}
