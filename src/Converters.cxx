@@ -3356,28 +3356,20 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(const std::string& fullType, cdim
         }
     }
 
-// FIXME: Taken from ROOT, update this to use CppInterOp for span check and extracting value type
 #if __cplusplus >= 202002L
 //-- special case: std::span
     pos = resolvedType.find("span<");
     if (pos == 0 /* no std:: */ || pos == 5 /* with std:: */ ||
         pos == 6 /* const no std:: */ || pos == 11 /* const with std:: */ ) {
 
-        auto pos1 = realType.find('<');
-        auto pos21 = realType.find(','); // for the case there are more template args
-        auto pos22 = realType.find('>');
-        auto len = std::min(pos21 - pos1, pos22 - pos1) - 1;
-        std::string value_type = realType.substr(pos1+1, len);
-
-        // strip leading "const "
-        const std::string cprefix = "const ";
-        if (value_type.compare(0, cprefix.size(), cprefix) == 0) {
-            value_type = value_type.substr(cprefix.size());
+        // std::span<T>::value_type == std::remove_cv_t<T>: look it up
+        Cppyy::TCppScope_t span_scope = Cppyy::GetScope(realType);
+        Cppyy::TCppType_t  vtype = Cppyy::ResolveType(
+            Cppyy::GetTypeFromScope(Cppyy::GetNamed("value_type", span_scope)));
+        if (span_scope && vtype) {
+            std::string value_type = Cppyy::GetTypeAsString(vtype);
+            return new StdSpanConverter{value_type, span_scope};
         }
-
-        std::string span_type = "std::span<" + value_type + ">";
-
-        return new StdSpanConverter{value_type, Cppyy::GetScope(span_type)};
     }
 #endif
 
@@ -3584,28 +3576,20 @@ CPyCppyy::Converter* CPyCppyy::CreateConverter(Cppyy::TCppType_t type, cdims_t d
         }
     }
 
-// FIXME: Taken from ROOT, update this to use CppInterOp for span check and extracting value type
 #if __cplusplus >= 202002L
 //-- special case: std::span
     pos = resolvedTypeStr.find("span<");
     if (pos == 0 /* no std:: */ || pos == 5 /* with std:: */ ||
         pos == 6 /* const no std:: */ || pos == 11 /* const with std:: */ ) {
 
-        auto pos1 = realTypeStr.find('<');
-        auto pos21 = realTypeStr.find(','); // for the case there are more template args
-        auto pos22 = realTypeStr.find('>');
-        auto len = std::min(pos21 - pos1, pos22 - pos1) - 1;
-        std::string value_type = realTypeStr.substr(pos1+1, len);
-
-        // strip leading "const "
-        const std::string cprefix = "const ";
-        if (value_type.compare(0, cprefix.size(), cprefix) == 0) {
-            value_type = value_type.substr(cprefix.size());
+        // std::span<T>::value_type == std::remove_cv_t<T>: look it up
+        Cppyy::TCppScope_t span_scope = Cppyy::GetScopeFromType(realType);
+        Cppyy::TCppType_t  vtype = Cppyy::ResolveType(
+            Cppyy::GetTypeFromScope(Cppyy::GetNamed("value_type", span_scope)));
+        if (span_scope && vtype) {
+            std::string value_type = Cppyy::GetTypeAsString(vtype);
+            return new StdSpanConverter{value_type, span_scope};
         }
-
-        std::string span_type = "std::span<" + value_type + ">";
-
-        return new StdSpanConverter{value_type, Cppyy::GetScope(span_type)};
     }
 #endif
 
