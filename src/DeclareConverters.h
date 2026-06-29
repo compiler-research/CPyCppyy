@@ -406,8 +406,8 @@ public:
 // function pointers
 class FunctionPointerConverter : public Converter {
 public:
-    FunctionPointerConverter(const std::string& ret, const std::string& sig) :
-        fRetType(ret), fSignature(sig) {}
+    FunctionPointerConverter(Cppyy::TCppType_t FnType) :
+        fFnType(FnType) {}
 
 public:
     bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
@@ -417,16 +417,15 @@ public:
     std::string GetFailureMsg() override { return "[FunctionPointerConverter]"; };
 
 protected:
-    std::string fRetType;
-    std::string fSignature;
+    Cppyy::TCppType_t fFnType;
     bool fAllowCppInstance = false;
 };
 
 // std::function
 class StdFunctionConverter : public FunctionPointerConverter {
 public:
-    StdFunctionConverter(Converter* cnv, const std::string& ret, const std::string& sig) :
-        FunctionPointerConverter(ret, sig), fConverter(cnv) {
+    StdFunctionConverter(Converter* cnv, Cppyy::TCppType_t fn, const std::string& ret, const std::string& sig) :
+        FunctionPointerConverter(Cppyy::GetFnTypeFromStdFn(fn)), fRetType(ret), fSignature(sig), fConverter(cnv) {
         fAllowCppInstance = true;
     }
     StdFunctionConverter(const StdFunctionConverter&) = delete;
@@ -440,6 +439,8 @@ public:
     std::string GetFailureMsg() override { return "[StdFunctionConverter]"; };
 
 protected:
+    std::string fRetType;
+    std::string fSignature;
     Converter* fConverter;
 };
 
