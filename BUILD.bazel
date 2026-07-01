@@ -1,0 +1,92 @@
+load("@cppyy_bazel//:defs.bzl", "BASE_COPTS")
+
+# The cppyy stack is a sanitizer boundary: libcppyy.so is dlopen'd by a
+# (possibly non-instrumented) host interpreter and works directly with the
+# non-sanitized LLVM/clang libraries, so an asan/ubsan-instrumented build would
+# die on undefined __asan_* symbols at load. Opt the whole package out; harmless
+# in non-sanitized builds.
+package(features = [
+    "-asan",
+    "-ubsan",
+])
+
+# Public C-API headers shipped to downstream consumers (cppyy).
+filegroup(
+    name = "headers",
+    srcs = glob(["include/CPyCppyy/*.h"]),
+    visibility = ["//visibility:public"],
+)
+
+# The extension module's source + private headers, exposed so a consumer can
+# build the extension against a different Python (e.g. nebula building per-conda-
+# env solib_py312/py313 variants); the :solib target here is single-version.
+filegroup(
+    name = "srcs",
+    srcs = glob([
+        "src/*.cxx",
+        "src/*.h",
+        "src/*.inc",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+# Public headers as a cc_library carrying the right include root, so a
+# cross-Python consumer (see :srcs) gets <CPyCppyy/...> resolvable by depending
+# on this instead of re-deriving the include path in its own package.
+cc_library(
+    name = "headers_lib",
+    hdrs = glob(["include/CPyCppyy/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+# The extension module's object code. Sources translate CMake's `file(GLOB
+# src/*.cxx)` + `include_dirs(include, Python)`. CPyCppyy duplicates the
+# CppInterOp `Cpp::` ABI structs in src/Cppyy.h and resolves the remaining
+# Cpp:: symbols at runtime from the backend solib, so no CppInterOp headers
+# are needed at compile time (mirrors CMake/setup.py, which add no such dirs).
+cc_library(
+    name = "solib_lib",
+    srcs = glob(["src/*.cxx"]),
+    hdrs = glob([
+        "src/*.h",
+        "src/*.inc",
+    ]) + [":headers"],
+    copts = BASE_COPTS + [
+        "-fexceptions",  # src uses C++ try/catch/throw (PyException)
+        "-frtti",  # src uses dynamic_cast/typeid
+        "-Wno-register",  # C++17 vs. Python headers
+        "-Wno-strict-aliasing",  # not all Pythons provide this
+        "-Wno-cast-function-type",  # g++: CPyFunction casts
+        # CPyCppyy has intentional non-override overrides; demote so a consumer
+        # toolchain with -Werror (e.g. nebula) doesn't make it fatal.
+        "-Wno-error=inconsistent-missing-override",
+        "-Wno-inconsistent-missing-override",
+    ],
+    includes = ["include"],
+    deps = [
+        "@rules_python//python/cc:current_py_cc_headers",
+        "@rules_python//python/cc:current_py_cc_libs",
+    ],
+)
+
+# Output name MUST be libcppyy.so: CPyCppyy's loader expects that exact name.
+cc_shared_library(
+    name = "solib",
+    # CMake links the backend at runtime (-Bsymbolic-functions, undefined
+    # symbols allowed); Cpp:: symbols come from the CppInterOp solib.
+    dynamic_deps = ["@cppinterop//:solib"],
+    shared_lib_name = "libcppyy.so",
+    user_link_flags = ["-Wl,-Bsymbolic-functions"],
+    visibility = ["//visibility:public"],
+    deps = [":solib_lib"],
+)
+
+filegroup(
+    name = "data",
+    srcs = [
+        ":headers",
+        ":solib",
+    ],
+    visibility = ["//visibility:public"],
+)

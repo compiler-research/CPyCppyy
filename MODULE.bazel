@@ -1,0 +1,27 @@
+module(
+    name = "cpycppyy",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "cppyy_bazel", version = "0.1.0")
+local_path_override(
+    module_name = "cppyy_bazel",
+    path = "../cppyy/bazel",
+)
+
+bazel_dep(name = "cppinterop", version = "0.1.0")
+local_path_override(
+    module_name = "cppinterop",
+    path = "../CppInterOp",
+)
+
+bazel_dep(name = "rules_python", version = "1.5.1")
+
+llvm = use_extension("@cppyy_bazel//:llvm.bzl", "llvm")
+use_repo(llvm, llvm = "cppjit_llvm")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(python_version = "3.12")
+
+# Opt in to the centralized clang toolchain from cppyy_bazel (standalone build).
+register_toolchains("@llvm//:cc_toolchain")
