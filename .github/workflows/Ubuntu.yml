@@ -575,9 +575,15 @@ jobs:
         else
           SUPPRESSION_FILE="../etc/${CLANG_INTERPRETER}${CLANG_VERSION}-valgrind.supp"
         fi
+
+        # Only pass a per-runtime suppression file when one exists.
+        SUPPRESSION_ARG=()
+        if [[ -f "${SUPPRESSION_FILE}" ]]; then
+          SUPPRESSION_ARG+=(--suppressions="${SUPPRESSION_FILE}")
+        fi
         export IS_VALGRIND=true
         if [[ "${{ matrix.Valgrind }}" == "On" ]]; then
-            valgrind --show-error-list=yes --error-exitcode=1 --track-origins=yes --suppressions="${SUPPRESSION_FILE}" --suppressions=../etc/valgrind-cppyy-cling.supp python -m pytest -m "not xfail" -v -ra
+            valgrind --show-error-list=yes --error-exitcode=1 --track-origins=yes "${SUPPRESSION_ARG[@]}" --suppressions=../etc/valgrind-cppyy-cling.supp python -m pytest -m "not xfail" -v -ra
         fi
         unset IS_VALGRIND
         export RETCODE=+$?
