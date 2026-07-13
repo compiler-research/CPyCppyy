@@ -1,0 +1,58 @@
+# Best-effort, NON-GATING Bazel build of the CPyCppyy extension module. CMake
+# remains the supported build; this job never gates CI (continue-on-error). The
+# build step runs for real and surfaces a regression as a warning, not a false
+# green.
+#
+# Sibling repos are cloned from the compiler-research default branches. The
+# cppyy_bazel module (cppyy/bazel/) and the per-repo MODULE.bazel files are still
+# landing across the four repos' Bazel PRs; until all four land this best-effort
+# job may fail (non-gating). Cloning the default branches means no follow-up PR
+# is needed once they do — the job goes green on its own.
+name: bazel
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bazel:
+    name: bazel (best-effort) llvm${{ matrix.llvm }}
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: ["22"]
+    steps:
+      # No `path:` -> CPyCppyy is $GITHUB_WORKSPACE; siblings are cloned
+      # alongside it so the local_path_overrides (../cppyy/bazel, ../CppInterOp)
+      # resolve.
+      - name: Checkout CPyCppyy
+        uses: actions/checkout@v4
+
+      - name: Clone sibling repos
+        run: |
+          set -eux
+          cd "$GITHUB_WORKSPACE/.."
+          for repo in cppyy CppInterOp; do
+            git clone --depth=1 \
+              "https://github.com/compiler-research/${repo}.git"
+          done
+
+      - name: Setup LLVM ${{ matrix.llvm }}
+        uses: compiler-research/ci-workflows/actions/setup-llvm@main
+        with:
+          version: ${{ matrix.llvm }}
+          os: ubuntu-24.04
+
+      - name: Point LLVM_DIR at the tree root for the @llvm Bazel extension
+        run: |
+          # setup-llvm sets LLVM_DIR=<prefix>/lib/cmake/llvm (CMake convention);
+          # the @llvm Bazel extension needs the tree root holding bin/llvm-config.
+          echo "LLVM_DIR=${GITHUB_WORKSPACE}/install" >> "$GITHUB_ENV"
+
+      - name: bazel build //:solib
+        run: |
+          bazelisk build //:solib \
+            || echo "::warning::bazel build //:solib failed (best-effort, non-gating)"
