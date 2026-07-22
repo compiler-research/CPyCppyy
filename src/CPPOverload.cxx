@@ -622,7 +622,7 @@ static PyObject* mp_vectorcall(
             return HandleReturn(pymeth, im_self, result);
 
     // fall through: python is dynamic, and so, the hashing isn't infallible
-        ctxt.fFlags &= ~CallContext::kAllowImplicit;
+        ctxt.fFlags &= ~(CallContext::kAllowImplicit | CallContext::kPyException | CallContext::kCppException);
         PyErr_Clear();
         ResetCallState(pymeth->fSelf, im_self);
     }
