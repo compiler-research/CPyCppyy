@@ -507,7 +507,13 @@ int CPyCppyy::CPPMethod::GetPriority()
         // type:
         // Cppyy::TCppType_t type = Cppyy::GetMethodArgType(fMethod, iarg);
 
-        if (Cppyy::IsBuiltin(aname)) {
+        // Not builtin and spelled "const void *", so match the compacted name.
+        std::string compact = aname;
+        compact.erase(std::remove(compact.begin(), compact.end(), ' '), compact.end());
+
+        if (compact.find("void*") != std::string::npos) {
+            priority -= 1000;          // void*/void** shouldn't be too greedy
+        } else if (Cppyy::IsBuiltin(aname)) {
         // complex type (note: double penalty: for complex and the template type)
             if (strstr(aname.c_str(), "std::complex"))
                 priority -=   10;      // prefer double, float, etc. over conversion
@@ -534,10 +540,6 @@ int CPyCppyy::CPPMethod::GetPriority()
         // string/char types
             else if (strstr(aname.c_str(), "char") && aname[aname.size()-1] != '*')
                 priority += -60;       // prefer (const) char* over char
-
-        // oddball
-            else if (strstr(aname.c_str(), "void*"))
-                priority -= 1000;      // void*/void** shouldn't be too greedy
 
         } else {
         // This is a user-defined type (class, struct, enum, etc.).
