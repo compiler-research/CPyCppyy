@@ -1,5 +1,16 @@
 .. -*- mode: rst -*-
 
+**This repository was archived in August 2026.** Development continues in
+`CppJIT <https://github.com/compiler-research/cppjit>`_, a new package and the
+successor project of cppyy. See that repository for details.
+
+In 2023, compiler-research forked `wlav/CPyCppyy <https://github.com/wlav/CPyCppyy>`_ to re-engineer it on vanilla
+Clang and the `CppInterOp <https://github.com/compiler-research/CppInterOp>`_
+library for the type system and reflection. The forks served as the R&D
+vehicle while maintaining a common history with the original cppyy project.
+Once the new system converged and worked end to end, the decision was made to
+start a successor project.
+
 CPyCppyy: Python-C++ bindings interface based on Cling/LLVM
 ===========================================================
 
