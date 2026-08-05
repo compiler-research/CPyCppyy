@@ -58,7 +58,8 @@ struct CallContext {
 
     enum ECallFlags {
         kNone                        = 0x000000,
-        kIsSorted                    = 0x000001, // if method overload priority determined
+        // UNUSED with new overload resolution
+        // kIsSorted                    = 0x000001, // if method overload priority determined
         kIsCreator                   = 0x000002, // if method creates python-owned objects
         kIsConstructor               = 0x000004, // if method is a C++ constructor
         kHaveImplicit                = 0x000008, // indicate that implicit converters are available
@@ -77,6 +78,8 @@ struct CallContext {
         kUseFFI                      = 0x010000, // not implemented
         kIsPseudoFunc                = 0x020000, // internal, used for introspection
         kUseStrict                   = 0x040000, // if method applies strict memory policy
+        kIsMethod                    = 0x080000, // If this is a class method
+        kIsSatticMethod              = 0x100000, // If this is a static class method
     };
 
 // memory handling
@@ -121,10 +124,6 @@ private:
     size_t                  fNArgs;
     Temporary*              fTemps;
 };
-
-inline bool IsSorted(uint64_t flags) {
-    return flags & CallContext::kIsSorted;
-}
 
 inline bool IsCreator(uint64_t flags) {
     return flags & CallContext::kIsCreator;

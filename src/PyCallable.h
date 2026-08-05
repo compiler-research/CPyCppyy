@@ -4,11 +4,16 @@
 #include <climits>
 
 // Bindings
+#include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
 #include "CallContext.h"
+#include "Cppyy.h"
 
 
 namespace CPyCppyy {
+
+extern PyObject *gOverloadResolutionException;
+extern PyObject *gOverloadAmbiguityException;
 
 class CPPInstance;
 
@@ -17,6 +22,7 @@ public:
     virtual ~PyCallable() {}
 
 public:
+    virtual Cppyy::TCppMethod_t GetMethod()   { return nullptr; }
     virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
     virtual PyObject* GetSignatureNames() = 0;
     virtual PyObject* GetSignatureTypes() = 0;
@@ -29,9 +35,6 @@ public:
         return nullptr;
     };
 
-    virtual int GetPriority() = 0;
-    virtual bool IsGreedy() = 0;
-
     virtual int GetMaxArgs() = 0;
     virtual PyObject* GetCoVarNames() = 0;
     virtual PyObject* GetArgDefault(int /* iarg */, bool silent=true) = 0;
@@ -43,6 +46,8 @@ public:
     virtual PyCallable* Clone() = 0;
 
     virtual int GetArgMatchScore(PyObject* /* args_tuple */) { return INT_MAX; }
+
+    virtual bool IsSimilarFnType([[maybe_unused]] Cppyy::TCppType_t fn_type) { return false; }
 
 public:
     virtual PyObject* Call(CPPInstance*& self,
